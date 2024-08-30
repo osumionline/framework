@@ -350,11 +350,11 @@ class OConfig {
 		$this->setDir('ofw_export',     $bd.'ofw/export/');
 		$this->setDir('ofw_tmp',        $bd.'ofw/tmp/');
 		$this->setDir('logs',           $bd.'ofw/logs/');
-		$this->setDir('ofw_base',       $bd.'vendor/osumionline/osumi-framework/');
-		$this->setDir('ofw_vendor',     $bd.'vendor/osumionline/osumi-framework/src/');
-		$this->setDir('ofw_assets',     $bd.'vendor/osumionline/osumi-framework/src/Assets/');
-		$this->setDir('ofw_locale',     $bd.'vendor/osumionline/osumi-framework/src/Assets/locale/');
-		$this->setDir('ofw_template',   $bd.'vendor/osumionline/osumi-framework/src/Assets/template/');
+		$this->setDir('ofw_base',       $bd.'vendor/osumionline/framework/');
+		$this->setDir('ofw_vendor',     $bd.'vendor/osumionline/framework/src/');
+		$this->setDir('ofw_assets',     $bd.'vendor/osumionline/framework/src/Assets/');
+		$this->setDir('ofw_locale',     $bd.'vendor/osumionline/framework/src/Assets/locale/');
+		$this->setDir('ofw_template',   $bd.'vendor/osumionline/framework/src/Assets/template/');
 		$this->setDir('public',         $bd.'public/');
 	}
 
