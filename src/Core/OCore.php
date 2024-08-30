@@ -32,6 +32,28 @@ class OCore {
 	}
 
 	/**
+	 * Get whole projects base dir
+	 *
+	 * @return string Absolute path of the project
+	 */
+	private function getBaseDir(): string {
+		// Start from the directory of the executed script
+		$dir = dirname(__DIR__, 3);
+
+		// Look for a marker file or directory that indicates the project root
+		while (!is_dir($dir . '/vendor') && $dir !== '/') {
+			$dir = dirname($dir);
+		}
+
+		// If we've reached the filesystem root without finding our marker, throw an exception
+		if ($dir === '/') {
+			throw new \RuntimeException("Could not locate project root directory");
+		}
+
+		return $dir.'/';
+  }
+
+	/**
 	 * Include required files for the framework and start up some components like configuration, cache container or database connection container
 	 *
 	 * @param bool $from_cli Marks if the core is being loaded for use in web application or CLI application
@@ -41,12 +63,7 @@ class OCore {
 	public function load(bool $from_cli=false): void {
 		date_default_timezone_set('Europe/Madrid');
 
-		$basedir = realpath(dirname(__FILE__));
-		$basedir = str_ireplace("\\", '/', $basedir);
-		$basedir = str_ireplace('osumionline/osumi-framework/src/Core', '', $basedir);
-		$basedir = $basedir.'../';
-
-		$this->config = new OConfig($basedir);
+		$this->config = new OConfig($this->getBaseDir());
 
 		// Check locale file
 		$locale_file = $this->config->getDir('ofw_locale').$this->config->getLang().'.po';
