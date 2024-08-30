@@ -1,0 +1,25 @@
+{
+  "name": "osumionline/framework",
+  "description": "Framework PHP de Osumi para aplicaciones web.",
+  "version": "9.0.0",
+  "type": "library",
+  "keywords": ["framework", "php", "web", "osumi"],
+  "homepage": "https://github.com/osumionline/framework",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Iñigo Gorosabel",
+      "homepage": "https://osumi.es",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Osumi\\OsumiFramework\\": "src/"
+    }
+  }
+}
