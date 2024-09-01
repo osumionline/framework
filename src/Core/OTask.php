@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Osumi\OsumiFramework\OFW\Core;
+namespace Osumi\OsumiFramework\Core;
 
 use Osumi\OsumiFramework\Tools\OColors;
 use Osumi\OsumiFramework\Log\OLog;

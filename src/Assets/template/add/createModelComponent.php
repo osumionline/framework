@@ -9,7 +9,7 @@
     <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_MODEL_COMPONENT_ERROR') ?>
 
 
-      <?php echo $values['colors']->getColoredString('ofw add modelComponent User', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('php of add modelComponent User', 'light_green') ?>
 
 
 <?php endif ?>
@@ -112,7 +112,7 @@ $values['colors']->getColoredString($values['component_folder'].$values['compone
 
 
     <?php echo OTools::getMessage('TASK_ADD_MODEL_COMPONENT_USE', [
-$values['colors']->getColoredString(strtolower($values['model_name']), 'light_green')
+$values['colors']->getColoredString($values['model_name'], 'light_green')
 ]) ?>
 
 
@@ -121,9 +121,9 @@ $values['colors']->getColoredString(strtolower($values['model_name']), 'light_gr
       <?php echo $values['colors']->getColoredString('$'.'this->getTemplate()->add(\'list\', $'.'list_component);', 'light_green') ?>
 
 
-      <?php echo $values['colors']->getColoredString('$'.'component = new '.$values['component_name']."(['".strtolower($values['model_name'])."' => $".strtolower($values['model_name'])."]);", 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('$'.'component = new '.$values['component_name']."(['".$values['model_name']."' => $".$values['model_name']."]);", 'light_green') ?>
 
-      <?php echo $values['colors']->getColoredString('$'.'this->getTemplate()->add(\''.strtolower($values['model_name']).'\', $'.'component);', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('$'.'this->getTemplate()->add(\''.$values['model_name'].'\', $'.'component);', 'light_green') ?>
 
 
 <?php endif ?>

@@ -521,7 +521,7 @@ msgid "TASK_RESET_CONTINUE"
 msgstr "Jarraian, framework-etik kanpoko eduki guztia ezabatzeari ekingo diogu, amaieran instalatu berri den aplikazio baten egoera izango du."
 
 msgid "TASK_RESET_TIME_TO_CANCEL"
-msgstr "Prozesu hau bertan behera uzteko 15 segundo dituzu Kontrol + C sakatuta."
+msgstr "Prozesu hau bertan behera uzteko 10 segundo dituzu Kontrol + C sakatuta."
 
 msgid "TASK_RESET_RESET_KEY_CREATED"
 msgstr "Berrezarri gakoa sortu da. Datu guztiak ezabatzea berresteko, exekutatu komando hau hurrengo 15 minutuetan:"

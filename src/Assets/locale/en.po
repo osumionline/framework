@@ -521,7 +521,7 @@ msgid "TASK_RESET_CONTINUE"
 msgstr "Next, we will proceed to delete all the content outside the framework, at the end it will have the status of a newly installed application."
 
 msgid "TASK_RESET_TIME_TO_CANCEL"
-msgstr "You have 15 seconds to cancel this process by pressing Control + C."
+msgstr "You have 10 seconds to cancel this process by pressing Control + C."
 
 msgid "TASK_RESET_RESET_KEY_CREATED"
 msgstr "Reset key created. To confirm the deletion of all data, execute the following command in the next 15 minutes:"
