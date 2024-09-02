@@ -299,6 +299,30 @@ class OConfig {
 	}
 
 	/**
+	 * Set configuration fields of a plugin
+	 *
+	 * @param string $plugin Name of the plugin
+	 *
+	 * @param array $plugin_conf Array of configuration fields for the plugin
+	 *
+	 * @return void
+	 */
+	public function setPluginConfig(string $plugin, array $plugin_conf): void {
+		$this->plugin_config[$plugin] = $plugin_conf;
+	}
+
+	/**
+	 * Get configuration fields of a plugin
+	 *
+	 * @param string $plugin Name of the plugin
+	 *
+	 * @return array Array of configuration fields for the plugin or null if not found
+	 */
+	public function getPluginConfig(string $plugin): ?array {
+		return array_key_exists($plugin, $this->plugin_config) ? $this->plugin_config[$plugin] : null;
+	}
+
+	/**
 	 * Set list of framework and user defined directories
 	 *
 	 * @param string $dir Name or code of the directory

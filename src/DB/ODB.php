@@ -177,7 +177,7 @@ class ODB {
 	 *
 	 * @return void
 	 */
-	public function setLink(PDO $l): void {
+	public function setLink(PDO | null $l): void {
 		$this->link = $l;
 	}
 
@@ -288,7 +288,7 @@ class ODB {
 				$this->setConnectionIndex($connection['index']);
 				$this->setLink($connection['link']);
 			}
-			catch (PDOException $e) {
+			catch (\PDOException $e) {
 				return 'Connection failed: ' . $e->getMessage();
 			}
 		}
@@ -342,7 +342,7 @@ class ODB {
 				$stmt = $pdo->query($q);
 			}
 		}
-		catch(PDOException $e) {
+		catch(\PDOException $e) {
 			// In case there is an exception throw a generic exception with the error message
 			throw new \Exception('SQL ERROR: '.$e->getMessage());
 		}

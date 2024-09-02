@@ -218,7 +218,7 @@ class OModel {
 		try {
 			$this->db->query($sql, $query_params);
 		}
-		catch(Exception $ex) {
+		catch(\Exception $ex) {
 			$this->log('ERROR: '.$ex->getMessage());
 			return false;
 		}

@@ -398,7 +398,7 @@ class OTools {
 		$text = str_replace($bad, $good, $text);
 
 		// Convert special characters
-		$text = utf8_decode($text);
+		mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
 		$text = htmlentities($text);
 		$text = preg_replace('/&([a-zA-Z])(uml|acute|grave|circ|tilde);/', '$1', $text);
 		$text = html_entity_decode($text);
@@ -589,7 +589,7 @@ class OTools {
 	 *
 	 * @param string $name Name of the new module
 	 *
-	 * @return array Status of the operation (status and module name)
+	 * @return array Status of the operation (status, module name and module path)
 	 */
 	public static function addModule(string $name): array {
 		global $core;
@@ -616,7 +616,7 @@ class OTools {
 		$str_module .= "class ".ucfirst($name)."Module {}";
 		file_put_contents($module_file, $str_module);
 
-		return ['status' => 'ok', 'name' => $name];
+		return ['status' => 'ok', 'name' => $name, 'path' => $module_file];
 	}
 
 	/**
@@ -643,13 +643,14 @@ class OTools {
 		$module_actions = $module_path.'/Actions';
 		$module_file    = $module_path.'/'.ucfirst($module).'Module.php';
 		$status         = [
-			'status' => 'ok',
-			'module' => $module,
-			'action' => $action,
-			'url'    => $url,
-			'type'   => $type,
-			'layout' => $layout,
-			'utils'  => $utils
+			'status'   => 'ok',
+			'module'   => $module,
+			'action'   => $action,
+			'url'      => $url,
+			'type'     => $type,
+			'layout'   => $layout,
+			'utils'    => $utils,
+			'template' => ''
 		];
 
 		if (!file_exists($module_path) || !file_exists($module_file)) {
@@ -708,6 +709,7 @@ class OTools {
 			return $status;
 		}
 		$action_template  = $action_folder.'/'.ucfirst($action).'Action.'.$type;
+		$status['template'] = $action_template;
 		if (file_exists($action_template)) {
 			$status['status'] = 'template-exists';
 			return $status;
@@ -1008,24 +1010,21 @@ class OTools {
 			}
 
 			$module_name = lcfirst(preg_replace('/Module$/', '', $url['module']));
-			$status = self::addModule($module_name);
+			$module_result = self::addModule($module_name);
 
-			if ($status=='ok') {
+			if ($module_result['status'] == 'ok') {
 				$all_updated = false;
 				if (!$silent) {
 					$ret .= "    ".self::getMessage('TASK_UPDATE_URLS_NEW_MODULE', [
 						$colors->getColoredString($url['module'], 'light_green'),
-						$colors->getColoredString($route_module, 'light_green')
-					])."\n";
-					$ret .= "    ".self::getMessage('TASK_UPDATE_URLS_NEW_TEMPLATE_FOLDER', [
-						$colors->getColoredString($route_templates, 'light_green')
+						$colors->getColoredString($module_result['path'], 'light_green')
 					])."\n";
 				}
 
 			}
 
-			$status = self::addAction($url['module'], $url['action'], $url['url'], $url['type'], $url['layout']);
-			if ($status=='ok') {
+			$action_result = self::addAction($url['module'], $url['action'], $url['url'], $url['type'], $url['layout']);
+			if ($action_result['status'] == 'ok') {
 				$all_updated = false;
 				if (!$silent) {
 					$ret .= "    ".self::getMessage('TASK_UPDATE_URLS_NEW_ACTION', [
@@ -1033,7 +1032,7 @@ class OTools {
 						$colors->getColoredString($url['module'], 'light_green')
 					])."\n";
 					$ret .= "    ".self::getMessage('TASK_UPDATE_URLS_NEW_TEMPLATE', [
-							$colors->getColoredString($route_template, 'light_green')
+							$colors->getColoredString($action_result['template'], 'light_green')
 						])."\n";
 				}
 			}
@@ -1186,7 +1185,7 @@ class OTools {
 	 *
 	 * @param string $string Text string to convert
 	 *
-	 * @param stringn $glue Character to use between words, defaults to underscore (_)
+	 * @param string $glue Character to use between words, defaults to underscore (_)
 	 *
 	 * @return string Converted text string
 	 */

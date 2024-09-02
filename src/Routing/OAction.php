@@ -10,20 +10,20 @@ use Osumi\OsumiFramework\Log\OLog;
 use Osumi\OsumiFramework\Web\OSession;
 use Osumi\OsumiFramework\Web\OCookie;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
-use Osumi\OsumiFramework\Tools\OTools;
 
 /**
  * OAction - Base class for the module actions providing access to the framework configuration, database, template, logs, session or cookies
  */
 class OAction {
-	protected ?OModuleAction   $attributes = null;
-	protected ?OConfig         $config     = null;
-	protected ?ODB             $db         = null;
-	protected ?OTemplate       $template   = null;
-	protected ?OLog            $log        = null;
-	protected ?OSession        $session    = null;
-	protected ?OCookie         $cookie     = null;
-	protected ?OCacheContainer $cacheContainer = null;
+	protected OModuleAction | null   $attributes = null;
+	protected OConfig | null         $config     = null;
+	protected ODB | null             $db         = null;
+	protected OTemplate | null       $template   = null;
+	protected OLog | null            $log        = null;
+	protected OSession | null        $session    = null;
+	protected OCookie | null         $cookie     = null;
+	protected OCacheContainer | null $cacheContainer = null;
+	protected array                  $service    = [];
 
 	/**
 	 * Load matched URL configuration value into the module
@@ -65,7 +65,7 @@ class OAction {
 			$service_name = "Osumi\\OsumiFramework\\App\\Service\\".$item.'Service';
 			$service = new $service_name;
 			$service->loadService();
-			$this->{$item.'_service'} = $service;
+			$this->service[$item] = $service;
 		}
 
 		// Load action's CSS and JS files

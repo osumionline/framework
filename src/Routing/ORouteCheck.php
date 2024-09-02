@@ -11,6 +11,8 @@ class ORouteCheck {
 	protected $defaultParameters = [];
 	protected $defaultOptions    = [];
 	protected $compiled          = false;
+	protected $firstOptional     = 0;
+	protected $segments          = [];
 	protected $options           = [];
 	protected $pattern           = null;
 	protected $staticPrefix      = null;
@@ -219,10 +221,10 @@ class ORouteCheck {
 			}
 			else {
 				// Parsing problem
-				throw new InvalidArgumentException(sprintf('Unable to parse "%s" route near "%s".', $this->pattern, $buffer));
+				throw new \InvalidArgumentException(sprintf('Unable to parse "%s" route near "%s".', $this->pattern, $buffer));
 			}
 		}
-    
+
 		// Check for suffix
 		if ($this->suffix) {
 			// Treat as a separator

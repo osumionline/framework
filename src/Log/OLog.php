@@ -8,15 +8,15 @@ use Osumi\OsumiFramework\Core\OConfig;
  * OLog - Class to log information to a debug log file
  */
 class OLog {
-	private ?string $class_name  = null;
-	private ?string $log_dir     = null;
-	private string $log_file     = 'osumi';
-	private string $log_file_ext = 'log';
-	private string $log_path     = '';
-	private int $max_file_size   = 50;
-	private int $max_num_files   = 3;
-	private string $log_level    = 'ALL';
-	private array $levels        = ['ALL', 'DEBUG', 'INFO', 'ERROR'];
+	private ?string $class_name   = null;
+	private ?string $log_dir      = null;
+	private string $log_file_name = 'osumi';
+	private string $log_file_ext  = 'log';
+	private string $log_path      = '';
+	private int $max_file_size    = 50;
+	private int $max_num_files    = 3;
+	private string $log_level     = 'ALL';
+	private array $levels         = ['ALL', 'DEBUG', 'INFO', 'ERROR'];
 
 	/**
 	 * Start up the object by getting the logging configuration from the global config

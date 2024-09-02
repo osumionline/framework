@@ -61,7 +61,7 @@ class OModelFieldFloat extends OModelField {
    */
   public function get(int | null $extra = null): float | null {
     if (!is_null($this->current_value) && !is_null($extra)) {
-      return floatval(number_format($value, $extra));
+      return floatval(number_format($this->current_value, $extra));
     }
     return $this->current_value;
   }
