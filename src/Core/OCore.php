@@ -148,7 +148,7 @@ class OCore {
 					$filter_route = $this->config->getDir('app_filter').$filter_name.'Filter.php';
 					if (file_exists($filter_route)) {
 						$value = call_user_func(
-							"\\Osumi\\OsumiFramework\\App\\Filter\\".$filter_name."Filter",
+							["\\Osumi\\OsumiFramework\\App\\Filter\\".$filter_name."Filter", 'handle'],
 							$url_result['params'],
 							$url_result['headers']
 						);
