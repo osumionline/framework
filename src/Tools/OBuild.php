@@ -2,7 +2,10 @@
 
 namespace Osumi\OsumiFramework\Tools;
 
+use \ReflectionClass;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Routing\OModule;
+use Osumi\OsumiFramework\Routing\OModuleAction;
 
 /**
  * OBuild - Utility class with tools to build framework components
@@ -642,7 +645,7 @@ class OBuild {
 			}
 
 			$module_name = lcfirst(preg_replace('/Module$/', '', $url['module']));
-			$module_result = OTools::addModule($module_name);
+			$module_result = self::addModule($module_name);
 
 			if ($module_result['status'] == 'ok') {
 				$all_updated = false;
@@ -655,7 +658,7 @@ class OBuild {
 
 			}
 
-			$action_result = OTools::addAction($url['module'], $url['action'], $url['url'], $url['type'], $url['layout']);
+			$action_result = self::addAction($url['module'], $url['action'], $url['url'], $url['type'], $url['layout']);
 			if ($action_result['status'] == 'ok') {
 				$all_updated = false;
 				if (!$silent) {
