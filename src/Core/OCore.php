@@ -11,6 +11,7 @@ use Osumi\OsumiFramework\Web\OSession;
 use Osumi\OsumiFramework\Web\ORequest;
 use Osumi\OsumiFramework\Routing\OUrl;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\Log\OLog;
 
 /**
@@ -187,7 +188,7 @@ class OCore {
 			if (file_exists($module_path)) {
 				$module_name = "\\Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\".$url_result['module'];
 				$module = new $module_name;
-				$module_attributes = OTools::getClassAttributes($module);
+				$module_attributes = OBuild::getClassAttributes($module);
 
 				if (in_array($url_result['action'], $module_attributes->getActions())) {
 					$action_path = $this->config->getDir('app_module').$url_result['module'].'/Actions/'.$url_result['action'].'/'.$url_result['action'].'Action.php';
@@ -195,7 +196,7 @@ class OCore {
 						$action_name = "Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\Actions\\".$url_result['action']."\\".$url_result['action']."Action";
 
 						$action = new $action_name;
-						$action_attributes = OTools::getClassAttributes($action);
+						$action_attributes = OBuild::getClassAttributes($action);
 						$reflection_param = new ReflectionParameter([$action_name, 'run'], 0);
 						$reflection_param_type = $reflection_param->getType()->getName();
 

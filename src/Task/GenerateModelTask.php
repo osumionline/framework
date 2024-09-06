@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Task;
 
 use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OBuild;
 
 /**
  * Generate a SQL file to create all the tables in the database based on user defined models (file generated on ofw/export)
@@ -40,7 +41,7 @@ class generateModelTask extends OTask {
 			'file_exists' => file_exists($sql_file)
 		];
 
-		OTools::generateModel();
+		OBuild::generateModel();
 
 		echo OTools::getPartial($path, $params);
 	}

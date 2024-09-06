@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Task;
 
 use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OBuild;
 
 /**
  * Updates URLs cache file
@@ -22,7 +23,7 @@ class updateUrlsTask extends OTask {
 		$path   = $this->getConfig()->getDir('ofw_template').'updateUrls/updateUrls.php';
 		$values = [
 			'colors' => $this->getColors(),
-			'messages' => OTools::updateUrls()
+			'messages' => OBuild::updateUrls()
 		];
 
 		echo OTools::getPartial($path, $values);

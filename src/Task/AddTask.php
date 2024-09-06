@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Task;
 
 use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\DB\OModel;
 
 /**
@@ -43,7 +44,7 @@ class addTask extends OTask {
 		$values['module_actions'] = $values['module_path'].'/Actions';
 		$values['module_file']    = $values['module_path'].'/'.ucfirst($values['module_name']).'Module.php';
 
-		$add = OTools::addModule($values['module_name']);
+		$add = OBuild::addModule($values['module_name']);
 
 		if ($add['status']=='exists') {
 			$values['error'] = 2;
@@ -85,7 +86,7 @@ class addTask extends OTask {
 		$values['action_url']     = $params[3];
 		$values['action_type']    = isset($params[4]) ? $params[4] : null;
 
-		$add = OTools::addAction($values['module_name'], $values['action_name'], $values['action_url'], $values['action_type']);
+		$add = OBuild::addAction($values['module_name'], $values['action_name'], $values['action_url'], $values['action_type']);
 		$values['action_folder']   = $values['module_actions'].'/'.$values['action_name'];
 		$values['action_file']     = $values['action_folder'].'/'.$values['action_name'].'Action.php';
 		$values['action_template'] = $values['action_folder'].'/'.$values['action_name'].'Action.'.$add['type'];
@@ -135,7 +136,7 @@ class addTask extends OTask {
 		$values['service_name'] = $params[1];
 		$values['service_file'] = $this->getConfig()->getDir('app_service').ucfirst($values['service_name']).'Service.php';
 
-		$add = OTools::addService($values['service_name']);
+		$add = OBuild::addService($values['service_name']);
 
 		if ($add['status']=='exists') {
 			$values['error'] = 2;
@@ -172,7 +173,7 @@ class addTask extends OTask {
 		$values['task_name'] = $params[1];
 		$values['task_file'] = $this->getConfig()->getDir('app_task').ucfirst($values['task_name']).'Task.php';
 
-		$add = OTools::addTask($values['task_name']);
+		$add = OBuild::addTask($values['task_name']);
 
 		if ($add['status']=='exists') {
 			$values['error'] = 2;
@@ -253,7 +254,7 @@ class addTask extends OTask {
 		$values['component_file']          = $values['model_name'].'Component.php';
 		$values['component_template_file'] = $values['model_name'].'Template.php';
 
-		$add = OTools::addModelComponent($values);
+		$add = OBuild::addModelComponent($values);
 		if ($add=='list-folder-exists') {
 			$values['error'] = 3;
 			echo OTools::getPartial($path, $values);
@@ -334,7 +335,7 @@ class addTask extends OTask {
 		$values['component_file'] = $values['path'].$values['component_name'].'Component.php';
 		$values['template_file'] = $values['path'].$values['component_name'].'Template.php';
 
-		$add = OTools::addComponent($values);
+		$add = OBuild::addComponent($values);
 
 		if ($add=='exists') {
 			$values['error'] = 2;
@@ -371,7 +372,7 @@ class addTask extends OTask {
 		$values['filter_name'] = ucfirst($params[1]);
 		$values['filter_file'] = $this->getConfig()->getDir('app_filter').$values['filter_name'].'Filter.php';
 
-		$add = OTools::addFilter($values);
+		$add = OBuild::addFilter($values);
 
 		if ($add=='exists') {
 			$values['error'] = 2;

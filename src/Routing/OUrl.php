@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Routing;
 
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OBuild;
 
 /**
  * OUrl - Class with methods to check required URL, get its data, generate new URLs or redirect the user to a new one
@@ -38,7 +39,7 @@ class OUrl {
 
 		// If it doesn't exist, generate it
 		if (!$urls_cache_file->isHit() || $urls_cache_file->get()===null){
-			OTools::updateUrls(true);
+			OBuild::updateUrls(true);
 			$urls_cache_file->reload();
 		}
 
