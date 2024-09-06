@@ -3,6 +3,7 @@
 namespace Osumi\OsumiFramework\Cache;
 
 use Osumi\OsumiFramework\Core\OConfig;
+use Osumi\OsumiFramework\Tools\OTools;
 
 /**
  * OCacheContainer - Container for all json cache files.
@@ -16,21 +17,9 @@ class OCacheContainer {
 	 */
 	function __construct() {
 		global $core;
-		$this->checkFolder($core->config);
+		OTools::checkOfw('cache');
 		$this->cache_folder = $core->config->getDir('ofw_cache');
 		$this->loadItems();
-	}
-
-	/**
-	 * Checks if log folder exists and creates it otherwise
-	 */
-	private function checkFolder(OConfig $config): void {
-		if (!is_dir($config->getDir('ofw'))) {
-			mkdir($config->getDir('ofw'));
-		}
-		if (!is_dir($config->getDir('ofw_cache'))) {
-			mkdir($config->getDir('ofw_cache'));
-		}
 	}
 
 	/**

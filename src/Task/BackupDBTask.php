@@ -43,6 +43,7 @@ class backupDBTask extends OTask {
 
 		if ($values['hasDB']) {
 			$values['db_name']     = $this->getColors()->getColoredString($this->getConfig()->getDb('name'));
+			OTools::checkOfw('export');
 			$values['dump_file']   = $this->getConfig()->getDir('ofw_export').$this->getConfig()->getDb('name').'.sql';
 			$values['dump_exists'] = file_exists($values['dump_file']);
 

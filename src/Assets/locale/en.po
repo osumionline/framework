@@ -397,6 +397,12 @@ msgstr "Create a new task"
 msgid "TASK_ADD_DEFAULT_MODEL_COMPONENT"
 msgstr "Create a component for a model"
 
+msgid "TASK_ADD_DEFAULT_COMPONENT"
+msgstr "Create a new component"
+
+msgid "TASK_ADD_DEFAULT_FILTER"
+msgstr "Create a new filter"
+
 msgid "TASK_ADD_MODULE_ERROR"
 msgstr "You must indicate the name of the module you want to create, for example:"
 
@@ -498,6 +504,36 @@ msgstr "New file "%s" created."
 
 msgid "TASK_ADD_MODEL_COMPONENT_USE"
 msgstr "New model component "%s" created. Use it with:"
+
+msgid "TASK_ADD_COMPONENT_ERROR"
+msgstr "You must indicate the name of the component you want to create, for example:"
+
+msgid "TASK_ADD_COMPONENT_EXISTS"
+msgstr "Component "%s" already exists."
+
+msgid "TASK_ADD_COMPONENT_NEW_COMPONENT"
+msgstr "New component "%s" created:"
+
+msgid "TASK_ADD_COMPONENT_NEW_FILE"
+msgstr "New file "%s" created."
+
+msgid "TASK_ADD_COMPONENT_TEMPLATE"
+msgstr "Component "%s" works."
+
+msgid "TASK_ADD_FILTER_ERROR"
+msgstr "You must indicate the name of the filter you want to create, for example:"
+
+msgid "TASK_ADD_FILTER_EXISTS"
+msgstr "Filter "%s" already exists."
+
+msgid "TASK_ADD_FILTER_NEW_FILTER"
+msgstr "New filter "%s" created:"
+
+msgid "TASK_ADD_FILTER_NEW_FILE"
+msgstr "New file "%s" created."
+
+msgid "TASK_ADD_FILTER_TEMPLATE"
+msgstr "New "%s" filter."
 
 msgid "OFW_INDICATE_OPTION"
 msgstr "  You have to indicate an option.\n"

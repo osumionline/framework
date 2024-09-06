@@ -373,7 +373,7 @@ class OConfig {
 		$this->setDir('ofw_cache',      $bd.'ofw/cache/');
 		$this->setDir('ofw_export',     $bd.'ofw/export/');
 		$this->setDir('ofw_tmp',        $bd.'ofw/tmp/');
-		$this->setDir('logs',           $bd.'ofw/logs/');
+		$this->setDir('ofw_logs',       $bd.'ofw/logs/');
 		$this->setDir('ofw_base',       $bd.'vendor/osumionline/framework/');
 		$this->setDir('ofw_vendor',     $bd.'vendor/osumionline/framework/src/');
 		$this->setDir('ofw_assets',     $bd.'vendor/osumionline/framework/src/Assets/');

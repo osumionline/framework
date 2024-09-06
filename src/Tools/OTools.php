@@ -115,7 +115,7 @@ class OTools {
 			$component_name = array_pop(explode('/', $component_name));
 		}
 
-		$component_file = $core->config->getDir('app_component').$name.'/'.$component_name.'.php';
+		$component_file = $core->config->getDir('app_component').$name.'/'.$component_name.'Component.php';
 		$output = self::getPartial($component_file, $values);
 
 		if (is_null($output)) {
@@ -441,6 +441,25 @@ class OTools {
 	}
 
 	/**
+	 * Checks if "ofw" dir exists, creates otherwise, and checks if given subdir exists
+	 *
+	 * @param string $name Check of the subfolder to be checked
+	 *
+	 * @return void
+	 */
+	public static function checkOfw(string $name): void {
+		global $core;
+		$ofw_path = $core->config->getDir('ofw');
+		if (!is_dir($ofw_path)) {
+			mkdir($ofw_path);
+		}
+		$check_path = $core->config->getDir('ofw_'.$name);
+		if (!is_dir($check_path)) {
+			mkdir($check_path);
+		}
+	}
+
+	/**
 	 * Generates a SQL file to build the database based on models defined by the user
 	 *
 	 * @return string SQL string to build all the tables in the database (also written to ofw/export/model.sql)
@@ -466,6 +485,7 @@ class OTools {
 
 		$sql .= "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n";
 
+		self::checkOfw('export');
 		$sql_file = $core->config->getDir('ofw_export').'model.sql';
 		if (file_exists($sql_file)) {
 			unlink($sql_file);
@@ -603,17 +623,13 @@ class OTools {
 		}
 		mkdir($module_path);
 		mkdir($module_actions);
-		$str_module = "<"."?php declare(strict_types=1);\n\n";
-		$str_module .= "namespace Osumi\OsumiFramework\App\Module\\".ucfirst($name)."Module;\n\n";
-		$str_module .= "use Osumi\OsumiFramework\Routing\OModule;\n\n";
-		$str_module .= "/**\n";
-		$str_module .= " * New ".$name." module\n";
-		$str_module .= " */\n";
-		$str_module .= "#[OModule(\n";
-		$str_module .= "	type: 'html',\n";
-		$str_module .= "	actions: []\n";
-		$str_module .= ")]\n";
-		$str_module .= "class ".ucfirst($name)."Module {}";
+
+		$template_path = $core->config->getDir('ofw_template').'add/moduleTemplate.php';
+		$str_module = self::getTemplate($template_path, '', [
+			'uc_name' => ucfirst($name),
+			'name' => $name
+		]);
+
 		file_put_contents($module_file, $str_module);
 
 		return ['status' => 'ok', 'name' => $name, 'path' => $module_file];
@@ -657,8 +673,8 @@ class OTools {
 			$status['status'] = 'no-module';
 			return $status;
 		}
-		$module_content = file_get_contents($module_file);
-		if (preg_match("/^\s+actions: \[(.*?)".$action."(.*?)\],?$/", $module_content) == 1) {
+		$str_module = file_get_contents($module_file);
+		if (preg_match("/^\s+actions: \[(.*?)".$action."(.*?)\],?$/", $str_module) == 1) {
 			$status['status'] = 'action-exists';
 			return $status;
 		}
@@ -716,17 +732,17 @@ class OTools {
 		}
 
 		// Add action to module
-		if (stripos($module_content, "actions: []") !== false) {
-			$module_content = preg_replace("/actions: \[\]/i", "actions: ['".ucfirst($action)."']", $module_content);
+		if (stripos($str_module, "actions: []") !== false) {
+			$str_module = preg_replace("/actions: \[\]/i", "actions: ['".ucfirst($action)."']", $str_module);
 		}
 		else {
-			preg_match("/actions: \[(.*?)\]/m", $module_content, $match);
+			preg_match("/actions: \[(.*?)\]/m", $str_module, $match);
 			$actions = explode(',', $match[1]);
 			for ($i = 0; $i < count($actions); $i++) {
 				$actions[$i] = trim($actions[$i]);
 			}
 			array_push($actions, "'".ucfirst($action)."'");
-			$module_content = preg_replace("/actions: \[(.*?)\]/i", "actions: [".implode(', ', $actions)."]", $module_content);
+			$str_module = preg_replace("/actions: \[(.*?)\]/i", "actions: [".implode(', ', $actions)."]", $str_module);
 		}
 
 		// Create action's folder
@@ -734,36 +750,19 @@ class OTools {
 
 		// New action's content
 		$str_template = self::getMessage('TASK_ADD_ACTION_TEMPLATE', [$action]);
+		$template_path = $core->config->getDir('ofw_template').'add/actionTemplate.php';
+		$str_action = self::getTemplate($template_path, '', [
+			'uc_module' => ucfirst($module),
+			'uc_action' => ucfirst($action),
+			'url' => $url,
+			'type' => (!$module_type) ? ",\n	type: '".$type."'" : '',
+			'layout' => (!is_null($layout) && $layout != 'default') ? ",\n	layout: '".$layout."'" : '',
+			'utils' => (!is_null($utils)) ? ",\n	utils: ['".$utils."']" : '',
+			'str_template' => $str_template
+		]);
 
-		$action_content = "<"."?php declare(strict_types=1);\n\n";
-		$action_content .= "namespace Osumi\OsumiFramework\App\Module\\".ucfirst($module)."Module\Actions\\".ucfirst($action).";\n\n";
-		$action_content .= "use Osumi\OsumiFramework\Routing\OModuleAction;\n";
-		$action_content .= "use Osumi\OsumiFramework\Routing\OAction;\n";
-		$action_content .= "use Osumi\OsumiFramework\Web\ORequest;\n\n";
-		$action_content .= "#[OModuleAction(\n";
-		$action_content .= "	url: '".$url."'";
-		if (!$module_type) {
-			$action_content .= ",\n	type: '".$type."'";
-		}
-		if (!is_null($layout) && $layout != 'default') {
-			$action_content .= ",\n	layout: '".$layout."'";
-		}
-		if (!is_null($utils)) {
-			$action_content .= ",\n	utils: ['".$utils."']";
-		}
-		$action_content .= "\n)]\n";
-		$action_content .= "class ".ucfirst($action)."Action extends OAction {\n";
-		$action_content .= "	/**\n";
-		$action_content .= "	 * ".$str_template."\n";
-		$action_content .= "	 *\n";
-		$action_content .= "	 * @param ORequest $"."req Request object with method, headers, parameters and filters used\n";
-		$action_content .= "	 * @return void\n";
-		$action_content .= "	 */\n";
-		$action_content .= "	public function run(ORequest $"."req): void {}\n";
-		$action_content .= "}";
-
-		file_put_contents($module_file,     $module_content);
-		file_put_contents($action_file,     $action_content);
+		file_put_contents($module_file,     $str_module);
+		file_put_contents($action_file,     $str_action);
 		file_put_contents($action_template, $str_template);
 
 		return $status;
@@ -789,14 +788,12 @@ class OTools {
 		if (file_exists($service_file)) {
 			return ['status' => 'exists', 'name' => $name];
 		}
-		$str_service = "<"."?php declare(strict_types=1);\n\n";
-		$str_service .= "namespace Osumi\OsumiFramework\App\Service;\n\n";
-		$str_service .= "use Osumi\OsumiFramework\Core\OService;\n\n";
-		$str_service .= "class ".ucfirst($name)."Service extends OService {\n";
-		$str_service .= "	function __construct() {\n";
-		$str_service .= "		$"."this->loadService();\n";
-		$str_service .= "	}\n";
-		$str_service .= "}";
+
+		$template_path = $core->config->getDir('ofw_template').'add/serviceTemplate.php';
+		$str_service = self::getTemplate($template_path, '', [
+			'uc_name' => ucfirst($name)
+		]);
+
 		file_put_contents($service_file, $str_service);
 
 		return ['status' => 'ok', 'name' => $name];
@@ -829,15 +826,12 @@ class OTools {
 
 		$str_message = str_ireplace('"', '\"', self::getMessage('TASK_ADD_TASK_MESSAGE', [$name]));
 
-		$str_task = "<"."?php declare(strict_types=1);\n\n";
-		$str_task .= "namespace Osumi\OsumiFramework\App\Task;\n\n";
-		$str_task .= "use Osumi\OsumiFramework\Core\OTask;\n\n";
-		$str_task .= "class ".ucfirst($name)."Task extends OTask {\n";
-		$str_task .= "	public function __toString() {\n";
-		$str_task .= "		return \"".$name.": ".$str_message."\";\n";
-		$str_task .= "	}\n\n";
-		$str_task .= "	public function run(array $"."options=[]): void {}\n";
-		$str_task .= "}";
+		$template_path = $core->config->getDir('ofw_template').'add/taskTemplate.php';
+		$str_task = self::getTemplate($template_path, '', [
+			'uc_name' => ucfirst($name),
+			'name' => $name,
+			'str_message' => $str_message
+		]);
 		file_put_contents($task_file, $str_task);
 
 		return ['status' => 'ok', 'name' => $name];
@@ -851,6 +845,8 @@ class OTools {
 	 * @return string Status of the operation
 	 */
 	public static function addModelComponent(array $values): string {
+		global $core;
+
 		if (file_exists($values['list_folder'])) {
 			return 'list-folder-exists';
 		}
@@ -883,20 +879,17 @@ class OTools {
 
 		$component_name = $values['model_name'].'Component';
 
-		$list_component_content = "<"."?php declare(strict_types=1);\n\n";
-		$list_component_content .= "namespace Osumi\OsumiFramework\App\Component\Model\\".$values['list_name'].";\n\n";
-		$list_component_content .= "use Osumi\OsumiFramework\Core\OComponent;\n\n";
-		$list_component_content .= "class ".$values['list_name']." extends OComponent {}";
+		$template_path = $core->config->getDir('ofw_template').'add/modelListComponentTemplate.php';
+		$list_component_content = self::getTemplate($template_path, '', [
+			'model_name' => $values['model_name'],
+			'list_name' => $values['list_name']
+		]);
 
-		$list_template_content = "<"."?php\n";
-		$list_template_content .= "use Osumi\OsumiFramework\App\Component\Model\\".$component_name."\\".$component_name.";\n\n";
-		$list_template_content .= "foreach ($"."values['list'] as $"."i => $".$values['model_name'].") {\n";
-		$list_template_content .= "  $"."component = new ".$values['component_name']."([ '".$values['model_name']."' => $".$values['model_name']." ]);\n";
-		$list_template_content .= "	echo strval($"."component);\n";
-		$list_template_content .= "	if ($"."i<count($"."values['list'])-1) {\n";
-		$list_template_content .= "		echo \",\\n\";\n";
-		$list_template_content .= "	}\n";
-		$list_template_content .= "}\n";
+		$template_path = $core->config->getDir('ofw_template').'add/modelListTemplate.php';
+		$list_template_content = self::getTemplate($template_path, '', [
+			'model_name' => $values['model_name'],
+			'component_name' => $component_name
+		]);
 
 		if (file_put_contents($values['list_folder'].$values['list_file'], $list_component_content)===false) {
 			return 'list-file-cant-create';
@@ -905,56 +898,58 @@ class OTools {
 			return 'list-file-cant-create';
 		}
 
-		$component_content = "<"."?php declare(strict_types=1);\n\n";
-		$component_content .= "namespace Osumi\OsumiFramework\App\Component\Model\\".$component_name.";\n\n";
-		$component_content .= "use Osumi\OsumiFramework\Core\OComponent;\n\n";
-		$component_content .= "class ".$component_name." extends OComponent {}";
+		$template_path = $core->config->getDir('ofw_template').'add/modelComponentTemplate.php';
+		$component_content = self::getTemplate($template_path, '', [
+			'component_name' => $component_name,
+			'model_name' => $values['model_name']
+		]);
 
-		$template_content = "<"."?php if (is_null($"."values['".$values['model_name']."'])): ?>\n";
-		$template_content .= "null\n";
-		$template_content .= "<"."?php else: ?>\n";
-		$template_content .= "{\n";
+		$str_fields = '';
 		foreach ($values['model'] as $field) {
 			$cont++;
-			$template_content .= "	\"".OTools::underscoresToCamelCase($field->getName())."\": ";
+			$str_fields .= "	\"".OTools::underscoresToCamelCase($field->getName())."\": ";
 			if (in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) {
-				$template_content .= "\"";
+				$str_fields .= "\"";
 			}
 
 			if ($field->getType()===OMODEL_BOOL) {
-				$template_content .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ? 'true' : 'false' ?>";
+				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ? 'true' : 'false' ?>";
 			}
 			elseif ($field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$template_content .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
+				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
 			}
 			elseif (!$field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$template_content .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
+				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
 			}
 			elseif ($field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$template_content .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
+				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
 			}
 			elseif (!$field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$template_content .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
+				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
 			}
 			elseif ($field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$template_content .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
+				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
 			}
 			elseif (!$field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$template_content .= "<"."?php echo urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
+				$str_fields .= "<"."?php echo urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
 			}
 
 			if (in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) {
-				$template_content .= "\"";
+				$str_fields .= "\"";
 			}
 
 			if ($cont<count($values['model'])) {
-				$template_content .= ",";
+				$str_fields .= ",";
 			}
 
-			$template_content .= "\n";
+			$str_fields .= "\n";
 		}
-		$template_content .= "}\n";
-		$template_content .= "<"."?php endif ?>";
+
+		$template_path = $core->config->getDir('ofw_template').'add/modelTemplate.php';
+		$template_content = self::getTemplate($template_path, '', [
+			'model_name' => $values['model_name'],
+			'str_fields' => $str_fields
+		]);
 
 		if (file_put_contents($values['component_folder'].$values['component_file'], $component_content)===false) {
 			return 'component-file-cant-create';
@@ -962,6 +957,71 @@ class OTools {
 		if (file_put_contents($values['component_folder'].$values['component_template_file'], $template_content)===false) {
 			return 'component-file-cant-create';
 		}
+
+		return 'ok';
+	}
+
+	/**
+	 * Creates a empty component file
+	 *
+	 * @param array $values Information about the files that have to be created
+	 *
+	 * @return string Status of the operation
+	 */
+	public static function addComponent(array $values): string {
+		global $core;
+
+		// If components folder does not exist I create it before doing anything else
+		if (!is_dir($core->config->getDir('app_component'))) {
+			mkdir($core->config->getDir('app_component'));
+		}
+
+		// Check if component already exists
+		if (file_exists($values['component_file'])) {
+			return 'exists';
+		}
+
+		// Create component's folder recursively
+		mkdir($values['path'], 0777, true);
+
+		$template_path = $core->config->getDir('ofw_template').'add/componentTemplate.php';
+		$str_component = self::getTemplate($template_path, '', [
+			'name' => $values['component_name'],
+			'path' => str_ireplace("/", "\\", $values['folders'])
+		]);
+		file_put_contents($values['component_file'], $str_component);
+
+		file_put_contents($values['template_file'], self::getMessage('TASK_ADD_COMPONENT_TEMPLATE', [$values['component_name']]));
+
+		return 'ok';
+	}
+
+	/**
+	 * Creates a empty filter file
+	 *
+	 * @param array $values Information about the files that have to be created
+	 *
+	 * @return string Status of the operation
+	 */
+	public static function addFilter(array $values): string {
+		global $core;
+
+		// If filters folder does not exist I create it before doing anything else
+		if (!is_dir($core->config->getDir('app_filter'))) {
+			mkdir($core->config->getDir('app_filter'));
+		}
+
+		// Check if component already exists
+		if (file_exists($values['filter_file'])) {
+			return 'exists';
+		}
+
+		$template_path = $core->config->getDir('ofw_template').'add/filterTemplate.php';
+		$str_component = self::getTemplate($template_path, '', [
+			'name' => $values['filter_name'],
+			'description' => self::getMessage('TASK_ADD_FILTER_TEMPLATE', [$values['filter_name']])
+		]);
+		file_put_contents($values['filter_file'], $str_component);
 
 		return 'ok';
 	}

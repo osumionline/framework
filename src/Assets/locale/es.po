@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: 7.2\n"
+"Project-Id-Version: 9.0\n"
 "POT-Creation-Date: 2021-04-06\n"
-"PO-Revision-Date: 2021-04-06\n"
+"PO-Revision-Date: 2024-09-06\n"
 "Last-Translator: igorosabel\n"
 "Language-Team: Osumi\n"
 "Language: es\n"
@@ -397,6 +397,12 @@ msgstr "Crea una nueva tarea"
 msgid "TASK_ADD_DEFAULT_MODEL_COMPONENT"
 msgstr "Crea un componente para un modelo"
 
+msgid "TASK_ADD_DEFAULT_COMPONENT"
+msgstr "Crea un nuevo componente"
+
+msgid "TASK_ADD_DEFAULT_FILTER"
+msgstr "Crea un nuevo filtro"
+
 msgid "TASK_ADD_MODULE_ERROR"
 msgstr "Debes indicar el nombre del módulo que quieres crear, por ejemplo:"
 
@@ -498,6 +504,36 @@ msgstr "Nuevo archivo "%s" creado."
 
 msgid "TASK_ADD_MODEL_COMPONENT_USE"
 msgstr "Nuevo componente de modelo "%s" creado. Se puede usar de la siguiente manera:"
+
+msgid "TASK_ADD_COMPONENT_ERROR"
+msgstr "Debes indicar el nombre del componente que quieres crear, por ejemplo:"
+
+msgid "TASK_ADD_COMPONENT_EXISTS"
+msgstr "El componente "%s" ya existe."
+
+msgid "TASK_ADD_COMPONENT_NEW_COMPONENT"
+msgstr "Nuevo componente "%s" creado:"
+
+msgid "TASK_ADD_COMPONENT_NEW_FILE"
+msgstr "Nuevo archivo "%s" creado."
+
+msgid "TASK_ADD_COMPONENT_TEMPLATE"
+msgstr "El componente "%s" funciona."
+
+msgid "TASK_ADD_FILTER_ERROR"
+msgstr "Debes indicar el nombre del filtro que quieres crear, por ejemplo:"
+
+msgid "TASK_ADD_FILTER_EXISTS"
+msgstr "El filtro "%s" ya existe."
+
+msgid "TASK_ADD_FILTER_NEW_FILTER"
+msgstr "Nuevo filtro "%s" creado:"
+
+msgid "TASK_ADD_FILTER_NEW_FILE"
+msgstr "Nuevo archivo "%s" creado."
+
+msgid "TASK_ADD_FILTER_TEMPLATE"
+msgstr "Nuevo filtro "%s"."
 
 msgid "OFW_INDICATE_OPTION"
 msgstr "  Tienes que indicar una opción.\n"

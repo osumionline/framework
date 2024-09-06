@@ -176,6 +176,7 @@ class resetTask extends OTask {
 				'key' => substr(hash('sha512', strval(time())), 0, 12),
 				'date' => time() + (60 * 15)
 			];
+			OTools::checkOfw('cache');
 			file_put_contents($cache_file, json_encode($data));
 
 			echo "\n  ".OTools::getMessage('TASK_RESET_RESET_KEY_CREATED')."\n\n";

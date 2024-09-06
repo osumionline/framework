@@ -3,6 +3,7 @@
 namespace Osumi\OsumiFramework\Log;
 
 use Osumi\OsumiFramework\Core\OConfig;
+use Osumi\OsumiFramework\Tools\OTools;
 
 /**
  * OLog - Class to log information to a debug log file
@@ -25,8 +26,8 @@ class OLog {
 	 */
 	function __construct(string $class_name=null) {
 		global $core;
-		$this->checkFolder($core->config);
-		$this->log_dir = $core->config->getDir('logs');
+		OTools::checkOfw('logs');
+		$this->log_dir = $core->config->getDir('ofw_logs');
 		$this->log_file_name = $core->config->getLog('name');
 		$this->log_path = $this->log_dir.$this->log_file_name.'.'.$this->log_file_ext;
 		$this->max_file_size = $core->config->getLog('max_file_size');
@@ -34,15 +35,6 @@ class OLog {
 		$this->log_level = array_key_exists($core->config->getLog('level'), $this->levels) ? $core->config->getLog('level') : 'ALL';
 		if (!is_null($class_name)) {
 			$this->class_name = $class_name;
-		}
-	}
-
-	/**
-	 * Checks if log folder exists and creates it otherwise
-	 */
-	private function checkFolder(OConfig $config): void {
-		if (!is_dir($config->getDir('logs'))) {
-			mkdir($config->getDir('logs'));
 		}
 	}
 

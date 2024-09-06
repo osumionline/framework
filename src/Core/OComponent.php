@@ -24,7 +24,7 @@ class OComponent {
 
 		$this->path = implode('/', $data).'/';
 		$this->values = $values;
-		$this->template = $this->path.$name.'ComponentTemplate.php';
+		$this->template = $this->path.$name.'Template.php';
 	}
 
 	/**

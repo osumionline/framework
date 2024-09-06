@@ -61,15 +61,8 @@ class extractorTask extends OTask {
 			$silent = true;
 		}
 		$this->base_dir = $this->getConfig()->getDir('base');
+		OTools::checkOfw('export');
 		$destination    = $this->getConfig()->getDir('ofw_export').'ofw_extractor.php';
-
-		// Check if destination folder exists, otherwise create it
-		if (!file_exists($this->getConfig()->getDir('ofw'))) {
-			mkdir($this->getConfig()->getDir('ofw'));
-		}
-		if (!file_exists($this->getConfig()->getDir('ofw_export'))) {
-			mkdir($this->getConfig()->getDir('ofw_export'));
-		}
 
 		$path   = $this->getConfig()->getDir('ofw_template').'extractor/extractor.php';
 		$values = [

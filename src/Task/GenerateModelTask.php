@@ -32,6 +32,7 @@ class generateModelTask extends OTask {
 		}
 
 		$path     = $this->getConfig()->getDir('ofw_template').'generateModel/generateModel.php';
+		OTools::checkOfw('export');
 		$sql_file = $this->getConfig()->getDir('ofw_export').'model.sql';
 		$params   = [
 			'colors'      => $this->getColors(),

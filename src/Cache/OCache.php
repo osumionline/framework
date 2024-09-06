@@ -21,6 +21,7 @@ class OCache {
 	function __construct(string $key) {
 		global $core;
 		$this->key = $key;
+		OTools::checkOfw('cache');
 		$this->route = $core->config->getDir('ofw_cache').$key.'.cache.json';
 		$this->expires_after = 60 * 60 * 24 * 7; // Default expiration time: one week
 	}
