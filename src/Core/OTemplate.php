@@ -206,46 +206,6 @@ class OTemplate {
 	}
 
 	/**
-	 * Add a parameter to be used in the template (eg {{title}} -> "Osumi")
-	 *
-	 * @param string $key Key value in the template that will get substituted (eg {{title}})
-	 *
-	 * @param string|object $value Value to be substituted
-	 *
-	 * @param string|int $extra Optional information about the value ('nourlencode' in json files, cut strings if too long...)
-	 *
-	 * @return void
-	 */
-	public function add(string $key, $value, $extra=null): void {
-		$temp = ['name' => $key, 'value' => strval($value)];
-		if (is_object($value) && str_starts_with(get_class($value), 'Osumi\OsumiFramework\App\Component')) {
-			if (property_exists($value, 'css')) {
-				foreach ($value->css as $item) {
-					$css_path = $value->getPath().$item.'.css';
-					if (file_exists($css_path)) {
-						$this->addCss($css_path, true);
-					}
-				}
-			}
-			if (property_exists($value, 'js')) {
-				foreach ($value->js as $item) {
-					$js_path = $value->getPath().$item.'.js';
-					if (file_exists($js_path)) {
-						$this->addJs($js_path, true);
-					}
-				}
-			}
-			if (!$value->getUrlEncode()) {
-				$extra = 'nourlencode';
-			}
-		}
-		if (!is_null($extra)) {
-			$temp['extra'] = $extra;
-		}
-		array_push($this->params, $temp);
-	}
-
-	/**
 	 * Adds a single item to the array of CSS files to be included in the template
 	 *
 	 * @param string $item Name of a CSS file to be included
@@ -297,90 +257,6 @@ class OTemplate {
 	 */
 	public function addExtJs(string $item): void {
 		array_push($this->ext_js_list, $item);
-	}
-
-	/**
-	 * Add a php file that can have its own logic into a substitution key on the template
-	 *
-	 * @param string $where Key value in the template that will get substituted (eg {{users}})
-	 *
-	 * @param string $name Name of the component file that will be loaded
-	 *
-	 * @param array $values Array of information that will be loaded into the component
-	 *
-	 * @return void
-	 */
-	public function addComponent(string $where, string $name, array $values=[]): void {
-		$component_name = $name;
-		if (stripos($component_name, '/')!==false) {
-			$component_name = array_pop(explode('/', $component_name));
-		}
-
-		$component_config_file = $this->component_dir.$name.'/config.json';
-		if (file_exists($component_config_file)) {
-			$component_config = json_decode(file_get_contents($component_config_file), true);
-			if (array_key_exists('css', $component_config)) {
-				foreach ($component_config['css'] as $css) {
-					$this->addCss($this->component_dir.$name.'/'.$css.'.css', true);
-				}
-			}
-			if (array_key_exists('js', $component_config)) {
-				foreach ($component_config['js'] as $js) {
-					$this->addJs($this->component_dir.$name.'/'.$js.'.js', true);
-				}
-			}
-		}
-
-		$component_file = $this->component_dir.$name.'/'.$component_name.'.php';
-		$output = OTools::getPartial($component_file, $values);
-
-		if (is_null($output)) {
-			$output = 'ERROR: File '.$name.' not found';
-		}
-		$this->add($where, $output, array_key_exists('extra', $values) ? $values['extra'] : null);
-	}
-
-	/**
-	 * Add a model object's JSON representation into a substitution key on the template
-	 *
-	 * @param string $where Key value in the template that will get substituted (eg {{users}})
-	 *
-	 * @param any $obj Model object
-	 *
-	 * @param array $exclude List of fields to be excluded
-	 *
-	 * @param array $empty List of fields to be returned empty
-	 *
-	 * @return void
-	 */
-	public function addModelComponent(string $where, $obj, array $exclude=[], array $empty=[]): void {
-		$this->add($where, OTools::getModelComponent($obj, $exclude, $empty), 'nourlencode');
-	}
-
-	/**
-	 * Add a list of model object's JSON representations into a substitution key on the template
-	 *
-	 * @param string $where Key value in the template that will get substituted (eg {{users}})
-	 *
-	 * @param array $list Model object list
-	 *
-	 * @param array $exclude List of fields to be excluded
-	 *
-	 * @param array $empty List of fields to be returned empty
-	 *
-	 * @return void
-	 */
-	public function addModelComponentList(string $where, array $list, array $exclude=[], array $empty=[]): void {
-		$result = '[';
-		$result_list = [];
-
-		foreach ($list as $i => $item) {
-			array_push($result_list, OTools::getModelComponent($item, $exclude, $empty));
-		}
-		$result .= implode(',', $result_list);
-		$result .= ']';
-
-		$this->add($where, $result, 'nourlencode');
 	}
 
 	/**

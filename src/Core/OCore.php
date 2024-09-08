@@ -13,6 +13,7 @@ use Osumi\OsumiFramework\Routing\OUrl;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\Log\OLog;
+use Osumi\OsumiFramework\Core\OComponent;
 
 /**
  * OCore - Base class for the framework with methods to load required files and start the application
@@ -211,7 +212,46 @@ class OCore {
 
 						$action->loadAction($url_result, $action_attributes);
 						$action->run($param);
-						echo $action->getTemplate()->process();
+
+						// Get action's vars
+						$vars = get_object_vars($action);
+
+						// Check for components, they might have css or js
+						$filtered = array_filter($vars, function($element) {
+						    return $element instanceof OComponent;
+						});
+						foreach ($filtered as $value) {
+							if (is_object($value) && str_starts_with(get_class($value), 'Osumi\OsumiFramework\App\Component')) {
+								if (property_exists($value, 'css')) {
+									foreach ($value->css as $item) {
+										$css_path = $value->getPath().$item.'.css';
+										if (file_exists($css_path)) {
+											$action->getTemplate()->addCss($css_path, true);
+										}
+									}
+								}
+								if (property_exists($value, 'js')) {
+									foreach ($value->js as $item) {
+										$js_path = $value->getPath().$item.'.js';
+										if (file_exists($js_path)) {
+											$action->getTemplate()->addJs($js_path, true);
+										}
+									}
+								}
+							}
+						}
+
+						// Get template
+						$template = $action->getTemplate()->process();
+
+						// Mix action's variables into the template
+						$end_html = preg_replace_callback('/\{\{(\w+)\}\}/', function ($matches) use ($vars) {
+						    $key = $matches[1];
+						    return isset($vars[$key]) ? strval($vars[$key]) : '';
+						}, $template);
+
+						// Show resulting HTML
+						echo $end_html;
 					}
 					else {
 						OTools::showErrorPage($url_result, 'action');
