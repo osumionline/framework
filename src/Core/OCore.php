@@ -146,11 +146,11 @@ class OCore {
 				$filter_check =  true;
 				$filter_return = null;
 				foreach ($url_result['filters'] as $filter_name => $value) {
-					// Check if the filter's file exist as it is loaded per request
-					$filter_route = $this->config->getDir('app_filter').$filter_name.'Filter.php';
-					if (file_exists($filter_route)) {
+					// Check if the filter exists
+					$filter_class = "\\Osumi\\OsumiFramework\\App\\Filter\\".$filter_name."Filter";
+					if (class_exists($filter_class)) {
 						$value = call_user_func(
-							["\\Osumi\\OsumiFramework\\App\\Filter\\".$filter_name."Filter", 'handle'],
+							[$filter_class, 'handle'],
 							$url_result['params'],
 							$url_result['headers']
 						);
@@ -184,18 +184,14 @@ class OCore {
 				}
 			}
 
-			$module_path = $this->config->getDir('app_module').$url_result['module'].'/'.$url_result['module'].'.php';
-
-			if (file_exists($module_path)) {
-				$module_name = "\\Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\".$url_result['module'];
+			$module_name = "\\Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\".$url_result['module'];
+			if (class_exists($module_name)) {
 				$module = new $module_name;
 				$module_attributes = OBuild::getClassAttributes($module);
 
 				if (in_array($url_result['action'], $module_attributes->getActions())) {
-					$action_path = $this->config->getDir('app_module').$url_result['module'].'/Actions/'.$url_result['action'].'/'.$url_result['action'].'Action.php';
-					if (file_exists($action_path)) {
-						$action_name = "Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\Actions\\".$url_result['action']."\\".$url_result['action']."Action";
-
+					$action_name = "Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\Actions\\".$url_result['action']."\\".$url_result['action']."Action";
+					if (class_exists($action_name)) {
 						$action = new $action_name;
 						$action_attributes = OBuild::getClassAttributes($action);
 						$reflection_param = new ReflectionParameter([$action_name, 'run'], 0);
@@ -221,21 +217,19 @@ class OCore {
 						    return $element instanceof OComponent;
 						});
 						foreach ($filtered as $value) {
-							if (is_object($value) && str_starts_with(get_class($value), 'Osumi\OsumiFramework\App\Component')) {
-								if (property_exists($value, 'css')) {
-									foreach ($value->css as $item) {
-										$css_path = $value->getPath().$item.'.css';
-										if (file_exists($css_path)) {
-											$action->getTemplate()->addCss($css_path, true);
-										}
+							if (property_exists($value, 'css')) {
+								foreach ($value->css as $item) {
+									$css_path = $value->getPath().$item.'.css';
+									if (file_exists($css_path)) {
+										$action->getTemplate()->addCss($css_path, true);
 									}
 								}
-								if (property_exists($value, 'js')) {
-									foreach ($value->js as $item) {
-										$js_path = $value->getPath().$item.'.js';
-										if (file_exists($js_path)) {
-											$action->getTemplate()->addJs($js_path, true);
-										}
+							}
+							if (property_exists($value, 'js')) {
+								foreach ($value->js as $item) {
+									$js_path = $value->getPath().$item.'.js';
+									if (file_exists($js_path)) {
+										$action->getTemplate()->addJs($js_path, true);
 									}
 								}
 							}
