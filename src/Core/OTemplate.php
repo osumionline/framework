@@ -348,11 +348,7 @@ class OTemplate {
 		// If type is not html is most likely it's and API call so tell the browsers not to cache it
 		if ($this->type!=='html') {
 			header('Cache-Control: no-cache, must-revalidate');
-			header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-		}
-		// If the request is a JSON and we are in production environment, encode and decode it to send minified
-		if ($this->environment=='prod' && $this->type=='json') {
-			$layout = json_encode(json_decode($layout));
+			header('Expires: Thu, 02 Jul 1981 03:00:00 GMT');
 		}
 
 		header('Content-type: '.$this->return_types[$this->type]);
