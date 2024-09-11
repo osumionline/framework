@@ -3,7 +3,6 @@
 namespace Osumi\OsumiFramework\Web;
 
 use Osumi\OsumiFramework\Log\OLog;
-use Osumi\OsumiFramework\Core\OConfig;
 
 /**
  * OCookie - Class with methods to create/modify/delete cookies on clients
@@ -11,7 +10,6 @@ use Osumi\OsumiFramework\Core\OConfig;
 class OCookie {
 	private bool     $debug       = false;
 	private ?Olog    $l           = null;
-	private ?OConfig $config      = null;
 	private array    $cookie_list = [];
 
 	/**
@@ -23,7 +21,6 @@ class OCookie {
 		if ($this->debug) {
 			$this->l = new OLog('OCookie');
 		}
-		$this->config = $core->config;
 	}
 
 	/**
@@ -69,8 +66,9 @@ class OCookie {
 	 * @return void
 	 */
 	public function add(string $key, string $value): void {
+		global $core;
 		$this->cookie_list[$key] = $value;
-		setcookie ($this->config->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $this->config->getCookieUrl());
+		setcookie ($core->config->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $core->config->getCookieUrl());
 	}
 
 	/**
@@ -90,10 +88,11 @@ class OCookie {
 	 * @return void
 	 */
 	public function load(): void {
+		global $core;
 		$this->cookie_list = [];
 
-		if (isset($_COOKIE[$this->config->getCookiePrefix()])) {
-			foreach ($_COOKIE[$this->config->getCookiePrefix()] as $key => $value) {
+		if (isset($_COOKIE[$core->config->getCookiePrefix()])) {
+			foreach ($_COOKIE[$core->config->getCookiePrefix()] as $key => $value) {
 				$key = htmlspecialchars($key);
 				$value = htmlspecialchars($value);
 
@@ -111,11 +110,12 @@ class OCookie {
 	 * @return void
 	 */
 	public function save(): void {
+		global $core;
 		$this->log('save - Cookie list:');
 		$this->log(var_export($this->cookie_list, true));
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie ($this->config->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $this->config->getCookieUrl());
+			setcookie ($this->core->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $this->core->getCookieUrl());
 		}
 	}
 
@@ -125,10 +125,11 @@ class OCookie {
 	 * @return void
 	 */
 	public function clean(): void {
+		global $core;
 		$this->log('clean - Cookies removed');
 
 		foreach ($this->cookie_list as $key => $value){
-			setcookie ($this->config->getCookiePrefix().'['.$key.']', $value, 1, '/', $this->config->getCookieUrl());
+			setcookie ($this->core->getCookiePrefix().'['.$key.']', $value, 1, '/', $this->core->getCookieUrl());
 		}
 		$this->cookie_list = [];
 	}

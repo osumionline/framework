@@ -119,11 +119,8 @@
 				}
 			}
 			else{
-	if ($values['mode']=='module') {
-		echo OTools::getMessage('ERROR_NO_MODULE_LABEL', [$values['res']['module']]);
-	}
 	if ($values['mode']=='action') {
-		echo OTools::getMessage('ERROR_NO_ACTION_LABEL', [$values['res']['action'], $values['res']['module']]);
+		echo OTools::getMessage('ERROR_NO_ACTION_LABEL', [$values['res']['action']]);
 	}
 ?>
 		<a href="#" id="show_more_link">

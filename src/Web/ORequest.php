@@ -11,11 +11,11 @@ class ORequest {
 	private array $params = [];
 	private array $filters = [];
 
-	function __construct(array $url_result) {
+	function __construct(array $url_result, array $filter_results) {
 		$this->setMethod($url_result['method']);
 		$this->setHeaders($url_result['headers']);
 		$this->setParams($url_result['params']);
-		$this->setFilters($url_result['filters']);
+		$this->setFilters($filter_results);
 	}
 
 	/**

@@ -9,9 +9,7 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
  * OService - Base class for the service classes
  */
 class OService {
-	protected ?OConfig $config = null;
 	protected ?OLog    $log    = null;
-	protected ?OCacheContainer $cacheContainer = null;
 
 	/**
 	 * Load global configuration and logger to use in the service
@@ -19,11 +17,7 @@ class OService {
 	 * @return void
 	 */
 	public final function loadService(): void {
-		global $core;
-
-		$this->config = $core->config;
-		$this->log    = new OLog(get_class($this));
-		$this->cacheContainer = $core->cacheContainer;
+		$this->log = new OLog(get_class($this));
 	}
 
 	/**
@@ -32,7 +26,8 @@ class OService {
 	 * @return OConfig Configuration class object
 	 */
 	public final function getConfig(): OConfig {
-		return $this->config;
+		global $core;
+		return $core->config;
 	}
 
 	/**
@@ -50,6 +45,7 @@ class OService {
 	 * @return OCacheContainer Cache container class object
 	 */
 	public final function getCacheContainer(): OCacheContainer {
-		return $this->cacheContainer;
+		global $core;
+		return $core->cacheContainer;
 	}
 }

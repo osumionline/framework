@@ -365,7 +365,6 @@ class OConfig {
 		$this->setDir('app_filter',     $bd.'src/Filter/');
 		$this->setDir('app_layout',     $bd.'src/Layout/');
 		$this->setDir('app_model',      $bd.'src/Model/');
-		$this->setDir('app_module',     $bd.'src/Module/');
 		$this->setDir('app_service',    $bd.'src/Service/');
 		$this->setDir('app_task',       $bd.'src/Task/');
 		$this->setDir('app_utils',      $bd.'src/Utils/');

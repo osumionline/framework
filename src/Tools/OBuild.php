@@ -4,8 +4,6 @@ namespace Osumi\OsumiFramework\Tools;
 
 use \ReflectionClass;
 use Osumi\OsumiFramework\Tools\OTools;
-use Osumi\OsumiFramework\Routing\OModule;
-use Osumi\OsumiFramework\Routing\OModuleAction;
 
 /**
  * OBuild - Utility class with tools to build framework components
@@ -72,275 +70,65 @@ class OBuild {
 	}
 
   /**
-	 * Creates or updates cache file of flattened URLs based on user configured module routes. Also calls to generate new modules/actions/templates that are new.
+	 * Creates a new empty action with the given name, URL and type
 	 *
-	 * @param bool $silent If set to true echoes messages about the update process
+	 * @param array $values New actions configuration options
 	 *
-	 * @return ?string Information about the update if silent is false
+	 * @return string Status of the operation
 	 */
-	public static function updateUrls(bool $silent=false): ?string {
-		global $core;
-		$urls = self::getModuleUrls();
-		$urls_cache_file = $core->cacheContainer->getItem('urls');
-		$urls_cache_file->set(json_encode($urls, JSON_UNESCAPED_UNICODE));
-		$urls_cache_file->save();
-
-		return self::updateControllers($silent);
-	}
-
-  /**
-	 * Get the attribute class from a module or an action.
-	 *
-	 * @param $class Class from which information will be taken
-	 *
-	 * @return OModule | OModuleAction Attribute class obtained from the class
-	 */
-	public static function getClassAttributes($class): OModule | OModuleAction {
-		$reflector = new ReflectionClass($class::class);
-		foreach ($reflector->getAttributes() as $attr) {
-			$attributes = $attr->newInstance();
-		}
-		return $attributes;
-	}
-
-  /**
-	 * Get module method's phpDoc information
-	 *
-	 * @param string $inspectclass Module name
-	 *
-	 * @return array List of items with module name, method name and associated phpDoc information
-	 */
-	public static function getDocumentation(string $inspectclass): array {
-		global $core;
-		$module_path = $core->config->getDir('app_module').$inspectclass.'/'.$inspectclass.'.php';
-		$module_name = "Osumi\\OsumiFramework\\App\\Module\\".$inspectclass."\\".$inspectclass;
-		$module = new $module_name;
-		$module_attributes = self::getClassAttributes($module);
-
-		$class_params = [
-			'module'  => $inspectclass,
-			'type'    => !is_null($module_attributes->getType()) ? $module_attributes->getType() : 'html',
-			'prefix'  => !is_null($module_attributes->getPrefix()) ? $module_attributes->getPrefix() : null
-		];
-		$actions = $module_attributes->getActions();
-
-		$arr = [];
-		foreach($actions as $action_name) {
-			$action_path = $core->config->getDir('app_module').$inspectclass.'/Actions/'.$action_name.'/'.$action_name.'Action.php';
-			$action_class_name = "Osumi\\OsumiFramework\\App\\Module\\".$inspectclass."\\Actions\\".$action_name."\\".$action_name."Action";
-			$action = new $action_class_name;
-			$action_attributes = self::getClassAttributes($action);
-
-			$action_params = [
-				'module'  => $class_params['module'],
-				'action'  => $action_name,
-				'type'    => (!is_null($action_attributes->getType())) ? $action_attributes->getType() : $class_params['type'],
-				'prefix'  => $class_params['prefix'],
-				'filters' => $action_attributes->getFilters(),
-				'url'     => $action_attributes->getUrl(),
-				'layout'  => $action_attributes->getLayout(),
-				'utils'   => $action_attributes->getUtils()
-			];
-			array_push($arr, $action_params);
-		}
-		return $arr;
-	}
-
-  /**
-	 * Get information from all the modules and actions to build the url cache file
-	 *
-	 * @return array List of every action with it's information: module, action, type, url, prefix and filter
-	 */
-	public static function getModuleUrls(): array {
-		global $core;
-		$modules = [];
-		if (is_dir($core->config->getDir('app_module'))) {
-			if ($model = opendir($core->config->getDir('app_module'))) {
-				while (false !== ($entry = readdir($model))) {
-					if ($entry != '.' && $entry != '..') {
-						array_push($modules, $entry);
-					}
-				}
-				closedir($model);
-			}
-		}
-
-		$list = [];
-		foreach ($modules as $module) {
-			$actions = self::getDocumentation($module);
-			foreach ($actions as $action) {
-				if (!is_null($action['prefix'])) {
-					$action['url'] = $action['prefix'].$action['url'];
-				}
-				unset($action['prefix']);
-				array_push($list, $action);
-			}
-		}
-		return $list;
-	}
-
-  /**
-	 * Creates a new empty module with the given name
-	 *
-	 * @param string $name Name of the new module
-	 *
-	 * @return array Status of the operation (status, module name and module path)
-	 */
-	public static function addModule(string $name): array {
+	public static function addAction(array $values): string {
 		global $core;
 
-		$module_path    = $core->config->getDir('app_module').ucfirst($name)."Module";
-		$module_actions = $module_path.'/Actions';
-		$module_file    = $module_path.'/'.ucfirst($name).'Module.php';
-
-		if (file_exists($module_path) || file_exists($module_file)) {
-			return ['status' => 'exists', 'name' => $name];
+		if (file_exists($values['action_file'])) {
+			return 'action-exists';
 		}
-		mkdir($module_path);
-		mkdir($module_actions);
-
-		$template_path = $core->config->getDir('ofw_template').'add/moduleTemplate.php';
-		$str_module = OTools::getTemplate($template_path, '', [
-			'uc_name' => ucfirst($name),
-			'name' => $name
-		]);
-
-		file_put_contents($module_file, $str_module);
-
-		return ['status' => 'ok', 'name' => $name, 'path' => $module_file];
-	}
-
-  /**
-	 * Creates a new empty action with the given name, URL and type into the given module
-	 *
-	 * @param string $module Name of the module where the action should go
-	 *
-	 * @param string $action Name of the new action
-	 *
-	 * @param string $url URL of the new action
-	 *
-	 * @param string $type Type of the return the new action will make
-	 *
-	 * @param string $layout Layout of the new action
-	 *
-	 * @param string $utils "utils" folder's classes to be loaded into the method (comma separated values)
-	 *
-	 * @return array Status of the operation (status, module name, action name, action url and action type)
-	 */
-	public static function addAction(string $module, string $action, string $url, string $type=null, string $layout=null, string $utils=null): array {
-		global $core;
-
-		$module_path    = $core->config->getDir('app_module').ucfirst($module).'Module';
-		$module_actions = $module_path.'/Actions';
-		$module_file    = $module_path.'/'.ucfirst($module).'Module.php';
-		$status         = [
-			'status'   => 'ok',
-			'module'   => $module,
-			'action'   => $action,
-			'url'      => $url,
-			'type'     => $type,
-			'layout'   => $layout,
-			'utils'    => $utils,
-			'template' => ''
-		];
-
-		if (!file_exists($module_path) || !file_exists($module_file)) {
-			$status['status'] = 'no-module';
-			return $status;
+		if (file_exists($values['action_folder'])) {
+			return 'action-exists';
 		}
-		$str_module = file_get_contents($module_file);
-		if (preg_match("/^\s+actions: \[(.*?)".$action."(.*?)\],?$/", $str_module) == 1) {
-			$status['status'] = 'action-exists';
-			return $status;
-		}
-
-		$module_type = false;
-		require_once $module_file;
-
-		$module_name = "\\Osumi\\OsumiFramework\\App\\Module\\".ucfirst($module)."Module\\".ucfirst($module)."Module";
-		$module_class = new $module_name;
-		$module_attributes = self::getClassAttributes($module_class);
-
-		$class_params = [
-			'module' => $module,
-			'action' => null,
-			'type'   => $type,
-			'prefix' => null,
-			'filter' => null,
-			'layout' => null,
-			'utils'  => null
-		];
-		if (!is_null($module_attributes->getPrefix())) {
-			if (stripos($url, $module_attributes->getPrefix())!==false) {
-				$url = str_ireplace($module_attributes->getPrefix(), '', $url);
-			}
-		}
-		if (is_null($type) && !is_null($module_attributes->getType())) {
-			$type = $class_params['type'];
-			$module_type = true;
-		}
-		if (is_null($type)) {
-			$type = 'html';
-		}
-		$status['type'] = $type;
-		if (is_null($layout)) {
-			$layout = 'default';
-		}
-		$status['layout'] = $layout;
-		$status['utils']  = $utils;
-
-		$action_folder = $module_actions.'/'.ucfirst($action);
-		if (file_exists($action_folder)) {
-			$status['status'] = 'action-exists';
-			return $status;
-		}
-		$action_file   = $action_folder.'/'.ucfirst($action).'Action.php';
-		if (file_exists($action_file)) {
-			$status['status'] = 'action-exists';
-			return $status;
-		}
-		$action_template  = $action_folder.'/'.ucfirst($action).'Action.'.$type;
-		$status['template'] = $action_template;
-		if (file_exists($action_template)) {
-			$status['status'] = 'template-exists';
-			return $status;
-		}
-
-		// Add action to module
-		if (stripos($str_module, "actions: []") !== false) {
-			$str_module = preg_replace("/actions: \[\]/i", "actions: ['".ucfirst($action)."']", $str_module);
-		}
-		else {
-			preg_match("/actions: \[(.*?)\]/m", $str_module, $match);
-			$actions = explode(',', $match[1]);
-			for ($i = 0; $i < count($actions); $i++) {
-				$actions[$i] = trim($actions[$i]);
-			}
-			array_push($actions, "'".ucfirst($action)."'");
-			$str_module = preg_replace("/actions: \[(.*?)\]/i", "actions: [".implode(', ', $actions)."]", $str_module);
+		if (file_exists($values['action_template'])) {
+			return 'template-exists';
 		}
 
 		// Create action's folder
-		mkdir($action_folder);
+		mkdir($values['action_folder'], 0777, true);
 
 		// New action's content
-		$str_template = OTools::getMessage('TASK_ADD_ACTION_TEMPLATE', [$action]);
+		$str_template = OTools::getMessage('TASK_ADD_ACTION_TEMPLATE', [$values['action_name']]);
 		$template_path = $core->config->getDir('ofw_template').'add/actionTemplate.php';
+		$folders = str_ireplace('/', '\\', $values['folders']);
 		$str_action = OTools::getTemplate($template_path, '', [
-			'uc_module' => ucfirst($module),
-			'uc_action' => ucfirst($action),
-			'url' => $url,
-			'type' => (!$module_type) ? ",\n	type: '".$type."'" : '',
-			'layout' => (!is_null($layout) && $layout != 'default') ? ",\n	layout: '".$layout."'" : '',
-			'utils' => (!is_null($utils)) ? ",\n	utils: ['".$utils."']" : '',
+			'folders' => $folders,
+			'action' => $values['action_name'],
 			'str_template' => $str_template
 		]);
 
-		file_put_contents($module_file,     $str_module);
-		file_put_contents($action_file,     $str_action);
-		file_put_contents($action_template, $str_template);
+		file_put_contents($values['action_file'],     $str_action);
+		file_put_contents($values['action_template'], $str_template);
 
-		return $status;
+		// Update URLs file
+		$urls_path = $core->config->getDir('app_config').'Urls.php';
+		if (!file_exists($urls_path)) {
+			$template_path = $core->config->getDir('ofw_template').'add/urlsTemplate.php';
+			$str_urls = file_get_contents($template_path);
+		}
+		else {
+			$str_urls = file_get_contents($urls_path);
+		}
+
+		$new_url = "\n\t[\n";
+	  $new_url .= "\t\t'url' => '".$values['action_url']."',\n";
+	  $new_url .= "\t\t'action' => ".$values['action_name']."Action::class,\n";
+	  $new_url .= "\t\t'type' => '".$values['action_type']."'\n";
+	  $new_url .= "\t],\n";
+
+		$str_urls = str_ireplace('$urls = [', '$urls = ['.$new_url, $str_urls);
+
+		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Action;\n\n";
+		$str_urls = str_ireplace('$urls = [', $use_url.'$urls = [', $str_urls);
+
+		file_put_contents($urls_path, $str_urls);
+
+		return 'ok';
 	}
 
   /**
@@ -599,90 +387,5 @@ class OBuild {
 		file_put_contents($values['filter_file'], $str_component);
 
 		return 'ok';
-	}
-
-  /**
-	 * Update the controllers based on cached-flattened urls.json file. Creates the modules/controllers/templates that are configured but are not found.
-	 *
-	 * @param bool $silent If true doesn't give an output and performs the actions silently
-	 *
-	 * @return ?string Result of performed actions or null if $silent parameter is true
-	 */
-	public static function updateControllers(bool $silent=false): ?string {
-		global $core;
-		$ret = null;
-		$urls_cache_file = $core->cacheContainer->getItem('urls');
-		$urls   = json_decode($urls_cache_file->get(), true);
-		$errors = false;
-		$all_updated = true;
-
-		if (!$silent) {
-			$colors = new OColors();
-			$ret = "";
-		}
-
-		$reserved_modules = ['private', 'protected', 'public'];
-		foreach ($urls as $url) {
-			if (in_array($url['module'], $reserved_modules)) {
-				if (!$silent) {
-					$ret .= $colors->getColoredString('ERROR', 'white', 'red').": ".OTools::getMessage('TASK_UPDATE_URLS_RESERVED')."\n";
-					foreach ($reserved_modules as $module) {
-						$ret .= "  · ".$module."\n";
-					}
-					$errors = true;
-				}
-				continue;
-			}
-
-			if ($url['action']==$url['module']) {
-				if (!$silent) {
-					$ret .= $colors->getColoredString('ERROR', 'white', 'red').": ".OTools::getMessage('TASK_UPDATE_URLS_ACTION_MODULE')."\n";
-					$ret .= "  ".self::getMessage('TASK_UPDATE_URLS_MODULE').": ".$url['module']."\n";
-					$ret .= "  ".self::getMessage('TASK_UPDATE_URLS_ACTION').": ".$url['action']."\n";
-					$errors = true;
-				}
-				continue;
-			}
-
-			$module_name = lcfirst(preg_replace('/Module$/', '', $url['module']));
-			$module_result = self::addModule($module_name);
-
-			if ($module_result['status'] == 'ok') {
-				$all_updated = false;
-				if (!$silent) {
-					$ret .= "    ".OTools::getMessage('TASK_UPDATE_URLS_NEW_MODULE', [
-						$colors->getColoredString($url['module'], 'light_green'),
-						$colors->getColoredString($module_result['path'], 'light_green')
-					])."\n";
-				}
-
-			}
-
-			$action_result = self::addAction($url['module'], $url['action'], $url['url'], $url['type'], $url['layout']);
-			if ($action_result['status'] == 'ok') {
-				$all_updated = false;
-				if (!$silent) {
-					$ret .= "    ".OTools::getMessage('TASK_UPDATE_URLS_NEW_ACTION', [
-						$colors->getColoredString($url['action'], 'light_green'),
-						$colors->getColoredString($url['module'], 'light_green')
-					])."\n";
-					$ret .= "    ".OTools::getMessage('TASK_UPDATE_URLS_NEW_TEMPLATE', [
-							$colors->getColoredString($action_result['template'], 'light_green')
-						])."\n";
-				}
-			}
-		}
-
-		if ($errors && !$silent) {
-			$ret .= "\n";
-			$ret .= $colors->getColoredString('----------------------------------------------------------------------------------------------------------------------', 'white', 'red')."\n";
-			$ret .= $colors->getColoredString(OTools::getMessage('TASK_UPDATE_URLS_ERROR'), 'white', 'red')."\n";
-			$ret .= $colors->getColoredString('----------------------------------------------------------------------------------------------------------------------', 'white', 'red')."\n";
-		}
-		if (!$silent && $all_updated) {
-			$ret .= "\n  ".OTools::getMessage('TASK_UPDATE_URLS_ALL_UPDATED');
-		}
-
-		return $ret;
 	}
 }

@@ -8,8 +8,6 @@
   <?php echo OTools::getMessage('TASK_ADD_DEFAULT_AVAILABLE_OPTIONS') ?>
 
 
-  · <?php echo $values['colors']->getColoredString('module', 'light_green') ?>: <?php echo OTools::getMessage('TASK_ADD_DEFAULT_MODULE') ?>
-
   · <?php echo $values['colors']->getColoredString('action', 'light_green') ?>: <?php echo OTools::getMessage('TASK_ADD_DEFAULT_ACTION') ?>
 
   · <?php echo $values['colors']->getColoredString('service', 'light_green') ?>: <?php echo OTools::getMessage('TASK_ADD_DEFAULT_SERVICE') ?>

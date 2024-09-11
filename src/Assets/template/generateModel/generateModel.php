@@ -1,6 +1,5 @@
 <?php use Osumi\OsumiFramework\Tools\OTools; ?>
 
-
   <?php echo $values['colors']->getColoredString('Osumi Framework', 'white', 'blue') ?>
 
 
@@ -16,4 +15,4 @@
 	  	$values['colors']->getColoredString($values['file'], 'light_green')
 	  ]) ?>
 
-
+ 

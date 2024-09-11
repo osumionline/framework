@@ -76,7 +76,7 @@ class ORouteCheck {
 
 		if (isset($matches['_star'])) {
 			$parameters = $this->parseStarParameter($matches['_star']);
-			unset($matches['_star'], $parameters['module'], $parameters['action']);
+			unset($matches['_star'], $parameters['action']);
 		}
 
 		// Defaults

@@ -2,6 +2,7 @@
 
 namespace Osumi\OsumiFramework\Core;
 
+use \ReflectionClass;
 use Osumi\OsumiFramework\Log\Olog;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Plugins\Translate\OTranslate;
@@ -15,10 +16,8 @@ class OTemplate {
 	private ?OLog       $l             = null;
 	private string      $component_dir = '';
 	private string      $layout_dir    = '';
-	private string      $modules_dir   = '';
 	private ?string     $template      = null;
-	private string      $action        = '';
-	private string      $module        = '';
+	private ?string     $template_path = null;
 	private string      $type          = 'html';
 	private string      $layout        = '';
 	private array       $params        = [];
@@ -48,7 +47,6 @@ class OTemplate {
 
 		$this->component_dir = $core->config->getDir('app_component');
 		$this->layout_dir = $core->config->getDir('app_layout');
-		$this->modules_dir = $core->config->getDir('app_module');
 		$this->title = $core->config->getDefaultTitle();
 	}
 
@@ -63,28 +61,6 @@ class OTemplate {
 		if ($this->debug) {
 			$this->l->debug($str);
 		}
-	}
-
-	/**
-	 * Set the module that is being executed
-	 *
-	 * @param string $m Name of the module
-	 *
-	 * @return void
-	 */
-	public function setModule(string $m): void {
-		$this->module = $m;
-	}
-
-	/**
-	 * Set the action of the module to get its template
-	 *
-	 * @param string $a Name of the action
-	 *
-	 * @return void
-	 */
-	public function setAction(string $a): void {
-		$this->action = $a;
 	}
 
 	/**
@@ -129,6 +105,17 @@ class OTemplate {
 		else {
 			$this->setLayout("");
 		}
+	}
+
+	/**
+	 * Sets path of the templates dir
+	 *
+	 * @param string $template_path Base dir of the templates file
+	 *
+	 * @return void
+	 */
+	public function setTemplatePath(string $template_path): void {
+		$this->template_path = $template_path;
 	}
 
 	/**
@@ -260,14 +247,15 @@ class OTemplate {
 	}
 
 	/**
-	 * Loads all the information (css, js, given parameters, translations) into the module/actions template
+	 * Loads all the information (css, js, given parameters, translations) into the actions template
 	 *
 	 * @return string Returns the processed template with all the information
 	 */
 	public function process(): string {
 		global $core;
 		$this->log('process - Type: '.$this->type);
-		$this->template = file_get_contents($this->modules_dir.$this->module.'/Actions/'.$this->action.'/'.$this->action.'Action.'.$this->type);
+
+		$this->template = file_get_contents($this->template_path);
 		foreach ($core->config->getCssList() as $css) {
 			$this->addCss($css);
 		}

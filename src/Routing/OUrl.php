@@ -25,29 +25,7 @@ class OUrl {
 		global $core;
 		$this->config = $core->config;
 		$this->method = $method;
-		$this->urls   = $this->loadUrls();
-	}
-
-	/**
-	 * Loads URLS from the flattened-cached file. If it doesn't exist it generates it.
-	 *
-	 * @return array Array of configured URLs
-	 */
-	public static function loadUrls(): array {
-		global $core;
-		$urls_cache_file = $core->cacheContainer->getItem('urls');
-
-		// If it doesn't exist, generate it
-		if (!$urls_cache_file->isHit() || $urls_cache_file->get()===null){
-			OBuild::updateUrls(true);
-			$urls_cache_file->reload();
-		}
-
-		// App urls
-		if (is_null($core->config->getUrlList())) {
-			$core->config->setUrlList(json_decode($urls_cache_file->get(), true));
-		}
-		return $core->config->getUrlList();
+		$this->urls   = $core->urls;
 	}
 
 	/**
@@ -107,38 +85,54 @@ class OUrl {
 		$found = false;
 		$i     = 0;
 		$ret   = [
-			'module'  => '',
-			'action'  => '',
-			'type'    => 'html',
-			'params'  => [],
-			'headers' => getallheaders(),
-			'method'  => strtolower($this->method),
-			'layout'  => 'default',
-			'filters' => [],
-			'res'     => false
+			'action'     => null,
+			'services'   => [],
+			'filters'    => [],
+			'layout'     => 'Default',
+			'type'       => 'html',
+			'inline_css' => [],
+			'css'        => [],
+			'inline_js'  => [],
+			'js'         => [],
+			'params'     => [],
+			'headers'    => getallheaders(),
+			'method'     => strtolower($this->method),
+			'res'        => false
 		];
 
-		while (!$found && $i<count($this->urls)) {
+		while (!$found && $i < count($this->urls)) {
 			$route = new ORouteCheck($this->urls[$i]['url']);
 			$chk = $route->matchesUrl($this->check_url);
 
-			// If there is a match, return urls.json values plus the parameters in the route
+			// If there is a match, return Urls.php values plus the parameters in the route and the headers
 			if (!is_null($chk)) {
 				$found         = true;
-				$ret['module'] = $this->urls[$i]['module'];
 				$ret['action'] = $this->urls[$i]['action'];
 				$ret['res']    = true;
 
-				if (array_key_exists('type', $this->urls[$i])) {
-					$ret['type'] = $this->urls[$i]['type'];
+				if (array_key_exists('services', $this->urls[$i])) {
+					$ret['services'] = $this->urls[$i]['services'];
+				}
+				if (array_key_exists('filters', $this->urls[$i])) {
+					$ret['filters'] = $this->urls[$i]['filters'];
 				}
 				if (array_key_exists('layout', $this->urls[$i])) {
 					$ret['layout'] = $this->urls[$i]['layout'];
 				}
-				if (array_key_exists('filters', $this->urls[$i])) {
-					foreach ($this->urls[$i]['filters'] as $filter_name) {
-						$ret['filters'][$filter_name] = [];
-					}
+				if (array_key_exists('type', $this->urls[$i])) {
+					$ret['type'] = $this->urls[$i]['type'];
+				}
+				if (array_key_exists('inline_css', $this->urls[$i])) {
+					$ret['inline_css'] = $this->urls[$i]['inline_css'];
+				}
+				if (array_key_exists('css', $this->urls[$i])) {
+					$ret['css'] = $this->urls[$i]['css'];
+				}
+				if (array_key_exists('inline_js', $this->urls[$i])) {
+					$ret['inline_js'] = $this->urls[$i]['inline_js'];
+				}
+				if (array_key_exists('js', $this->urls[$i])) {
+					$ret['js'] = $this->urls[$i]['js'];
 				}
 
 				$ret['params'] = $chk;
@@ -156,8 +150,6 @@ class OUrl {
 	/**
 	 * Static method to generate a URL for a user configured URL
 	 *
-	 * @param string $module Module of the action
-	 *
 	 * @param string $action Action whose url has to be generated
 	 *
 	 * @param array $params Array of parameters to build the URL in case of a dynamic URL (eg /user/:id/:slug -> /user/1/igorosabel)
@@ -166,18 +158,17 @@ class OUrl {
 	 *
 	 * @return string Generated URL with given parameters
 	 */
-	public static function generateUrl(string $module, string $action, array $params=[], bool $absolute=false): string {
+	public static function generateUrl(string $action, array $params=[], bool $absolute=false): string {
 		// Load URLs, as it's a static method it won't go through the constructor
 		global $core;
-		$urls = self::loadUrls();
 
 		$found = false;
 		$i   = 0;
 		$url = '';
 
-		while (!$found && $i<count($urls)) {
-			if ($urls[$i]['module']==$module && $urls[$i]['action']==$action) {
-				$url = $urls[$i]['url'];
+		while (!$found && $i < count($core->urls)) {
+			if ($core->urls[$i]['action'] == get_class($action)) {
+				$url = $core->urls[$i]['url'];
 				$found = true;
 			}
 			$i++;
@@ -209,5 +200,25 @@ class OUrl {
 	public static function goToUrl(string $url): void {
 		header('Location:'.$url);
 		exit;
+	}
+
+	/**
+	 * Static method to combine groups of URLs
+	 *
+	 * @param array $original_array First group of URLs to combine
+	 *
+	 * @param array $second_array Group of URLs to be combined into the original one
+	 *
+	 * @param string $prefix Prefix to be added to the second group of URLs
+	 *
+	 * @return void
+	 */
+	public static function addUrls(array &$original_array, array $second_array, string $prefix = ''): void {
+    foreach ($second_array as $entry) {
+        if ($prefix !== '') {
+            $entry['url'] = $prefix . $entry['url'];
+        }
+        array_push($original_array, $entry);
+    }
 	}
 }

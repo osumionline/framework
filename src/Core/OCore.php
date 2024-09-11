@@ -25,6 +25,7 @@ class OCore {
 	public ?OSession        $session = null;
 	public ?OTranslate      $translate = null;
 	public ?float           $start_time = null;
+	public array            $urls = [];
 
 	/**
 	 * Get the start time in milliseconds to use in benchmarks
@@ -110,6 +111,12 @@ class OCore {
 
 		// Set up an empty cache container
 		$this->cacheContainer = new OCacheContainer();
+
+		// Load URLs file
+		$urls_path = $this->config->getDir('app_config').'Urls.php';
+		if (file_exists($urls_path)) {
+			$this->urls = require_once($urls_path);
+		}
 	}
 
 	/**
@@ -142,34 +149,30 @@ class OCore {
 			}
 
 			// If there is a filter defined, apply it before the controller
+			$filter_results = [];
 			if (array_key_exists('filters', $url_result) && count($url_result['filters']) > 0) {
 				$filter_check =  true;
 				$filter_return = null;
-				foreach ($url_result['filters'] as $filter_name => $value) {
-					// Check if the filter exists
-					$filter_class = "\\Osumi\\OsumiFramework\\App\\Filter\\".$filter_name."Filter";
-					if (class_exists($filter_class)) {
-						$value = call_user_func(
-							[$filter_class, 'handle'],
-							$url_result['params'],
-							$url_result['headers']
-						);
+				foreach ($url_result['filters'] as $filter) {
+					$filter_instance = new $filter();
+					$value = $filter_instance->handle(
+						$url_result['params'],
+						$url_result['headers']
+					);
+					$reflection = new ReflectionClass($filter_instance);
+  				$class_name = str_ireplace('Filter', '', $reflection->getShortName());
 
-						// If status is not 'ok', filter checks have failed
-						if ($value['status'] !== 'ok') {
-							$filter_check = false;
-							if (is_null($filter_return) && array_key_exists('return', $value)) {
-								$filter_return = $value['return'];
-							}
-							break;
+					// If status is not 'ok', filter checks have failed
+					if ($value['status'] !== 'ok') {
+						$filter_check = false;
+						if (is_null($filter_return) && array_key_exists('return', $value)) {
+							$filter_return = $value['return'];
 						}
+						break;
+					}
 
-						// Store the result value
-						$url_result['filters'][$filter_name] = $value;
-					}
-					else {
-						OTools::showErrorPage($url_result, '403');
-					}
+					// Store the result value
+					$filter_results[$class_name] = $value;
 				}
 
 				// If filter checks didn't pass
@@ -184,80 +187,59 @@ class OCore {
 				}
 			}
 
-			$module_name = "\\Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\".$url_result['module'];
-			if (class_exists($module_name)) {
-				$module = new $module_name;
-				$module_attributes = OBuild::getClassAttributes($module);
+			$action_instance = new $url_result['action']();
+			$reflection_param = new ReflectionParameter([$action_instance, 'run'], 0);
+			$reflection_param_type = $reflection_param->getType()->getName();
 
-				if (in_array($url_result['action'], $module_attributes->getActions())) {
-					$action_name = "Osumi\\OsumiFramework\\App\\Module\\".$url_result['module']."\\Actions\\".$url_result['action']."\\".$url_result['action']."Action";
-					if (class_exists($action_name)) {
-						$action = new $action_name;
-						$action_attributes = OBuild::getClassAttributes($action);
-						$reflection_param = new ReflectionParameter([$action_name, 'run'], 0);
-						$reflection_param_type = $reflection_param->getType()->getName();
-
-						$req = new ORequest($url_result);
-						if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
-							$param = new $reflection_param_type;
-							$param->load($req);
-						}
-						else {
-							$param = $req;
-						}
-
-						$action->loadAction($url_result, $action_attributes);
-						$action->run($param);
-
-						// Get action's vars
-						$vars = get_object_vars($action);
-
-						// Check for components, they might have css or js
-						$filtered = array_filter($vars, function($element) {
-						    return $element instanceof OComponent;
-						});
-						foreach ($filtered as $value) {
-							if (property_exists($value, 'css')) {
-								foreach ($value->css as $item) {
-									$css_path = $value->getPath().$item.'.css';
-									if (file_exists($css_path)) {
-										$action->getTemplate()->addCss($css_path, true);
-									}
-								}
-							}
-							if (property_exists($value, 'js')) {
-								foreach ($value->js as $item) {
-									$js_path = $value->getPath().$item.'.js';
-									if (file_exists($js_path)) {
-										$action->getTemplate()->addJs($js_path, true);
-									}
-								}
-							}
-						}
-
-						// Get template
-						$template = $action->getTemplate()->process();
-
-						// Mix action's variables into the template
-						$end_html = preg_replace_callback('/\{\{(\w+)\}\}/', function ($matches) use ($vars) {
-						    $key = $matches[1];
-						    return isset($vars[$key]) ? strval($vars[$key]) : '';
-						}, $template);
-
-						// Show resulting HTML
-						echo $end_html;
-					}
-					else {
-						OTools::showErrorPage($url_result, 'action');
-					}
-				}
-				else {
-					OTools::showErrorPage($url_result, 'action');
-				}
+			$req = new ORequest($url_result, $filter_results);
+			if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
+				$param = new $reflection_param_type();
+				$param->load($req);
 			}
 			else {
-				OTools::showErrorPage($url_result, 'module');
+				$param = $req;
 			}
+
+			$action_instance->loadAction($url_result);
+			$action_instance->run($param);
+
+			// Get action's vars
+			$vars = get_object_vars($action_instance);
+
+			// Check for components, they might have css or js
+			$filtered = array_filter($vars, function($element) {
+			    return $element instanceof OComponent;
+			});
+			foreach ($filtered as $value) {
+				if (property_exists($value, 'css')) {
+					foreach ($value->css as $item) {
+						$css_path = $value->getPath().$item.'.css';
+						if (file_exists($css_path)) {
+							$action_instance->getTemplate()->addCss($css_path, true);
+						}
+					}
+				}
+				if (property_exists($value, 'js')) {
+					foreach ($value->js as $item) {
+						$js_path = $value->getPath().$item.'.js';
+						if (file_exists($js_path)) {
+							$action_instance->getTemplate()->addJs($js_path, true);
+						}
+					}
+				}
+			}
+
+			// Get template
+			$template = $action_instance->getTemplate()->process();
+
+			// Mix action's variables into the template
+			$end_html = preg_replace_callback('/\{\{(\w+)\}\}/', function ($matches) use ($vars) {
+			    $key = $matches[1];
+			    return isset($vars[$key]) ? strval($vars[$key]) : '';
+			}, $template);
+
+			// Show resulting HTML
+			echo $end_html;
 		}
 		else {
 			OTools::showErrorPage($url_result, '404');

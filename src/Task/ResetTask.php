@@ -77,7 +77,6 @@ class resetTask extends OTask {
 			'app_filter',
 			'app_layout',
 			'app_model',
-			'app_module',
 			'app_service',
 			'app_task',
 			'app_utils',

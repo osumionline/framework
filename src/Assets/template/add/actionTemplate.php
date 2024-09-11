@@ -1,15 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace Osumi\OsumiFramework\App\Module\{{uc_module}}Module\Actions\{{uc_action}};
+namespace Osumi\OsumiFramework\App\{{folders}};
 
-use Osumi\OsumiFramework\Routing\OModuleAction;
 use Osumi\OsumiFramework\Routing\OAction;
 use Osumi\OsumiFramework\Web\ORequest;
 
-#[OModuleAction(
-	url: '{{url}}'{{type}}{{layout}}{{utils}}
-)]
-class {{uc_action}}Action extends OAction {
+class {{action}}Action extends OAction {
 	/**
    * {{str_template}}
 	 *

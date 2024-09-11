@@ -239,12 +239,13 @@ class OTools {
 	 *
 	 * @param array $res Array containing information about the error
 	 *
-	 * @param string $mode Error mode (403 / 404 / 500 / module / action)
+	 * @param string $mode Error mode (403 / 404 / 500 / action)
 	 *
 	 * @return void
 	 */
 	public static function showErrorPage(array $res, string $mode): void {
 		global $core;
+
 		if (!is_null($core->config->getErrorPage($mode))) {
 			header('Location:'.$core->config->getErrorPage($mode));
 			exit;
