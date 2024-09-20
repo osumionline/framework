@@ -118,12 +118,7 @@ $values['colors']->getColoredString($values['model_name'], 'light_green')
 
       <?php echo $values['colors']->getColoredString('$'.'list_component = new '.$values['list_name']."(['list' => $"."list]);", 'light_green') ?>
 
-      <?php echo $values['colors']->getColoredString('$'.'this->getTemplate()->add(\'list\', $'.'list_component);', 'light_green') ?>
-
-
       <?php echo $values['colors']->getColoredString('$'.'component = new '.$values['component_name']."(['".$values['model_name']."' => $".$values['model_name']."]);", 'light_green') ?>
-
-      <?php echo $values['colors']->getColoredString('$'.'this->getTemplate()->add(\''.$values['model_name'].'\', $'.'component);', 'light_green') ?>
 
 
 <?php endif ?>

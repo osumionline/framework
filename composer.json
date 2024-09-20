@@ -1,7 +1,7 @@
 {
   "name": "osumionline/framework",
   "description": "Framework PHP de Osumi para aplicaciones web.",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "type": "library",
   "keywords": ["framework", "php", "web", "osumi"],
   "homepage": "https://github.com/osumionline/framework",
@@ -21,5 +21,8 @@
     "psr-4": {
       "Osumi\\OsumiFramework\\": "src/"
     }
+  },
+  "extra": {
+    "version-description": "Correcciones en add modelComponent y OUrl generateUrl"
   }
 }

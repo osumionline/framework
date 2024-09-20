@@ -167,7 +167,10 @@ class OUrl {
 		$url = '';
 
 		while (!$found && $i < count($core->urls)) {
-			if ($core->urls[$i]['action'] == get_class($action)) {
+			$check_action = $core->urls[$i]['action'];
+			$check_action_parts = explode('\\', $check_action);
+			$check_last_part = array_pop($check_action_parts);
+			if ($check_last_part == $action) {
 				$url = $core->urls[$i]['url'];
 				$found = true;
 			}
