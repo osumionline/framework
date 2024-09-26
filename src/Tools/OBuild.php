@@ -271,7 +271,7 @@ class OBuild {
 		foreach ($values['model'] as $field) {
 			$cont++;
 			$str_fields .= "	\"".OTools::underscoresToCamelCase($field->getName())."\": ";
-			if (in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) {
+			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
 				$str_fields .= "\"";
 			}
 
@@ -291,13 +291,13 @@ class OBuild {
 				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
 			}
 			elseif ($field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
+				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : '\"'.urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')).'\"' ?>";
 			}
 			elseif (!$field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
 				$str_fields .= "<"."?php echo urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
 			}
 
-			if (in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) {
+			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
 				$str_fields .= "\"";
 			}
 
