@@ -214,12 +214,17 @@ class OUrl {
 	 *
 	 * @param string $prefix Prefix to be added to the second group of URLs
 	 *
+	 * @param string $type Type of the whole group of URLs
+	 *
 	 * @return void
 	 */
-	public static function addUrls(array &$original_array, array $second_array, string $prefix = ''): void {
+	public static function addUrls(array &$original_array, array $second_array, string $prefix = '', string $type = ''): void {
     foreach ($second_array as $entry) {
         if ($prefix !== '') {
             $entry['url'] = $prefix . $entry['url'];
+        }
+				if ($type !== '') {
+            $entry['type'] = $type;
         }
         array_push($original_array, $entry);
     }
