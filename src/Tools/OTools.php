@@ -259,14 +259,14 @@ class OTools {
 			'res'     => $res
 		];
 
-		if ($params['title']=='') {
+		if ($params['title'] === '') {
 			$params['title'] = 'Osumi Framework';
 		}
 		$path = $core->config->getDir('ofw_template').'error.php';
 
-		if ($mode=='403') { header($_SERVER['SERVER_PROTOCOL'].' 403 Forbidden'); }
-		if ($mode=='404') { header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found'); }
-		if ($mode=='500') { header($_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error'); }
+		if ($mode === '403') { header($_SERVER['SERVER_PROTOCOL'].' 403 Forbidden'); }
+		if ($mode === '404') { header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found'); }
+		if ($mode === '500') { header($_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error'); }
 
 		echo self::getPartial($path, $params);
 		exit;
@@ -312,19 +312,19 @@ class OTools {
 	 */
 	public static function curlRequest(string $method, string $url, array $data): string|false {
 		$ch = curl_init();
-		if ($method=='get') {
+		if ($method === 'get') {
 			$url .= '?';
 			$params = [];
 			foreach ($data as $key => $value) {
-				array_push($params, $key.'='.$value);
+				$params[] = $key . '=' . $value;
 			}
 			$url .= implode('&', $params);
 		}
-		if ($method=='post') {
+		if ($method === 'post') {
 			curl_setopt($ch, CURLOPT_POST, 1);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		}
-		if ($method=='delete') {
+		if ($method === 'delete') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		}

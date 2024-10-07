@@ -128,7 +128,7 @@ class OTemplate {
 	public function setCssList(array $cl): void {
 		$list = [];
 		foreach ($cl as $item) {
-			array_push($list, ['file' => $item, 'inline' => false]);
+			$list[] = ['file' => $item, 'inline' => false];
 		}
 		$this->css_list = $list;
 	}
@@ -154,7 +154,7 @@ class OTemplate {
 	public function setJsList(array $jl): void {
 		$list = [];
 		foreach ($jl as $item) {
-			array_push($list, ['file' => $item, 'inline' => false]);
+			$list[] = ['file' => $item, 'inline' => false];
 		}
 		$this->js_list = $list;
 	}
@@ -203,8 +203,8 @@ class OTemplate {
 	 */
 	public function addCss(string $item, bool $inline=false): void {
 		$key = array_search($item, array_column($this->css_list, 'file'));
-		if ($key===false) {
-			array_push($this->css_list, ['file' => $item, 'inline' => $inline]);
+		if ($key === false) {
+			$this->css_list[] = ['file' => $item, 'inline' => $inline];
 		}
 	}
 
@@ -216,7 +216,7 @@ class OTemplate {
 	 * @return void
 	 */
 	public function addExtCss(string $item): void {
-		array_push($this->ext_css_list, $item);
+		$this->ext_css_list[] = $item;
 	}
 
 	/**
@@ -230,8 +230,8 @@ class OTemplate {
 	 */
 	public function addJs(string $item, bool $inline=false): void {
 		$key = array_search($item, array_column($this->js_list, 'file'));
-		if ($key===false) {
-			array_push($this->js_list,  ['file' => $item, 'inline' => $inline]);
+		if ($key === false) {
+			$this->js_list[] =  ['file' => $item, 'inline' => $inline];
 		}
 	}
 
@@ -243,7 +243,7 @@ class OTemplate {
 	 * @return void
 	 */
 	public function addExtJs(string $item): void {
-		array_push($this->ext_js_list, $item);
+		$this->ext_js_list[] = $item;
 	}
 
 	/**

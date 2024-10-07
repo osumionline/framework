@@ -26,12 +26,12 @@ class OModelGroup {
 			switch ($item->getType()) {
 				case OMODEL_PK: {
 					$field = new OModelFieldNum($item);
-					array_push($this->pk, $field->getName());
+					$this->pk[] = $field->getName();
 				}
 				break;
 				case OMODEL_PK_STR: {
 					$field = new OModelFieldText($item);
-					array_push($this->pk, $field->getName());
+					$this->pk[] = $field->getName();
 				}
 				break;
 				case OMODEL_CREATED: {
@@ -100,7 +100,7 @@ class OModelGroup {
 			}
 		}
 		if (!$validate_id) {
-			array_push($validate_errors, 'At least one PK or PK_STR field type is mandatory.');
+			$validate_errors[] = 'At least one PK or PK_STR field type is mandatory.';
 		}
 		if ($validate_id_num > 1) {
 			foreach ($this->model as $field) {
@@ -110,16 +110,16 @@ class OModelGroup {
 			}
 		}
 		if (!$validate_created) {
-			array_push($validate_errors, 'A CREATED field type is mandatory.');
+			$validate_errors[] = 'A CREATED field type is mandatory.';
 		}
 		if ($validate_created_num > 1) {
-			array_push($validate_errors, 'There can only be one CREATED field type in a model.');
+			$validate_errors[] = 'There can only be one CREATED field type in a model.';
 		}
 		if (!$validate_updated) {
-			array_push($validate_errors, 'An UPDATED field type is mandatory.');
+			$validate_errors[] = 'An UPDATED field type is mandatory.';
 		}
 		if ($validate_updated_num > 1) {
-			array_push($validate_errors, 'There can only be one UPDATED field type in a model.');
+			$validate_errors[] = 'There can only be one UPDATED field type in a model.';
 		}
 		// If there is one or more errors, throw all of them at once.
 		if (count($validate_errors) > 0) {
@@ -209,8 +209,8 @@ class OModelGroup {
 		foreach ($this->model as $field) {
 			if (!is_null($field->getRef())) {
 				$ref = explode('.', $field->getRef());
-				array_push($indexes, "  ADD KEY `fk_".$table_name."_".$ref[0]."_idx` (`".$field->getName()."`)");
-				array_push($constraints, "  ADD CONSTRAINT `fk_".$table_name."_".$ref[0]."` FOREIGN KEY (`".$field->getName()."`) REFERENCES `".$ref[0]."` (`".$ref[1]."`) ON DELETE NO ACTION ON UPDATE NO ACTION");
+				$indexes[] = "  ADD KEY `fk_" . $table_name . "_" . $ref[0] . "_idx` (`" . $field->getName() . "`)";
+				$constraints[] = "  ADD CONSTRAINT `fk_" . $table_name . "_" . $ref[0] . "` FOREIGN KEY (`" . $field->getName() . "`) REFERENCES `" . $ref[0] . "` (`" . $ref[1] . "`) ON DELETE NO ACTION ON UPDATE NO ACTION";
 			}
 		}
 

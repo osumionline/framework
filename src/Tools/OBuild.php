@@ -22,7 +22,7 @@ class OBuild {
 			while (false !== ($entry = readdir($model))) {
 				if ($entry != '.' && $entry != '..') {
 					$table = "\\Osumi\\OsumiFramework\\App\\Model\\".str_ireplace('.php','',$entry);
-					array_push($ret, new $table());
+					$ret[] = new $table();
 				}
 			}
 			closedir($model);
@@ -69,6 +69,74 @@ class OBuild {
 		return $sql;
 	}
 
+	/**
+	 * Updates or creates a route file.
+	 *
+	 * @param string $file_path Path of the route file.
+	 *
+	 * @param string $new_route New route to be added.
+	 *
+	 * @param string $new_use_statement New "use" statement for the action.
+	 *
+	 * @return void
+	 */
+	public static function updateRoutesFile(string $file_path, string $new_route, string $new_use_statement): void {
+		global $core;
+
+    // Read the current file contents
+		if (file_exists($file_path)) {
+    	$contents = file_get_contents($file_path);
+		}
+		else {
+			$template_path = $core->config->getDir('ofw_template').'add/urlsTemplate.php';
+			$contents = file_get_contents($template_path);
+    }
+
+    // Split the file into lines
+    $lines = explode("\n", $contents);
+
+    // Find the last 'use' statement
+    $last_use_index = -1;
+    $use_statement_exists = false;
+    foreach ($lines as $index => $line) {
+        if (strpos($line, 'use ') === 0) {
+            $last_use_index = $index;
+            // Check if the use statement already exists
+            if (trim($line) === trim($new_use_statement)) {
+                $use_statement_exists = true;
+            }
+        }
+    }
+
+    // Add the new 'use' statement after the last existing one
+    if (!$use_statement_exists && $last_use_index !== -1) {
+        array_splice($lines, $last_use_index + 1, 0, $new_use_statement);
+    }
+
+    // Find the last line with content (ignoring empty lines at the end)
+    $last_content_line = count($lines) - 1;
+    while ($last_content_line >= 0 && trim($lines[$last_content_line]) === '') {
+        $last_content_line--;
+    }
+
+    // Add the new route
+    if ($last_content_line >= 0) {
+        // Add a blank line if the last line isn't already blank
+        if (trim($lines[$last_content_line]) !== '') {
+            $last_content_line++;
+            $lines[$last_content_line] = '';
+        }
+        $last_content_line++;
+        $lines[$last_content_line] = $new_route;
+    }
+
+    // Combine lines back into a single string
+    $new_contents = implode("\n", $lines)."\n";
+
+    // Write the updated contents back to the file
+    file_put_contents($file_path, $new_contents);
+	}
+
   /**
 	 * Creates a new empty action with the given name, URL and type
 	 *
@@ -106,27 +174,12 @@ class OBuild {
 		file_put_contents($values['action_template'], $str_template);
 
 		// Update URLs file
-		$urls_path = $core->config->getDir('app_config').'Urls.php';
-		if (!file_exists($urls_path)) {
-			$template_path = $core->config->getDir('ofw_template').'add/urlsTemplate.php';
-			$str_urls = file_get_contents($template_path);
-		}
-		else {
-			$str_urls = file_get_contents($urls_path);
-		}
+		$urls_path = $core->config->getDir('app_routes').'Web.php';
 
-		$new_url = "\n\t[\n";
-	  $new_url .= "\t\t'url' => '".$values['action_url']."',\n";
-	  $new_url .= "\t\t'action' => ".$values['action_name']."Action::class,\n";
-	  $new_url .= "\t\t'type' => '".$values['action_type']."'\n";
-	  $new_url .= "\t],\n";
+		$new_url = "ORoute::get('".$values['action_url']."', ".$values['action_name']."Action::class, [], '".$values['action_type']."');";
+		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Action;";
 
-		$str_urls = str_ireplace('$urls = [', '$urls = ['.$new_url, $str_urls);
-
-		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Action;\n\n";
-		$str_urls = str_ireplace('$urls = [', $use_url.'$urls = [', $str_urls);
-
-		file_put_contents($urls_path, $str_urls);
+		self::updateRoutesFile($urls_path, $new_url, $use_url);
 
 		return 'ok';
 	}
@@ -173,11 +226,12 @@ class OBuild {
 		global $core;
 
 		// If tasks folder does not exist I create it before doing anything else
-		if (!is_dir($core->config->getDir('app_task'))) {
-			mkdir($core->config->getDir('app_task'));
+		$tasks_path = $core->config->getDir('app_task');
+		if (!is_dir($tasks_path)) {
+			mkdir($tasks_path);
 		}
 
-		$task_file = $core->config->getDir('app_task').ucfirst($name).'Task.php';
+		$task_file = $tasks_path.ucfirst($name).'Task.php';
 		$ofw_task_file = $core->config->getDir('ofw_task').ucfirst($name).'Task.php';
 
 		if (file_exists($task_file)) {
@@ -191,8 +245,8 @@ class OBuild {
 
 		$template_path = $core->config->getDir('ofw_template').'add/taskTemplate.php';
 		$str_task = OTools::getTemplate($template_path, '', [
-			'uc_name' => ucfirst($name),
-			'name' => $name,
+			'uc_name'     => ucfirst($name),
+			'name'        => $name,
 			'str_message' => $str_message
 		]);
 		file_put_contents($task_file, $str_task);

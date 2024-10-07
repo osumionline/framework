@@ -8,20 +8,20 @@ use Osumi\OsumiFramework\Tools\OTools;
 /**
  * Cleans all non framework data, to be used on new installations
  */
-class resetTask extends OTask {
+class ResetTask extends OTask {
 	public function __toString() {
 		return $this->getColors()->getColoredString('reset', 'light_green').': '.OTools::getMessage('TASK_RESET');
 	}
 
 	private function rrmdir(string $dir): bool {
 		if (is_dir($dir)) {
-			$files = array_diff(scandir($dir), array('.','..'));
+			$files = array_diff(scandir($dir), ['.', '..']);
 			foreach ($files as $file) {
-				if (is_dir($dir.'/'.$file)) {
-					$this->rrmdir($dir.'/'.$file);
+				if (is_dir($dir . '/' . $file)) {
+					$this->rrmdir($dir . '/' . $file);
 				}
 				else {
-					unlink($dir.'/'.$file);
+					unlink($dir . '/' . $file);
 				}
 			}
 			return rmdir($dir);
@@ -32,9 +32,9 @@ class resetTask extends OTask {
 	}
 
 	private function countDown(): void {
-		for ($i=10; $i>=0; $i--) {
+		for ($i = 10; $i >= 0; $i--) {
 			echo "  ";
-			if ($i<4) {
+			if ($i < 4) {
 				echo $this->getColors()->getColoredString(strval($i), 'red');
 			}
 			else {
@@ -57,7 +57,7 @@ class resetTask extends OTask {
 			if (is_dir($this->config->getDir($value))) {
 				if ($model = opendir($this->config->getDir($value))) {
 					while (false !== ($entry = readdir($model))) {
-						if ($entry != '.' && $entry != '..') {
+						if ($entry !== '.' && $entry !== '..') {
 							$this->rrmdir($this->config->getDir($value).$entry);
 						}
 					}
@@ -77,6 +77,7 @@ class resetTask extends OTask {
 			'app_filter',
 			'app_layout',
 			'app_model',
+			'app_routes',
 			'app_service',
 			'app_task',
 			'app_utils',
@@ -91,7 +92,7 @@ class resetTask extends OTask {
 			mkdir($this->config->getDir($value));
 		}
 
-		// Generate default config.json
+		// Generate default Config.json
 		$default_config_json = "{\n";
 		$default_config_json .= "	\"name\": \"Osumi Framework\"\n";
 		$default_config_json .= "}";
@@ -164,7 +165,7 @@ class resetTask extends OTask {
 			unlink($cache_file);
 		}
 
-		if (count($options) == 0) {
+		if (count($options) === 0) {
 			echo "\n  ".$this->getColors()->getColoredString(OTools::getMessage('TASK_RESET_WARNING'), 'red')."\n\n";
 			echo "  ".OTools::getMessage('TASK_RESET_CONTINUE')."\n\n";
 			echo "  ".OTools::getMessage('TASK_RESET_TIME_TO_CANCEL')."\n\n";

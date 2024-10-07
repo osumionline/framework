@@ -154,10 +154,10 @@ class OTranslate {
 				}
 				if (substr($line, 0, 1) === '"') {
 					if ($doing_keys) {
-						array_push($current, trim(substr(trim($line), 1, -1)));
+						$current[] = trim(substr(trim($line), 1, -1));
 					}
 					elseif ($doing_translations) {
-						array_push($translation, trim(substr(trim($line), 1, -1)));
+						$translation[] = trim(substr(trim($line), 1, -1));
 					}
 					else {
 						$header = explode(':', trim(substr(trim($line), 1, -1)));
@@ -178,7 +178,7 @@ class OTranslate {
 					$key = trim(substr(trim(substr($line,5)), 1, -1));
 					$current = [];
 					if ($key !== '') {
-						array_push($current, $key);
+						$current[] = $key;
 					}
 				}
 				if (substr($line, 0, 6) === 'msgstr') {
@@ -187,7 +187,7 @@ class OTranslate {
 					$value = trim(substr(trim(substr($line, 6)), 1, -1));
 					$translation = [];
 					if ($value !== '') {
-						array_push($translation, $value);
+						$translation[] = $value;
 					}
 				}
 			}

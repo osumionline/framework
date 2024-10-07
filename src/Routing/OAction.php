@@ -22,7 +22,6 @@ class OAction {
 	protected ?OSession        $session    = null;
 	protected ?OCookie         $cookie     = null;
 	protected ?OCacheContainer $cacheContainer = null;
-	protected array            $service    = [];
 
 	/**
 	 * Load matched URL configuration value into the action
@@ -42,8 +41,8 @@ class OAction {
 		$this->cookie   = new OCookie();
 
 		// Current and previous action
-		if ($this->getSession()->getParam('current') != '') {
-			$this->getSession()->addParam('previous', $this->session->getParam('current'));
+		if ($this->getSession()->getParam('current') !== '') {
+			$this->getSession()->addParam('previous', $this->getSession()->getParam('current'));
 		}
 		$this->getSession()->addParam('current', get_class($this));
 
@@ -56,22 +55,13 @@ class OAction {
     $template_path = str_ireplace('.php', '.'.$url_result['type'], $reflection->getFileName());
 		$this->template->setTemplatePath($template_path);
 
-		// Load action's required services
-		foreach ($url_result['services'] as $item) {
-			$service = new $item();
-			$service->loadService();
-			$reflection = new ReflectionClass($service);
-			$class_name = str_ireplace('Service', '', $reflection->getShortName());
-			$this->service[$class_name] = $service;
-		}
-
+		// Load action's CSS and JS files
 		$action_base_dir = '';
 		if (count($url_result['inline_css']) > 0 || count($url_result['inline_js']) > 0) {
 			$reflection = new ReflectionClass($this);
 	    $action_base_dir = dirname($reflection->getFileName());
 		}
 
-		// Load action's CSS and JS files
 		foreach ($url_result['inline_css'] as $item) {
 			$css_file = $action_base_dir.'/'.$item.'.css';
 			$this->template->addCss($css_file, true);

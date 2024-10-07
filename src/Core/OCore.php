@@ -10,6 +10,7 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
 use Osumi\OsumiFramework\Web\ORequest;
 use Osumi\OsumiFramework\Routing\OUrl;
+use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\Log\OLog;
@@ -25,7 +26,7 @@ class OCore {
 	public ?OSession        $session = null;
 	public ?OTranslate      $translate = null;
 	public ?float           $start_time = null;
-	public array            $urls = [];
+	public array            $services = [];
 
 	/**
 	 * Get the start time in milliseconds to use in benchmarks
@@ -112,11 +113,18 @@ class OCore {
 		// Set up an empty cache container
 		$this->cacheContainer = new OCacheContainer();
 
-		// Load URLs file
-		$urls_path = $this->config->getDir('app_config').'Urls.php';
-		if (file_exists($urls_path)) {
-			$this->urls = require_once($urls_path);
+		// Load routes
+		$routes_path = $this->config->getDir('app_routes');
+		$files = scandir($routes_path);
+    foreach ($files as $file) {
+			if ($file === '.' || $file === '..') {
+				continue;
+			}
+			require_once $routes_path.$file;
 		}
+
+		// Load global functions
+		require_once $this->config->getDir('ofw_tools').'functions.php';
 	}
 
 	/**
@@ -143,8 +151,15 @@ class OCore {
 
 		if ($url_result['res']) {
 			// If the call method is OPTIONS, just return OK right away
-			if ($url_result['method']==='options'){
+			if ($url_result['method'] === 'OPTIONS'){
 				header($_SERVER['SERVER_PROTOCOL'].' 200 OK');
+				exit;
+			}
+
+			// Check method
+			if ($url_result['method'] !== $url_result['action_method']) {
+				$url_result['message'] = 'Method not allowed, expected "' . $url_result['action_method'].'" but received "' . $url_result['method'].'".';
+				OTools::showErrorPage($url_result, 'method');
 				exit;
 			}
 

@@ -5,6 +5,7 @@ namespace Osumi\OsumiFramework\Routing;
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
+use Osumi\OsumiFramework\Routing\ORoute;
 
 /**
  * OUrl - Class with methods to check required URL, get its data, generate new URLs or redirect the user to a new one
@@ -24,8 +25,8 @@ class OUrl {
 	function __construct(string $method) {
 		global $core;
 		$this->config = $core->config;
-		$this->method = $method;
-		$this->urls   = $core->urls;
+		$this->method = strtoupper($method);
+		$this->urls   = ORoute::$routes;
 	}
 
 	/**
@@ -41,7 +42,7 @@ class OUrl {
 	 *
 	 * @return void
 	 */
-	public function setCheckUrl(string $check_url, array $get=null, array $post=null, array $files=null): void {
+	public function setCheckUrl(string $check_url, ?array $get = null, ?array $post = null, ?array $files = null): void {
 		$this->check_url = $check_url;
 		$check_params = stripos($check_url, '?');
 		if ($check_params !== false) {
@@ -85,19 +86,19 @@ class OUrl {
 		$found = false;
 		$i     = 0;
 		$ret   = [
-			'action'     => null,
-			'services'   => [],
-			'filters'    => [],
-			'layout'     => 'Default',
-			'type'       => 'html',
-			'inline_css' => [],
-			'css'        => [],
-			'inline_js'  => [],
-			'js'         => [],
-			'params'     => [],
-			'headers'    => getallheaders(),
-			'method'     => strtolower($this->method),
-			'res'        => false
+			'action'        => null,
+			'filters'       => [],
+			'layout'        => 'Default',
+			'type'          => 'html',
+			'inline_css'    => [],
+			'css'           => [],
+			'inline_js'     => [],
+			'js'            => [],
+			'params'        => [],
+			'headers'       => getallheaders(),
+			'method'        => $this->method,
+			'action_method' => '',
+			'res'           => false
 		];
 
 		while (!$found && $i < count($this->urls)) {
@@ -109,18 +110,16 @@ class OUrl {
 				$found         = true;
 				$ret['action'] = $this->urls[$i]['action'];
 				$ret['res']    = true;
+				$ret['action_method'] = $this->urls[$i]['method'];
 
-				if (array_key_exists('services', $this->urls[$i])) {
-					$ret['services'] = $this->urls[$i]['services'];
-				}
 				if (array_key_exists('filters', $this->urls[$i])) {
 					$ret['filters'] = $this->urls[$i]['filters'];
 				}
-				if (array_key_exists('layout', $this->urls[$i])) {
-					$ret['layout'] = $this->urls[$i]['layout'];
-				}
 				if (array_key_exists('type', $this->urls[$i])) {
 					$ret['type'] = $this->urls[$i]['type'];
+				}
+				if (array_key_exists('layout', $this->urls[$i])) {
+					$ret['layout'] = $this->urls[$i]['layout'];
 				}
 				if (array_key_exists('inline_css', $this->urls[$i])) {
 					$ret['inline_css'] = $this->urls[$i]['inline_css'];
@@ -226,7 +225,7 @@ class OUrl {
 				if ($type !== '') {
             $entry['type'] = $type;
         }
-        array_push($original_array, $entry);
+        $original_array[] = $entry;
     }
 	}
 }

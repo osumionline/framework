@@ -162,8 +162,8 @@ class OModel {
 			$updated_fields = [];
 			foreach ($this->model->getFields() as $field) {
 				if ($field->getType() !== OMODEL_PK && $field->getType() !== OMODEL_PK_STR && $field->changed()) {
-					array_push($updated_fields, $field->getUpdateStr());
-					array_push($query_params, $field->get());
+					$updated_fields[] = $field->getUpdateStr();
+					$query_params[] = $field->get();
 				}
 			}
 			// If there is nothing to update, just return
@@ -177,7 +177,7 @@ class OModel {
 					$sql .= "AND ";
 				}
 				$sql .= "`".$pk_ind."` = ?";
-				array_push($query_params, $this->model->getFields()[$pk_ind]->get());
+				$query_params[] = $this->model->getFields()[$pk_ind]->get();
 			}
 
 			$save_type = 'u';
@@ -189,19 +189,19 @@ class OModel {
 			$sql = "INSERT INTO `".$this->table_name."` (";
 			$insert_fields = [];
 			foreach ($this->model->getFields() as $field) {
-				array_push($insert_fields, "`".$field->getName()."`");
+				$insert_fields[] = "`".$field->getName()."`";
 			}
 			$sql .= implode(",", $insert_fields);
 			$sql .= ") VALUES (";
 			$insert_fields = [];
 			foreach ($this->model->getFields() as $field) {
 				$value = $field->get();
-				array_push($insert_fields, $field->getInsertStr());
+				$insert_fields[] = $field->getInsertStr();
 				if ($field->getType() === OMODEL_PK && $field->getIncr()) {
-					array_push($query_params, null);
+					$query_params[] = null;
 				}
 				else {
-					array_push($query_params, $value);
+					$query_params[] = $value;
 				}
 			}
 			$sql .= implode(",", $insert_fields);
@@ -252,14 +252,14 @@ class OModel {
 		foreach ($opt as $key => $value) {
 			if (!is_null($value)) {
 				if ($this->model->getFields()[$key]->getType() != OMODEL_BOOL) {
-					array_push($search_fields, "`".$key."` = '".$value."' ");
+					$search_fields[] = "`" . $key . "` = '" . $value . "' ";
 				}
 				else {
-					array_push($search_fields, "`".$key."` = ".($value ? 1 : 0)." ");
+					$search_fields[] = "`" . $key . "` = " . ($value ? 1 : 0) . " ";
 				}
 			}
 			else {
-				array_push($search_fields, "`".$key."` IS NULL ");
+				$search_fields[] = "`" . $key . "` IS NULL ";
 			}
 		}
 		$sql .= implode("AND ", $search_fields);
@@ -323,7 +323,7 @@ class OModel {
 		$sql = "DELETE FROM `".$this->table_name."` WHERE ";
 		$delete_fields = [];
 		foreach ($this->pk as $pk_field) {
-			array_push($delete_fields, "`".$pk_field."` = '".$this->model->getFields()[$pk_field]->get()."' ");
+			$delete_fields[] = "`" . $pk_field . "` = '" . $this->model->getFields()[$pk_field]->get() . "' ";
 		}
 		$sql .= implode("AND ", $delete_fields);
 

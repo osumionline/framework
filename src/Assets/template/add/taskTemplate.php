@@ -9,5 +9,5 @@ class {{uc_name}}Task extends OTask {
 		return "{{name}}: {{str_message}}";
 	}
 
-	public function run(array $options=[]): void {}
+	public function run(array $options = []): void {}
 }

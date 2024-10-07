@@ -13,7 +13,7 @@ class {{name}}Filter {
 	 * @return array Return filter status (ok / error) and information
 	 */
 	public static function handle(array $params, array $headers): array {
-		$ret = ['status'=>'ok'];
+		$ret = ['status' => 'ok'];
 
 		return $ret;
 	}

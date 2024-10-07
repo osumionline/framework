@@ -9,7 +9,7 @@ use Osumi\OsumiFramework\Tools\OBuild;
 /**
  * Generate a SQL file to create all the tables in the database based on user defined models (file generated on ofw/export)
  */
-class generateModelTask extends OTask {
+class GenerateModelTask extends OTask {
 	public function __toString() {
 		return $this->getColors()->getColoredString('generateModel', 'light_green').': '.OTools::getMessage('TASK_GENERATE_MODEL');
 	}
@@ -32,8 +32,8 @@ class generateModelTask extends OTask {
 			exit;
 		}
 
-		$path     = $this->getConfig()->getDir('ofw_template').'generateModel/generateModel.php';
 		OTools::checkOfw('export');
+		$path     = $this->getConfig()->getDir('ofw_template').'generateModel/generateModel.php';
 		$sql_file = $this->getConfig()->getDir('ofw_export').'model.sql';
 		$params   = [
 			'colors'      => $this->getColors(),

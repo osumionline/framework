@@ -184,8 +184,8 @@ class OConfig {
 			$dir_from = [];
 			$dir_to = [];
 			foreach ($dir_list as $key => $value) {
-				array_push($dir_from, '{{'.$key.'}}');
-				array_push($dir_to, $value);
+				$dir_from[] = '{{' . $key . '}}';
+				$dir_to[] = $value;
 			}
 			foreach ($config['dir'] as $key => $value) {
 				$this->setDir($key, str_ireplace($dir_from, $dir_to, $value));
@@ -365,6 +365,7 @@ class OConfig {
 		$this->setDir('app_filter',     $bd.'src/Filter/');
 		$this->setDir('app_layout',     $bd.'src/Layout/');
 		$this->setDir('app_model',      $bd.'src/Model/');
+		$this->setDir('app_routes',     $bd.'src/Routes/');
 		$this->setDir('app_service',    $bd.'src/Service/');
 		$this->setDir('app_task',       $bd.'src/Task/');
 		$this->setDir('app_utils',      $bd.'src/Utils/');
@@ -379,6 +380,7 @@ class OConfig {
 		$this->setDir('ofw_locale',     $bd.'vendor/osumionline/framework/src/Assets/locale/');
 		$this->setDir('ofw_template',   $bd.'vendor/osumionline/framework/src/Assets/template/');
 		$this->setDir('ofw_task',       $bd.'vendor/osumionline/framework/src/Task/');
+		$this->setDir('ofw_tools',      $bd.'vendor/osumionline/framework/src/Tools/');
 		$this->setDir('public',         $bd.'public/');
 	}
 
@@ -545,7 +547,7 @@ class OConfig {
 	 * @return void
 	 */
 	public function addCssList(string $item): void {
-		array_push($this->css_list, $item);
+		$this->css_list[] = $item;
 	}
 
 	/**
@@ -576,7 +578,7 @@ class OConfig {
 	 * @return void
 	 */
 	public function addExtCssList(string $item): void {
-		array_push($this->ext_css_list, $item);
+		$this->ext_css_list[] = $item;
 	}
 
 	/**
@@ -607,7 +609,7 @@ class OConfig {
 	 * @return void
 	 */
 	public function addJsList(string $item): void {
-		array_push($this->js_list, $item);
+		$this->js_list[] = $item;
 	}
 
 	/**
@@ -638,7 +640,7 @@ class OConfig {
 	 * @return void
 	 */
 	public function addExtJsList(string $item): void {
-		array_push($this->ext_js_list, $item);
+		$this->ext_js_list[] = $item;
 	}
 
 	/**
@@ -729,7 +731,7 @@ class OConfig {
 	 * @return void
 	 */
 	public function addLib(string $item): void {
-		array_push($this->libs, $item);
+		$this->libs[] = $item;
 	}
 
 	/**

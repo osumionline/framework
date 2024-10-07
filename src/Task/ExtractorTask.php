@@ -8,7 +8,7 @@ use Osumi\OsumiFramework\Tools\OTools;
 /**
  * Function to export an application with all its files to a single self-extracting php file
  */
-class extractorTask extends OTask {
+class ExtractorTask extends OTask {
 	public function __toString() {
 		return $this->getColors()->getColoredString('extractor', 'light_green').': '.OTools::getMessage('TASK_EXTRACTOR');
 	}
@@ -31,17 +31,17 @@ class extractorTask extends OTask {
 	 * @return string[] Array with file names
 	 */
 	private function scanFileNameRecursivly(string $path = '', array &$name = []): array {
-		$path = ($path == '') ? $this->base_dir : $path;
+		$path = ($path === '') ? $this->base_dir : $path;
 		$lists = @scandir($path);
 
 		if(!empty($lists)) {
 			foreach($lists as $f) {
-				if ($f=='.' || $f=='..') { continue; }
-				if (is_dir($path.DIRECTORY_SEPARATOR.$f) && $f != '..' && $f != '.') {
-					$this->scanFileNameRecursivly($path.DIRECTORY_SEPARATOR.$f, $name);
+				if ($f === '.' || $f === '..') { continue; }
+				if (is_dir($path.DIRECTORY_SEPARATOR.$f) && $f !== '..' && $f !== '.') {
+					$this->scanFileNameRecursivly($path . DIRECTORY_SEPARATOR . $f, $name);
 				}
 				else {
-					array_push($name, $path.DIRECTORY_SEPARATOR.$f);
+					$name[] = $path . DIRECTORY_SEPARATOR . $f;
 				}
 			}
 		}
@@ -55,13 +55,13 @@ class extractorTask extends OTask {
 	 *
 	 * @return void Echoes messages generated while performing the export
 	 */
-	public function run(array $params=[]): void {
+	public function run(array $params = []): void {
 		$silent = false;
-		if (count($params)==1 && $params[0]===true) {
+		if (count($params) === 1 && $params[0] === true) {
 			$silent = true;
 		}
-		$this->base_dir = $this->getConfig()->getDir('base');
 		OTools::checkOfw('export');
+		$this->base_dir = $this->getConfig()->getDir('base');
 		$destination    = $this->getConfig()->getDir('ofw_export').'ofw_extractor.php';
 
 		$path   = $this->getConfig()->getDir('ofw_template').'extractor/extractor.php';
@@ -100,11 +100,11 @@ class extractorTask extends OTask {
 				array_pop($folder_name);
 				// Take the first part
 				$check_folder = array_shift($folder_name);
-				while (count($folder_name)>-1) {
+				while (count($folder_name) > -1) {
 					if (!in_array($check_folder, $folders)) {
-						array_push($folders, $check_folder);
+						$folders[] = $check_folder;
 					}
-					if (count($folder_name)>0) {
+					if (count($folder_name) > 0) {
 						$check_folder .= '/' . array_shift($folder_name);
 					}
 					else {
@@ -119,7 +119,7 @@ class extractorTask extends OTask {
 		file_put_contents($destination, "$"."files = [\n", FILE_APPEND);
 		$content_array = [];
 		foreach ($files as $key => $content) {
-			array_push($content_array, "  '".$key."' => '".$content."'");
+			$content_array[] = "  '" . $key . "' => '" . $content . "'";
 		}
 		file_put_contents($destination, implode(",\n", $content_array), FILE_APPEND);
 		file_put_contents($destination, "];\n", FILE_APPEND);
