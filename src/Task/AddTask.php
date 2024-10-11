@@ -355,7 +355,6 @@ class AddTask extends OTask {
 	 * @return void Echoes framework information
 	 */
 	public function run(array $params): void {
-		var_dump($params);
 		$available_options = ['action', 'service', 'task', 'modelComponent','component', 'filter'];
 		$option = (array_key_exists('option', $params)) ? $params['option'] : 'none';
 		$option = in_array($option, $available_options) ? $option : 'none';
