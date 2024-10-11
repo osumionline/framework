@@ -1,7 +1,7 @@
 {
   "name": "osumionline/framework",
   "description": "Framework PHP de Osumi para aplicaciones web.",
-  "version": "9.1.0",
+  "version": "9.1.1",
   "type": "library",
   "keywords": ["framework", "php", "web", "osumi"],
   "homepage": "https://github.com/osumionline/framework",
@@ -23,6 +23,6 @@
     }
   },
   "extra": {
-    "version-description": "Nuevo sistema de rutas, nuevo sistema de inyección de servicios y nuevo CLI. Correcciones y mejoras."
+    "version-description": "Control de errores en método no aceptado y corrección al crear modelos de componente."
   }
 }
