@@ -100,6 +100,16 @@ class ResetTask extends OTask {
 		file_put_contents($config_file, $default_config_json);
 
 		// Generate default layout
+		$default_layout = "<"."?php declare(strict_types=1);\n\n";
+		$default_layout .= "namespace Osumi\OsumiFramework\App\Layout;\n\n";
+		$default_layout .= "use Osumi\OsumiFramework\Core\OComponent;\n\n";
+		$default_layout .= "class DefaultLayoutComponent extends OComponent {\n";
+		$default_layout .= "	public string $"."title = '';\n";
+		$default_layout .= "  public string $"."body = '';\n";
+		$default_layout .= "}\n";
+		$layout_file = $this->config->getDir('app_layout').'DefaultLayoutComponent.php';
+		file_put_contents($layout_file, $default_layout);
+
 		$default_layout = "<!DOCTYPE html>\n";
 		$default_layout .= "<html>\n";
 		$default_layout .= "	<head>\n";
@@ -109,14 +119,12 @@ class ResetTask extends OTask {
 		$default_layout .= "		<title>{{title}}</title>\n";
 		$default_layout .= "		<link type=\"image/x-icon\" href=\"/favicon.png\" rel=\"icon\">\n";
 		$default_layout .= "		<link type=\"image/x-icon\" href=\"/favicon.png\" rel=\"shortcut icon\">\n";
-		$default_layout .= "		{{css}}\n";
-		$default_layout .= "		{{js}}\n";
 		$default_layout .= "	</head>\n";
 		$default_layout .= "	<body>\n";
 		$default_layout .= "		{{body}}\n";
 		$default_layout .= "	</body>\n";
 		$default_layout .= "</html>";
-		$layout_file = $this->config->getDir('app_layout').'DefaultLayout.php';
+		$layout_file = $this->config->getDir('app_layout').'DefaultLayoutTemplate.php';
 		file_put_contents($layout_file, $default_layout);
 
 		// Generate default .htaccess
@@ -152,17 +160,17 @@ class ResetTask extends OTask {
 	 * @return void
 	 */
 	public function run(array $options = []): void {
-		$cache_file = $this->config->getDir('ofw_cache').'reset.json';
+		$tmp_file = $this->config->getDir('ofw_tmp').'reset.json';
 		$reset_key = '';
 		$reset_date = 0;
 
-		if (file_exists($cache_file)) {
-			$reset_data = json_decode(file_get_contents($cache_file), true);
+		if (file_exists($cache_tmp)) {
+			$reset_data = json_decode(file_get_contents($tmp_file), true);
 			if (!is_null($reset_data)) {
 				$reset_key  = $reset_data['key'];
 				$reset_date = $reset_data['date'];
 			}
-			unlink($cache_file);
+			unlink($tmp_file);
 		}
 
 		if (count($options) === 0) {
@@ -176,19 +184,20 @@ class ResetTask extends OTask {
 				'key' => substr(hash('sha512', strval(time())), 0, 12),
 				'date' => time() + (60 * 15)
 			];
-			OTools::checkOfw('cache');
-			file_put_contents($cache_file, json_encode($data));
+			OTools::checkOfw('tmp');
+			file_put_contents($tmp_file, json_encode($data));
 
 			echo "\n  ".OTools::getMessage('TASK_RESET_RESET_KEY_CREATED')."\n\n";
-			echo "    php of reset ".$data['key']."\n\n";
+			echo "    php of reset --key ".$data['key']."\n\n";
 		}
 		else {
-			if ($options[0] === 'silent') {
+			if (array_key_exists('silent', $params) && $params['silent'] === 'true') {
 				$this->cleanData();
 			}
 			else {
 				if (
-					$options[0] === $reset_key &&
+					array_key_exists('key', $params) &&
+					$options['key'] === $reset_key &&
 					$reset_date > time()
 				) {
 					$this->cleanData();

@@ -2,10 +2,10 @@
 
 namespace Osumi\OsumiFramework\App\{{folders}};
 
-use Osumi\OsumiFramework\Routing\OAction;
+use Osumi\OsumiFramework\Core\OComponent;
 use Osumi\OsumiFramework\Web\ORequest;
 
-class {{action}}Action extends OAction {
+class {{action}}Component extends OComponent {
 	/**
    * {{str_template}}
 	 *

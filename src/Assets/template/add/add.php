@@ -5,6 +5,7 @@
 
   <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_DEFAULT_NOT_VALID') ?>
 
+
   <?php echo OTools::getMessage('TASK_ADD_DEFAULT_AVAILABLE_OPTIONS') ?>
 
 
@@ -20,4 +21,7 @@
 
   · <?php echo $values['colors']->getColoredString('filter', 'light_green') ?>: <?php echo OTools::getMessage('TASK_ADD_DEFAULT_FILTER') ?>
 
- 
+
+ <?php echo OTools::getMessage('OFW_EXAMPLE').': '.$values['colors']->getColoredString('php of add --option action --name api/getUsers --url /api/get-users --type json', 'light_green') ?>
+
+  

@@ -3,30 +3,28 @@
 namespace Osumi\OsumiFramework\Routing;
 
 class ORoute {
-  public static $routes = [];
-  private static $currentPrefix = '';
-  private static $currentType = '';
+  public static array $routes = [];
+  private static string $currentPrefix = '';
+  private static ?string $currentLayout = null;
 
   /**
    * Register a new GET route with the router.
    *
    * @param string $url URL to respond.
    *
-   * @param string $action Action to be executed.
+   * @param string $component Component to be executed.
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param string $type Return type (html, json, xml).
-   *
-   * @param array $options Extra options (layout, inline_css, css, inline_js, js)
+   * @param ?string $layout Layout component, optional.
    *
    * @return void
    */
-  public static function get(string $url, string $action, array $filters = [], string $type = 'html', array $options = []): void {
+  public static function get(string $url, string $component, array $filters = [], ?string $layout = null): void {
     $fullUrl = self::$currentPrefix . $url;
-    $type = (self::$currentType !== '') ? self::$currentType : $type;
+    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
 
-    self::addRoute('GET', $fullUrl, $action, $filters, $type, $options);
+    self::addRoute('GET', $fullUrl, $component, $filters, $layout);
   }
 
   /**
@@ -34,21 +32,19 @@ class ORoute {
    *
    * @param string $url URL to respond.
    *
-   * @param string $action Action to be executed.
+   * @param string $component Component to be executed.
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param string $type Return type (html, json, xml).
-   *
-   * @param array $options Extra options (layout, inline_css, css, inline_js, js)
+   * @param ?string $layout Layout component, optional.
    *
    * @return void
    */
-  public static function post(string $url, string $action, array $filters = [], string $type = 'html', array $options = []): void {
+  public static function post(string $url, string $component, array $filters = [], ?string $layout = null): void {
     $fullUrl = self::$currentPrefix . $url;
-    $type = (self::$currentType !== '') ? self::$currentType : $type;
+    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
 
-    self::addRoute('POST', $fullUrl, $action, $filters, $type, $options);
+    self::addRoute('POST', $fullUrl, $component, $filters, $layout);
   }
 
   /**
@@ -56,21 +52,19 @@ class ORoute {
    *
    * @param string $url URL to respond.
    *
-   * @param string $action Action to be executed.
+   * @param string $component Component to be executed.
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param string $type Return type (html, json, xml).
-   *
-   * @param array $options Extra options (layout, inline_css, css, inline_js, js)
+   * @param ?string $layout Layout component, optional.
    *
    * @return void
    */
-  public static function put(string $url, string $action, array $filters = [], string $type = 'html', array $options = []): void {
+  public static function put(string $url, string $component, array $filters = [], ?string $layout = null): void {
     $fullUrl = self::$currentPrefix . $url;
-    $type = (self::$currentType !== '') ? self::$currentType : $type;
+    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
 
-    self::addRoute('PUT', $fullUrl, $action, $filters, $type, $options);
+    self::addRoute('PUT', $fullUrl, $component, $filters, $layout);
   }
 
   /**
@@ -78,21 +72,19 @@ class ORoute {
    *
    * @param string $url URL to respond.
    *
-   * @param string $action Action to be executed.
+   * @param string $component Component to be executed.
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param string $type Return type (html, json, xml).
-   *
-   * @param array $options Extra options (layout, inline_css, css, inline_js, js)
+   * @param ?string $layout Layout component, optional.
    *
    * @return void
    */
-  public static function delete(string $url, string $action, array $filters = [], string $type = 'html', array $options = []): void {
+  public static function delete(string $url, string $component, array $filters = [], ?string $layout = null): void {
     $fullUrl = self::$currentPrefix . $url;
-    $type = (self::$currentType !== '') ? self::$currentType : $type;
+    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
 
-    self::addRoute('DELETE', $fullUrl, $action, $filters, $type, $options);
+    self::addRoute('DELETE', $fullUrl, $component, $filters, $layout);
   }
 
   /**
@@ -102,42 +94,23 @@ class ORoute {
    *
    * @param string $url URL to respond.
    *
-   * @param string $action Action to be executed.
+   * @param string $component Component to be executed.
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param string $type Return type (html, json, xml).
-   *
-   * @param array $options Extra options (layout, inline_css, css, inline_js, js)
+   * @param ?string $layout Layout component, optional.
    *
    * @return void
    */
-  public static function addRoute(string $method, string $url, string $action, array $filters, string $type, array $options): void {
+  public static function addRoute(string $method, string $url, string $component, array $filters, ?string $layout = null): void {
     $route = [
       'method' => $method,
       'url' => $url,
-      'action' => $action,
+      'component' => $component,
       'filters' => $filters,
-      'type' => $type
+      'layout' => $layout
     ];
 
-    if (count($options) > 0) {
-      if (array_key_exists('layout', $options)) {
-        $route['layout'] = $options['layout'];
-      }
-      if (array_key_exists('inline_css', $options)) {
-        $route['inline_css'] = $options['inline_css'];
-      }
-      if (array_key_exists('css', $options)) {
-        $route['css'] = $options['css'];
-      }
-      if (array_key_exists('inline_js', $options)) {
-        $route['inline_js'] = $options['inline_js'];
-      }
-      if (array_key_exists('js', $options)) {
-        $route['js'] = $options['js'];
-      }
-    }
     self::$routes[] = $route;
   }
 
@@ -160,43 +133,43 @@ class ORoute {
   }
 
   /**
-   * Register a group of routes with a given type ("json").
+   * Register a group of routes with a given layout.
    *
-   * @param string $type Type to be applied.
+   * @param string $layout Layout to be applied.
    *
    * @param callable $callback Anonymous function of routes to be added.
    *
    * @return void
    */
-  public static function type(string $type, callable $callback): void {
-    $previousType = self::$currentType;
-    self::$currentType = $type;
+  public static function layout(string $layout, callable $callback): void {
+    $previousLayout = self::$currentLayout;
+    self::$currentLayout = $layout;
 
     $callback();
 
-    self::$currentType = $previousType;
+    self::$currentLayout = $previousLayout;
   }
 
   /**
-   * Register a group of routes with a given prefix ("/api") and a give type ("json").
+   * Register a group of routes with a given prefix ("/api") and a given layout component.
    *
    * @param string $prefix Prefix to be applied.
    *
-   * @param string $type Type to be applied.
+   * @param string $layout Layout to be applied.
    *
    * @param callable $callback Anonymous function of routes to be added.
    *
    * @return void
    */
-  public static function group(string $prefix, string $type, callable $callback): void {
+  public static function group(string $prefix, string $layout, callable $callback): void {
     $previousPrefix = self::$currentPrefix;
     self::$currentPrefix = $prefix;
-    $previousType = self::$currentType;
-    self::$currentType = $type;
+    $previousLayout = self::$currentLayout;
+    self::$currentLayout = $layout;
 
     $callback();
 
     self::$currentPrefix = $previousPrefix;
-    self::$currentType = $previousType;
+    self::$currentLayout = $previousLayout;
   }
 }

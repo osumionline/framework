@@ -265,7 +265,6 @@ class OTools {
 		$path = $core->config->getDir('ofw_template').'error.php';
 
 		if ($mode === '403') { header($_SERVER['SERVER_PROTOCOL'].' 403 Forbidden'); }
-		if ($mode === '405') { header($_SERVER['SERVER_PROTOCOL'].' 405 Method Not Allowed'); }
 		if ($mode === '404') { header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found'); }
 		if ($mode === '500') { header($_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error'); }
 
@@ -465,7 +464,7 @@ class OTools {
 	 *
 	 * @return array Returns the status ok/error if task was run and it's return messages if $return is set to true
 	 */
-	public static function runOFWTask(string $task_name, array $params=[], bool $return=false): array {
+	public static function runOFWTask(string $task_name, array $params = [], bool $return = false): array {
 		global $core;
 		$ret = [
 			'status' => 'ok',

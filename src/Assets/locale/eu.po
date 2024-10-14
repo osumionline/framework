@@ -22,9 +22,6 @@ msgstr "404 Orria ez da aurkitu"
 msgid "ERROR_500_LABEL"
 msgstr "500 Zerbitzariaren barneko errorea"
 
-msgid "ERROR_NO_ACTION_LABEL"
-msgstr "<strong>%s</strong> funtzioa ez da aurkitu"
-
 msgid "ERROR_SEE_MORE_LABEL"
 msgstr "Xehetasun gehiago ikusi"
 

@@ -22,14 +22,14 @@ class BackupDBTask extends OTask {
 	 */
 	public function run(array $params = []): void {
 		$silent = false;
-		if (count($params) === 1 && $params[0] === true) {
+		if (array_key_exists('silent', $params) && $params['silent'] === 'true') {
 			$silent = true;
 		}
 
 		$path   = $this->getConfig()->getDir('ofw_template').'backupDB/backupDB.php';
 		$values = [
 			'colors'      => $this->getColors(),
-			'from_all'    => (count($params) === 2 && $params[1] === true),
+			'from_all'    => (array_key_exists('from_all', $params) && $params['from_all'] === 'true'),
 			'hasDB'       => true,
 			'db_name'     => '',
 			'dump_file'   => '',

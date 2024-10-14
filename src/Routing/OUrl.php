@@ -86,19 +86,15 @@ class OUrl {
 		$found = false;
 		$i     = 0;
 		$ret   = [
-			'action'        => null,
-			'filters'       => [],
-			'layout'        => 'Default',
-			'type'          => 'html',
-			'inline_css'    => [],
-			'css'           => [],
-			'inline_js'     => [],
-			'js'            => [],
-			'params'        => [],
-			'headers'       => getallheaders(),
-			'method'        => $this->method,
-			'action_method' => '',
-			'res'           => false
+			'component'        => null,
+			'filters'          => [],
+			'layout'           => null,
+			'type'             => 'html',
+			'params'           => [],
+			'headers'          => getallheaders(),
+			'method'           => $this->method,
+			'component_method' => '',
+			'res'              => false
 		];
 
 		while (!$found && $i < count($this->urls)) {
@@ -107,31 +103,16 @@ class OUrl {
 
 			// If there is a match, return Urls.php values plus the parameters in the route and the headers
 			if (!is_null($chk)) {
-				$found         = true;
-				$ret['action'] = $this->urls[$i]['action'];
-				$ret['res']    = true;
-				$ret['action_method'] = $this->urls[$i]['method'];
+				$found      = true;
+				$ret['res'] = true;
+				$ret['component'] = $this->urls[$i]['component'];
+				$ret['component_method'] = $this->urls[$i]['method'];
 
 				if (array_key_exists('filters', $this->urls[$i])) {
 					$ret['filters'] = $this->urls[$i]['filters'];
 				}
-				if (array_key_exists('type', $this->urls[$i])) {
-					$ret['type'] = $this->urls[$i]['type'];
-				}
 				if (array_key_exists('layout', $this->urls[$i])) {
 					$ret['layout'] = $this->urls[$i]['layout'];
-				}
-				if (array_key_exists('inline_css', $this->urls[$i])) {
-					$ret['inline_css'] = $this->urls[$i]['inline_css'];
-				}
-				if (array_key_exists('css', $this->urls[$i])) {
-					$ret['css'] = $this->urls[$i]['css'];
-				}
-				if (array_key_exists('inline_js', $this->urls[$i])) {
-					$ret['inline_js'] = $this->urls[$i]['inline_js'];
-				}
-				if (array_key_exists('js', $this->urls[$i])) {
-					$ret['js'] = $this->urls[$i]['js'];
 				}
 
 				$ret['params'] = $chk;
@@ -149,7 +130,7 @@ class OUrl {
 	/**
 	 * Static method to generate a URL for a user configured URL
 	 *
-	 * @param string $action Action whose url has to be generated
+	 * @param string $component Component whose url has to be generated
 	 *
 	 * @param array $params Array of parameters to build the URL in case of a dynamic URL (eg /user/:id/:slug -> /user/1/igorosabel)
 	 *
@@ -157,7 +138,7 @@ class OUrl {
 	 *
 	 * @return string Generated URL with given parameters
 	 */
-	public static function generateUrl(string $action, array $params=[], bool $absolute=false): string {
+	public static function generateUrl(string $component, array $params = [], bool $absolute = false): string {
 		// Load URLs, as it's a static method it won't go through the constructor
 		global $core;
 
@@ -166,10 +147,10 @@ class OUrl {
 		$url = '';
 
 		while (!$found && $i < count($core->urls)) {
-			$check_action = $core->urls[$i]['action'];
-			$check_action_parts = explode('\\', $check_action);
-			$check_last_part = array_pop($check_action_parts);
-			if ($check_last_part == $action) {
+			$check_component = $core->urls[$i]['component'];
+			$check_component_parts = explode('\\', $check_component);
+			$check_last_part = array_pop($check_component_parts);
+			if ($check_last_part == $component) {
 				$url = $core->urls[$i]['url'];
 				$found = true;
 			}
@@ -202,30 +183,5 @@ class OUrl {
 	public static function goToUrl(string $url): void {
 		header('Location:'.$url);
 		exit;
-	}
-
-	/**
-	 * Static method to combine groups of URLs
-	 *
-	 * @param array $original_array First group of URLs to combine
-	 *
-	 * @param array $second_array Group of URLs to be combined into the original one
-	 *
-	 * @param string $prefix Prefix to be added to the second group of URLs
-	 *
-	 * @param string $type Type of the whole group of URLs
-	 *
-	 * @return void
-	 */
-	public static function addUrls(array &$original_array, array $second_array, string $prefix = '', string $type = ''): void {
-    foreach ($second_array as $entry) {
-        if ($prefix !== '') {
-            $entry['url'] = $prefix . $entry['url'];
-        }
-				if ($type !== '') {
-            $entry['type'] = $type;
-        }
-        $original_array[] = $entry;
-    }
 	}
 }

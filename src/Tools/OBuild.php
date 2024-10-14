@@ -176,8 +176,8 @@ class OBuild {
 		// Update URLs file
 		$urls_path = $core->config->getDir('app_routes').'Web.php';
 
-		$new_url = "ORoute::get('".$values['action_url']."', ".$values['action_name']."Action::class, [], '".$values['action_type']."');";
-		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Action;";
+		$new_url = "ORoute::get('".$values['action_url']."', ".$values['action_name']."Component::class);";
+		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Component;";
 
 		self::updateRoutesFile($urls_path, $new_url, $use_url);
 
@@ -325,11 +325,7 @@ class OBuild {
 		foreach ($values['model'] as $field) {
 			$cont++;
 			$str_fields .= "	\"".OTools::underscoresToCamelCase($field->getName())."\": ";
-			if (
-				(in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) &&
-				in_array($field->getType(), $urlencode_fields) &&
-				!$field->getNullable()
-			) {
+			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
 				$str_fields .= "\"";
 			}
 
@@ -355,11 +351,7 @@ class OBuild {
 				$str_fields .= "<"."?php echo urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
 			}
 
-			if (
-				(in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) &&
-				in_array($field->getType(), $urlencode_fields) &&
-				!$field->getNullable()
-			) {
+			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
 				$str_fields .= "\"";
 			}
 

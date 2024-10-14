@@ -51,8 +51,8 @@ class AddTask extends OTask {
 		$values['action_name']     = $action_name_parts[count($action_name_parts) -1];
 		$values['action_url']      = $params['url'];
 		$values['action_type']     = isset($params['type']) ? $params['type'] : 'html';
-		$values['action_file']     = $values['action_folder'].$values['action_name'].'Action.php';
-		$values['action_template'] = $values['action_folder'].$values['action_name'].'Action.'.$values['action_type'];
+		$values['action_file']     = $values['action_folder'].$values['action_name'].'Component.php';
+		$values['action_template'] = $values['action_folder'].$values['action_name'].'Template.'.$values['action_type'];
 
 		$add = OBuild::addAction($values);
 

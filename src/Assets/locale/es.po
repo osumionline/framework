@@ -22,9 +22,6 @@ msgstr "404 Página no encontrada"
 msgid "ERROR_500_LABEL"
 msgstr "500 Error interno del servidor"
 
-msgid "ERROR_NO_ACTION_LABEL"
-msgstr "Función <strong>%s</strong> no encontrada"
-
 msgid "ERROR_SEE_MORE_LABEL"
 msgstr "Ver más detalles"
 

@@ -20,7 +20,7 @@ class backupAllTask extends OTask {
 	 */
 	public function run(): void {
 		$path             = $this->getConfig()->getDir('ofw_template').'backupAll/backupAll.php';
-		$backupdb_result  = OTools::runOFWTask('backupDB',  [true, true], true);
+		$backupdb_result  = OTools::runOFWTask('backupDB',  ['silent' => 'true', 'from_all' => 'true'], true);
 		$extractor_result = OTools::runOFWTask('extractor', [], true);
 
 		$params = [

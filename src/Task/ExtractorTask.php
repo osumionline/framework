@@ -57,7 +57,7 @@ class ExtractorTask extends OTask {
 	 */
 	public function run(array $params = []): void {
 		$silent = false;
-		if (count($params) === 1 && $params[0] === true) {
+		if (array_key_exists('silent', $params) && $params['silent'] === 'true') {
 			$silent = true;
 		}
 		OTools::checkOfw('export');
@@ -80,7 +80,14 @@ class ExtractorTask extends OTask {
 
 		file_put_contents($destination, "<?php\n");
 
-		$files['of'] = OTools::fileToBase64($this->getConfig()->getDir('base') . 'of');
+		// Files on base path
+		$base_files = ['of', '.gitignore', 'composer.json', 'composer.lock', 'LICENSE', 'README.md'];
+		foreach ($base_files as $file) {
+			$file_path = $this->getConfig()->getDir('base') . $file;
+			if (file_exists($file_path)) {
+				$files[$file] = OTools::fileToBase64($file_path);
+			}
+		}
 
 		// Traverse folders
 		foreach ($this->folder_list as $folder) {

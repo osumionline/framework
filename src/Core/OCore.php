@@ -27,6 +27,17 @@ class OCore {
 	public ?OTranslate      $translate = null;
 	public ?float           $start_time = null;
 	public array            $services = [];
+	public array            $includes = [
+    'css' => [],
+    'inline_css' => [],
+    'js' => [],
+    'inline_js' => []
+  ];
+	private array $return_types  = [
+		'html' => 'text/html',
+		'json' => 'application/json',
+		'xml'  => 'text/xml'
+	];
 
 	/**
 	 * Get the start time in milliseconds to use in benchmarks
@@ -157,9 +168,9 @@ class OCore {
 			}
 
 			// Check method
-			if ($url_result['method'] !== $url_result['action_method']) {
-				$url_result['message'] = 'Method not allowed, expected "' . $url_result['action_method'].'" but received "' . $url_result['method'].'".';
-				OTools::showErrorPage($url_result, '405');
+			if ($url_result['method'] !== $url_result['component_method']) {
+				$url_result['message'] = 'Method not allowed, expected "' . $url_result['component_method'].'" but received "' . $url_result['method'].'".';
+				OTools::showErrorPage($url_result, 'method');
 				exit;
 			}
 
@@ -202,8 +213,8 @@ class OCore {
 				}
 			}
 
-			$action_instance = new $url_result['action']();
-			$reflection_param = new ReflectionParameter([$action_instance, 'run'], 0);
+			$component_instance = new $url_result['component']();
+			$reflection_param = new ReflectionParameter([$component_instance, 'run'], 0);
 			$reflection_param_type = $reflection_param->getType()->getName();
 
 			$req = new ORequest($url_result, $filter_results);
@@ -215,46 +226,39 @@ class OCore {
 				$param = $req;
 			}
 
-			$action_instance->loadAction($url_result);
-			$action_instance->run($param);
+			$component_instance->run($param);
+			$body = $component_instance->render();
+			$return_type = $component_instance->component_info['template_type'];
 
-			// Get action's vars
-			$vars = get_object_vars($action_instance);
+			// If there is a layout defined
+			if (!is_null($url_result['layout'])) {
+				$layout_instance = new $url_result['layout']();
+				// Add title and executed component's body
+				$layout_instance->title = $this->config->getDefaultTitle();
+				$layout_instance->body = $body;
+				// Get resulting body
+				$layout_body = $layout_instance->render();
 
-			// Check for components, they might have css or js
-			$filtered = array_filter($vars, function($element) {
-			    return $element instanceof OComponent;
-			});
-			foreach ($filtered as $value) {
-				if (property_exists($value, 'css')) {
-					foreach ($value->css as $item) {
-						$css_path = $value->getPath().$item.'.css';
-						if (file_exists($css_path)) {
-							$action_instance->getTemplate()->addCss($css_path, true);
-						}
-					}
+				// Add any CSS, inline CSS, JS or inline JS
+				if (stripos($layout_body, '</head>') !== false) {
+					$layout_body = str_ireplace('</head>', $this->renderInline().'</head>', $layout_body);
+					$layout_body = str_ireplace('</head>', $this->renderExternal().'</head>', $layout_body);
 				}
-				if (property_exists($value, 'js')) {
-					foreach ($value->js as $item) {
-						$js_path = $value->getPath().$item.'.js';
-						if (file_exists($js_path)) {
-							$action_instance->getTemplate()->addJs($js_path, true);
-						}
-					}
-				}
+				$body = $layout_body;
+				$return_type = $component_instance->component_info['template_type'];
 			}
 
-			// Get template
-			$template = $action_instance->getTemplate()->process();
+			// If type is not html is most likely it's and API call so tell the browsers not to cache it
+			if ($return_type !== 'html') {
+				header('Cache-Control: no-cache, must-revalidate');
+				header('Expires: Thu, 02 Jul 1981 03:00:00 GMT');
+			}
 
-			// Mix action's variables into the template
-			$end_html = preg_replace_callback('/\{\{(\w+)\}\}/', function ($matches) use ($vars) {
-			    $key = $matches[1];
-			    return isset($vars[$key]) ? strval($vars[$key]) : '';
-			}, $template);
+			header('Content-type: '.$this->return_types[$return_type]);
+			header('X-Powered-By: Osumi Framework '.OTools::getVersion());
 
 			// Show resulting HTML
-			echo $end_html;
+			echo $body;
 		}
 		else {
 			OTools::showErrorPage($url_result, '404');
@@ -264,6 +268,92 @@ class OCore {
 			$this->dbContainer->closeAllConnections();
 		}
 	}
+
+	/**
+   * Returns inline content (CSS and JS)
+   *
+   * @return string Inline content, if any
+   */
+  private function renderInline(): string {
+    $ret = '';
+		// Add global CSS files
+		if (count($this->config->getCssList())) {
+			foreach ($this->config->getCssList() as $css) {
+				$this->includes['inline_css'][] = $this->config->getDir('public').'css/'.$css.'.css';
+			}
+		}
+		// Add global JS files
+		if (count($this->config->getJsList())) {
+			foreach ($this->config->getJsList() as $js) {
+				$this->includes['inline_js'][] = $this->config->getDir('public').'js/'.$js.'.js';
+			}
+		}
+
+		// Process inline CSS files
+    if (count($this->includes['inline_css']) > 0) {
+      foreach ($this->includes['inline_css'] as $css) {
+        if (file_exists($css)) {
+          $ret .= "<style>\n";
+          $ret .= file_get_contents($css);
+          $ret .= "</style>\n";
+        }
+        else {
+          throw new Exception("No valid inline CSS file found: " . $css);
+        }
+      }
+    }
+		// Process inline JS files
+    if (count($this->includes['inline_js']) > 0) {
+      foreach ($this->includes['inline_js'] as $js) {
+        if (file_exists($js)) {
+          $ret .= "<script>\n";
+          $ret .= file_get_contents($js);
+          $ret .= "</script>\n";
+        }
+        else {
+          throw new Exception("No valid inline JS file found for the component: " . $js);
+        }
+      }
+    }
+
+    return $ret;
+  }
+
+	/**
+   * Returns external content (CSS and JS)
+   *
+   * @return string External content, if any
+   */
+  private function renderExternal(): string {
+    $ret = '';
+		// Add global external CSS files
+		if (count($this->config->getExtCssList())) {
+			foreach ($this->config->getExtCssList() as $css) {
+				$this->includes['css'][] = $css;
+			}
+		}
+		// Add global external JS files
+		if (count($this->config->getExtJsList())) {
+			foreach ($this->config->getExtJsList() as $js) {
+				$this->includes['js'][] = $js;
+			}
+		}
+
+		// Process CSS files
+    if (count($this->includes['css']) > 0) {
+      foreach ($this->includes['css'] as $css) {
+        $ret .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"".$css."\">\n";
+      }
+    }
+		// Process JS files
+    if (count($this->includes['js']) > 0) {
+      foreach ($this->includes['js'] as $js) {
+        $ret .= "<script src=\"".$js."\"></script>\n";
+      }
+    }
+
+    return $ret;
+  }
 
 	/**
 	 * Custom error handler, shows an error page and the error's stack trace

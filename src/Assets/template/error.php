@@ -124,15 +124,12 @@
 					echo '<span>'.$values['message'].'</span>';
 				}
 			}
-			else{
-	if ($values['mode'] === 'action') {
-		echo OTools::getMessage('ERROR_NO_ACTION_LABEL', [$values['res']['action']]);
-	}
+			else {
 ?>
 		<a href="#" id="show_more_link">
 			<?php echo OTools::getMessage('ERROR_SEE_MORE_LABEL') ?>
 		</a>
-		<div id="detail" style="display:none;">
+		<div id="detail" style="display: none;">
 			<pre>
 <?php
 	var_dump($values['res']);
@@ -142,8 +139,8 @@
 		<script>
 			function showMore(ev) {
 				ev.preventDefault();
-				document.getElementById('detail').style.display='block';
-				document.getElementById('show_more_link').style.display='none';
+				document.getElementById('detail').style.display = 'block';
+				document.getElementById('show_more_link').style.display = 'none';
 			}
 
 			window.onload = () => {
