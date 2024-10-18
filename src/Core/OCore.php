@@ -170,7 +170,7 @@ class OCore {
 			// Check method
 			if ($url_result['method'] !== $url_result['component_method']) {
 				$url_result['message'] = 'Method not allowed, expected "' . $url_result['component_method'].'" but received "' . $url_result['method'].'".';
-				OTools::showErrorPage($url_result, 'method');
+				OTools::showErrorPage($url_result, '405');
 				exit;
 			}
 
