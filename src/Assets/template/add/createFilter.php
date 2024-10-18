@@ -9,7 +9,7 @@
     <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_FILTER_ERROR') ?>
 
 
-      <?php echo $values['colors']->getColoredString('php of add filter login', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('php of add --option filter --name login', 'light_green') ?>
 
 
 <?php endif ?>

@@ -9,7 +9,7 @@
     <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_TASK_ERROR') ?>
 
 
-      <?php echo $values['colors']->getColoredString('php of add task email', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('php of add --option task --name email', 'light_green') ?>
 
 
 <?php endif ?>

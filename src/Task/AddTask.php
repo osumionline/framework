@@ -179,6 +179,7 @@ class AddTask extends OTask {
 		}
 
 		$values['model_name'] = $params['name'];
+		$values['model_name_lower'] = strtolower($params['name']);
 		$values['model_file'] = '';
 		$model_path           = $this->config->getDir('app_model');
 

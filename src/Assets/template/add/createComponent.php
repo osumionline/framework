@@ -9,7 +9,7 @@
     <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_COMPONENT_ERROR') ?>
 
 
-      <?php echo $values['colors']->getColoredString('php of add component users', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('php of add --option component --name users', 'light_green') ?>
 
 
 <?php endif ?>

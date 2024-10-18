@@ -305,6 +305,7 @@ class OBuild {
 		$template_path = $core->config->getDir('ofw_template').'add/modelListTemplate.php';
 		$list_template_content = OTools::getTemplate($template_path, '', [
 			'model_name' => $values['model_name'],
+			'model_name_lower' => $values['model_name_lower'],
 			'component_name' => $component_name
 		]);
 
@@ -318,7 +319,8 @@ class OBuild {
 		$template_path = $core->config->getDir('ofw_template').'add/modelComponentTemplate.php';
 		$component_content = OTools::getTemplate($template_path, '', [
 			'component_name' => $component_name,
-			'model_name' => $values['model_name']
+			'model_name' => $values['model_name'],
+			'model_name_lower' => $values['model_name_lower']
 		]);
 
 		$str_fields = '';
@@ -330,25 +332,25 @@ class OBuild {
 			}
 
 			if ($field->getType()===OMODEL_BOOL) {
-				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ? 'true' : 'false' ?>";
+				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."') ? 'true' : 'false' ?>";
 			}
 			elseif ($field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
+				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : $".$values['model_name_lower']."->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
 			}
 			elseif (!$field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
+				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
 			}
 			elseif ($field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
+				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : $".$values['model_name_lower']."->get('".$field->getName()."') ?>";
 			}
 			elseif (!$field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo $"."values['".$values['model_name']."']->get('".$field->getName()."') ?>";
+				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."') ?>";
 			}
 			elseif ($field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo is_null($"."values['".$values['model_name']."']->get('".$field->getName()."')) ? 'null' : '\"'.urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')).'\"' ?>";
+				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : '\"'.urlencode($".$values['model_name_lower']."->get('".$field->getName()."')).'\"' ?>";
 			}
 			elseif (!$field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo urlencode($"."values['".$values['model_name']."']->get('".$field->getName()."')) ?>";
+				$str_fields .= "<"."?php echo urlencode($".$values['model_name_lower']."->get('".$field->getName()."')) ?>";
 			}
 
 			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
@@ -365,6 +367,7 @@ class OBuild {
 		$template_path = $core->config->getDir('ofw_template').'add/modelTemplate.php';
 		$template_content = OTools::getTemplate($template_path, '', [
 			'model_name' => $values['model_name'],
+			'model_name_lower' => $values['model_name_lower'],
 			'str_fields' => $str_fields
 		]);
 

@@ -9,7 +9,7 @@
     <?php echo $values['colors']->getColoredString('ERROR', 'red') ?>: <?php echo OTools::getMessage('TASK_ADD_MODEL_COMPONENT_ERROR') ?>
 
 
-      <?php echo $values['colors']->getColoredString('php of add modelComponent User', 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('php of add --option modelComponent --name User', 'light_green') ?>
 
 
 <?php endif ?>
@@ -118,7 +118,7 @@ $values['colors']->getColoredString($values['model_name'], 'light_green')
 
       <?php echo $values['colors']->getColoredString('$'.'list_component = new '.$values['list_name']."(['list' => $"."list]);", 'light_green') ?>
 
-      <?php echo $values['colors']->getColoredString('$'.'component = new '.$values['component_name']."(['".$values['model_name']."' => $".$values['model_name']."]);", 'light_green') ?>
+      <?php echo $values['colors']->getColoredString('$'.'component = new '.$values['component_name']."Component(['".$values['model_name_lower']."' => $".$values['model_name_lower']."]);", 'light_green') ?>
 
 
 <?php endif ?>

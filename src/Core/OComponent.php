@@ -5,6 +5,8 @@ namespace Osumi\OsumiFramework\Core;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Log\OLog;
+use Osumi\OsumiFramework\Cache\OCacheContainer;
+use Osumi\OsumiFramework\Web\OSession;
 use \ReflectionClass;
 use \ReflectionProperty;
 
@@ -94,10 +96,39 @@ class OComponent {
    *
    * @return OConfig Configuration class object
    */
-  public final function getConfig(): OConfig {
+  public function getConfig(): OConfig {
     global $core;
     return $core->config;
   }
+
+  /**
+   * Get component's log object
+   *
+   * @return ?Olog Log object
+   */
+  public function getLog(): ?OLog {
+    return $this->log;
+  }
+
+  /**
+	 * Get access to the users session information
+	 *
+	 * @return OSession Session configuration class object
+	 */
+	public final function getSession(): OSession {
+		global $core;
+		return $core->session;
+	}
+
+  /**
+	 * Get access to the cache container
+	 *
+	 * @return OCacheContainer Cache container class object
+	 */
+	public final function getCacheContainer(): OCacheContainer {
+		global $core;
+		return $core->cacheContainer;
+	}
 
   /**
    * Add a CSS file (or list) to be added to output
