@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace Osumi\OsumiFramework\DB;
+namespace Osumi\OsumiFramework\ORM;
 
-use \PDO;
+use PDO;
 
 /**
  * ODBContainer - Class to store all the opened connections to the databases and methods to create new connections or close existing ones
@@ -28,7 +28,7 @@ class ODBContainer {
 	 * @return array Connection data, array with the connection index and the PDO connection link
 	 */
 	public function getConnection(string $driver, string $host, string $user, string $pass, string $name, string $charset): array {
-		$index = sha1($driver.$host.$user.$pass.$name.$charset);
+		$index = $driver . ':' . $host . ':' . $user . ':' . $pass . ':' . $name . ':' . $charset;
 
 		if (!array_key_exists($index, $this->connections)) {
 			$conn = new PDO(

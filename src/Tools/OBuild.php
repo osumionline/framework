@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Tools;
 
 use \ReflectionClass;
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\ORM\OField;
 
 /**
  * OBuild - Utility class with tools to build framework components
@@ -43,16 +44,8 @@ class OBuild {
 		$models = self::getModelList();
 
 		foreach ($models as $model) {
-			if (method_exists($model, 'generate')) {
-				$sql .= $model->generate() . "\n\n";
-			}
-		}
-		foreach ($models as $model) {
-			if (method_exists($model, 'generateRefs')) {
-				$refs = $model->generateRefs();
-				if ($refs!=''){
-					$sql .= $refs . "\n\n";
-				}
+			if (method_exists($model, 'toSQL')) {
+				$sql .= $model->toSQL() . "\n\n";
 			}
 		}
 
@@ -289,10 +282,10 @@ class OBuild {
 			return 'component-folder-cant-create';
 		}
 
-		$text_fields      = [OMODEL_PK_STR, OMODEL_TEXT, OMODEL_LONGTEXT];
-		$urlencode_fields = [OMODEL_TEXT, OMODEL_LONGTEXT];
-		$date_fields      = [OMODEL_CREATED, OMODEL_UPDATED, OMODEL_DATE];
-		$cont             = 0;
+		$text_fields   = [OField::TEXT, OField::LONGTEXT];
+		$number_fields = [OField::NUMBER, OField::FLOAT];
+		$date_fields   = [OField::DATE];
+		$cont          = 0;
 
 		$component_name = $values['model_name'].'Component';
 
@@ -324,40 +317,43 @@ class OBuild {
 		]);
 
 		$str_fields = '';
-		foreach ($values['model'] as $field) {
+		foreach ($values['model']['fields'] as $field_name => $field) {
 			$cont++;
-			$str_fields .= "	\"".OTools::underscoresToCamelCase($field->getName())."\": ";
-			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "\"";
+			$str_fields .= "	\"".OTools::underscoresToCamelCase($field_name)."\": ";
+
+			if (array_key_exists('primary', $field) && $field['primary'] === true) {
+				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ?>";
+			}
+			elseif ($field['type'] === OField::BOOL) {
+				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ? 'true' : 'false' ?>";
+			}
+			else {
+				if ($field['nullable']) {
+					if (in_array($field['type'], $date_fields)) {
+						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : '\"'.$".$values['model_name_lower']."->get('".$field_name."', 'd/m/Y H:i:s').'\"' ?>";
+					}
+					if (in_array($field['type'], $number_fields)) {
+						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : $".$values['model_name_lower']."->".$field_name." ?>";
+					}
+					if (in_array($field['type'], $text_fields)) {
+						echo "4\n";
+						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : '\"'.urlencode($".$values['model_name_lower']."->".$field_name.").'\"' ?>";
+					}
+				}
+				else {
+					if (in_array($field['type'], $date_fields)) {
+						$str_fields .= "\"<"."?php echo $".$values['model_name_lower']."->get('".$field_name."', 'd/m/Y H:i:s') ?>\"";
+					}
+					if (in_array($field['type'], $number_fields)) {
+						$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ?>";
+					}
+					if (in_array($field['type'], $text_fields)) {
+						$str_fields .= "\"<"."?php echo urlencode($".$values['model_name_lower']."->".$field_name.") ?>\"";
+					}
+				}
 			}
 
-			if ($field->getType()===OMODEL_BOOL) {
-				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."') ? 'true' : 'false' ?>";
-			}
-			elseif ($field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : $".$values['model_name_lower']."->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
-			}
-			elseif (!$field->getNullable() && in_array($field->getType(), $date_fields)) {
-				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."', 'd/m/Y H:i:s') ?>";
-			}
-			elseif ($field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : $".$values['model_name_lower']."->get('".$field->getName()."') ?>";
-			}
-			elseif (!$field->getNullable() && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->get('".$field->getName()."') ?>";
-			}
-			elseif ($field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->get('".$field->getName()."')) ? 'null' : '\"'.urlencode($".$values['model_name_lower']."->get('".$field->getName()."')).'\"' ?>";
-			}
-			elseif (!$field->getNullable() && in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "<"."?php echo urlencode($".$values['model_name_lower']."->get('".$field->getName()."')) ?>";
-			}
-
-			if ((in_array($field->getType(), $text_fields) || in_array($field->getType(), $date_fields)) && !in_array($field->getType(), $urlencode_fields)) {
-				$str_fields .= "\"";
-			}
-
-			if ($cont<count($values['model'])) {
+			if ($cont < count($values['model'])) {
 				$str_fields .= ",";
 			}
 
@@ -371,10 +367,10 @@ class OBuild {
 			'str_fields' => $str_fields
 		]);
 
-		if (file_put_contents($values['component_folder'].$values['component_file'], $component_content)===false) {
+		if (file_put_contents($values['component_folder'] . $values['component_file'], $component_content) === false) {
 			return 'component-file-cant-create';
 		}
-		if (file_put_contents($values['component_folder'].$values['component_template_file'], $template_content)===false) {
+		if (file_put_contents($values['component_folder'] . $values['component_template_file'], $template_content) === false) {
 			return 'component-file-cant-create';
 		}
 

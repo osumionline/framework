@@ -46,6 +46,6 @@ class OService {
 	 */
 	public final function getCacheContainer(): OCacheContainer {
 		global $core;
-		return $core->cacheContainer;
+		return $core->cache_container;
 	}
 }

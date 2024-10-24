@@ -5,7 +5,6 @@ namespace Osumi\OsumiFramework\Task;
 use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
-use Osumi\OsumiFramework\DB\OModel;
 
 /**
  * Add new actions, services, tasks, model components, components or filters
@@ -181,7 +180,7 @@ class AddTask extends OTask {
 		$values['model_name'] = $params['name'];
 		$values['model_name_lower'] = strtolower($params['name']);
 		$values['model_file'] = '';
-		$model_path           = $this->config->getDir('app_model');
+		$model_path           = $this->getConfig()->getDir('app_model');
 
 		if (file_exists($model_path)) {
 			if ($model = opendir($model_path)) {
@@ -207,7 +206,7 @@ class AddTask extends OTask {
 		$component_path = $this->getConfig()->getDir('app_component');
 		$model_name = "\\Osumi\\OsumiFramework\\App\\Model\\".$values['model_name'];
 		$model = new $model_name;
-		$values['model'] = $model->getModel();
+		$values['model']                   = $model->getModel();
 		$values['list_name']               = $values['model_name'].'ListComponent';
 		$values['list_folder']             = $component_path.'Model/'.$values['model_name'].'List/';
 		$values['list_file']               = $values['model_name'].'ListComponent.php';

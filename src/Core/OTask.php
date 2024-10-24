@@ -4,6 +4,7 @@ namespace Osumi\OsumiFramework\Core;
 
 use Osumi\OsumiFramework\Tools\OColors;
 use Osumi\OsumiFramework\Log\OLog;
+use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 
 /**
@@ -11,9 +12,7 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
  */
 class OTask {
 	protected ?OColors $colors = null;
-	protected ?OConfig $config = null;
 	protected ?OLog    $log    = null;
-	protected ?OCacheContainer $cacheContainer = null;
 
 	/**
 	 * Load global configuration and logger to use in the service
@@ -21,11 +20,8 @@ class OTask {
 	 * @return void
 	 */
 	public final function loadTask(): void {
-		global $core;
 		$this->colors = new OColors();
-		$this->config = $core->config;
 		$this->log    = new OLog(get_class($this));
-		$this->cacheContainer = $core->cacheContainer;
 	}
 
 	/**
@@ -43,7 +39,8 @@ class OTask {
 	 * @return OConfig Configuration class object
 	 */
 	public final function getConfig(): OConfig {
-		return $this->config;
+		global $core;
+		return $core->config;
 	}
 
 	/**
@@ -61,6 +58,7 @@ class OTask {
 	 * @return OCacheContainer Cache container class object
 	 */
 	public final function getCacheContainer(): OCacheContainer {
-		return $this->cacheContainer;
+		global $core;
+		return $core->cache_container;
 	}
 }

@@ -5,7 +5,7 @@ namespace Osumi\OsumiFramework\Core;
 use \PDO;
 use \ReflectionParameter;
 use \ReflectionClass;
-use Osumi\OsumiFramework\DB\ODBContainer;
+use Osumi\OsumiFramework\ORM\ODBContainer;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
 use Osumi\OsumiFramework\Web\ORequest;
@@ -20,8 +20,8 @@ use Osumi\OsumiFramework\Core\OComponent;
  * OCore - Base class for the framework with methods to load required files and start the application
  */
 class OCore {
-	public ?ODBContainer    $dbContainer = null;
-	public ?OCacheContainer $cacheContainer = null;
+	public ?ODBContainer    $db_container = null;
+	public ?OCacheContainer $cache_container = null;
 	public ?OConfig         $config = null;
 	public ?OSession        $session = null;
 	public ?OTranslate      $translate = null;
@@ -103,18 +103,8 @@ class OCore {
 				echo "ERROR: El sistema no dispone del driver ".$this->config->getDB('driver')." solicitado para realizar la conexión a la base de datos.\n";
 				exit;
 			}
-			define('OMODEL_PK', 1);
-			define('OMODEL_PK_STR', 10);
-			define('OMODEL_CREATED', 2);
-			define('OMODEL_UPDATED', 3);
-			define('OMODEL_NUM', 4);
-			define('OMODEL_TEXT', 5);
-			define('OMODEL_DATE', 6);
-			define('OMODEL_BOOL', 7);
-			define('OMODEL_LONGTEXT', 8);
-			define('OMODEL_FLOAT', 9);
 
-			$this->dbContainer = new ODBContainer();
+			$this->db_container = new ODBContainer();
 		}
 
 		if (!$from_cli) {
@@ -122,7 +112,7 @@ class OCore {
 		}
 
 		// Set up an empty cache container
-		$this->cacheContainer = new OCacheContainer();
+		$this->cache_container = new OCacheContainer();
 
 		// Load routes
 		$routes_path = $this->config->getDir('app_routes');
@@ -264,8 +254,8 @@ class OCore {
 			OTools::showErrorPage($url_result, '404');
 		}
 
-		if (!is_null($this->dbContainer)) {
-			$this->dbContainer->closeAllConnections();
+		if (!is_null($this->db_container)) {
+			$this->db_container->closeAllConnections();
 		}
 	}
 

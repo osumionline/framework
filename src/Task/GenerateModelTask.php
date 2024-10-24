@@ -22,7 +22,7 @@ class GenerateModelTask extends OTask {
 	public function run(): void {
 		global $core;
 		// Check if there is a database configured and loaded
-		if (is_null($core->dbContainer)) {
+		if (is_null($core->db_container)) {
 			$path   = $this->getConfig()->getDir('ofw_template').'generateModel/error.php';
 			$values = [
 				'colors' => $this->getColors()
