@@ -512,17 +512,43 @@ abstract class OModel {
 
     $sql .= implode(' AND ', $wheres);
 
-    // Aditional options (orderBy, limit, offset)
+    // Aditional options (order_by, limit, offset)
     if (isset($options['order_by'])) {
-      $sql .= " ORDER BY {$options['order_by']}";
+      // Splits the value of "order_by" into field and direction if it contains '#'
+      list($field, $direction) = array_pad(explode('#', $options['order_by']), 2, 'ASC');
+
+      // Checks if the direction is valid, otherwise sets 'ASC' by default
+      $direction = strtoupper($direction);
+      if ($direction !== 'ASC' && $direction !== 'DESC') {
+        $direction = 'ASC';
+      }
+
+      $sql .= " ORDER BY `{$field}` {$direction}";
     }
 
     if (isset($options['limit'])) {
-      $sql .= " LIMIT {$options['limit']}";
+      if (is_numeric($options['limit'])) {
+        $count = null;
+        $start = $options['limit'];
+      }
+      else {
+        // Splits the value of "limit" into start and amount if it contains '#'
+        list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
+      }
+
+      // Constructs the LIMIT clause according to the format provided
+      if ($count !== null) {
+        // If both start and amount are specified
+        $sql .= " LIMIT {$start}, {$count}";
+      } else {
+        // If only one limit value is specified
+        $sql .= " LIMIT {$start}";
+      }
     }
 
     if (isset($options['offset'])) {
-      $sql .= " OFFSET {$options['offset']}";
+      $offset = $options['offset'];
+      $sql .= " OFFSET {$offset}";
     }
 
     $db = ODB::getInstance();
@@ -563,15 +589,41 @@ abstract class OModel {
 
     // Aditional options (order_by, limit, offset)
     if (isset($options['order_by'])) {
-      $sql .= " ORDER BY {$options['order_by']}";
+      // Splits the value of "order_by" into field and direction if it contains '#'
+      list($field, $direction) = array_pad(explode('#', $options['order_by']), 2, 'ASC');
+
+      // Checks if the direction is valid, otherwise sets 'ASC' by default
+      $direction = strtoupper($direction);
+      if ($direction !== 'ASC' && $direction !== 'DESC') {
+        $direction = 'ASC';
+      }
+
+      $sql .= " ORDER BY `{$field}` {$direction}";
     }
 
     if (isset($options['limit'])) {
-      $sql .= " LIMIT {$options['limit']}";
+      if (is_numeric($options['limit'])) {
+        $count = null;
+        $start = $options['limit'];
+      }
+      else {
+        // Splits the value of "limit" into start and amount if it contains '#'
+        list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
+      }
+
+      // Constructs the LIMIT clause according to the format provided
+      if ($count !== null) {
+        // If both start and amount are specified
+        $sql .= " LIMIT {$start}, {$count}";
+      } else {
+        // If only one limit value is specified
+        $sql .= " LIMIT {$start}";
+      }
     }
 
     if (isset($options['offset'])) {
-      $sql .= " OFFSET {$options['offset']}";
+      $offset = $options['offset'];
+      $sql .= " OFFSET {$offset}";
     }
 
     $db = ODB::getInstance();
@@ -588,6 +640,40 @@ abstract class OModel {
     self::$results_cache[$cache_key] = $instances;
 
     return $instances;
+  }
+
+  /**
+   * Returns a count of all records of a table with given conditions
+   *
+   * @param array $conditions List of conditions to be applied on the query
+   *
+   * @return int Result count
+   */
+  public static function count(array $conditions = []): int {
+    $table_name = self::getTableName();
+    $db = ODB::getInstance();
+
+    // Build the base COUNT query
+    $sql = "SELECT COUNT(*) as `num` FROM `{$table_name}`";
+
+    // Add WHERE conditions if defined
+    $params = [];
+    if (!empty($conditions)) {
+      $where_clauses = [];
+      foreach ($conditions as $field => $value) {
+        $where_clauses[] = "`{$field}` = :{$field}";
+        $params[":{$field}"] = $value;
+      }
+      $sql .= " WHERE " . implode(' AND ', $where_clauses);
+    }
+
+    // Prepare and execute the query
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    // Gets the result and returns the value of "num"
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['num'] ?? 0;
   }
 
   /**
