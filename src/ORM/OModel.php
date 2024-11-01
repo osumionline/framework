@@ -69,24 +69,24 @@ abstract class OModel {
 
     // Validate primary key
     if (!$has_primary_key) {
-      throw new Exception("Model '{$className}' doesn't have a primary key field (OPK) defined.");
+      throw new Exception("Model '{$class_name}' doesn't have a primary key field (OPK) defined.");
     }
 
     // Validate mandatory created_at and updated_at fields
     if ($has_created_at === 0) {
-      throw new Exception("Model '{$className}' doesn't have a created at field (OCreatedAt) defined.");
+      throw new Exception("Model '{$class_name}' doesn't have a created at field (OCreatedAt) defined.");
     }
     if ($has_created_at > 1) {
-      throw new Exception("Model '{$className}' can't have more than one created at field (OCreatedAt) defined.");
+      throw new Exception("Model '{$class_name}' can't have more than one created at field (OCreatedAt) defined.");
     }
     if ($has_updated_at === 0) {
-      throw new Exception("Model '{$className}' doesn't have an updated at field (OUpdatedAt) defined.");
+      throw new Exception("Model '{$class_name}' doesn't have an updated at field (OUpdatedAt) defined.");
     }
     if ($has_updated_at > 1) {
-      throw new Exception("Model '{$className}' can't have more than one updated at field (OUpdatedAt) defined.");
+      throw new Exception("Model '{$class_name}' can't have more than one updated at field (OUpdatedAt) defined.");
     }
     if ($has_deleted_at > 1) {
-      throw new Exception("Model '{$className}' can't have more than one deleted at field (ODeletedAt) defined.");
+      throw new Exception("Model '{$class_name}' can't have more than one deleted at field (ODeletedAt) defined.");
     }
 
     // Mark model as validated
@@ -380,12 +380,16 @@ abstract class OModel {
           }
           break;
         case OField::TEXT:
-        case OField::LONGTEXT:
           if (!is_string($value)) {
             throw new Exception("The '{$field_name}' field must be a text string.");
           }
           if (isset($field['max']) && strlen($value) > $field['max']) {
             throw new Exception("The '{$field_name}' field cannot be longer than {$field['max']} characters.");
+          }
+          break;
+        case OField::LONGTEXT:
+          if (!is_string($value)) {
+            throw new Exception("The '{$field_name}' field must be a text string.");
           }
           break;
         case OField::BOOL:
@@ -477,7 +481,7 @@ abstract class OModel {
     $results = self::where($conditions, ['limit' => 1]);
 
     // Store results on cache
-    self::$results_cache[$cacheKey] = $results[0] ?? null;
+    self::$results_cache[$cache_key] = $results[0] ?? null;
 
     return $results[0] ?? null;
   }

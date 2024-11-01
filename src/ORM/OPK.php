@@ -11,6 +11,8 @@ class OPK {
     public bool $incr;
     public string $comment;
     public string $ref;
+    public bool $nullable;
+    public mixed $default;
 
     /**
      * OPK constructor
@@ -27,11 +29,15 @@ class OPK {
         string $type = OField::NUMBER,
         bool $incr = true,
         string $comment = '',
-        string $ref = ''
+        string $ref = '',
+        bool $nullable = true,
+        mixed $default = null
     ) {
-        $this->type    = $type;
-        $this->incr    = $incr;
-        $this->comment = $comment;
-        $this->ref     = $ref;
+        $this->type     = $type;
+        $this->incr     = $incr;
+        $this->comment  = $comment;
+        $this->ref      = $ref;
+        $this->nullable = $nullable;
+        $this->default  = $default;
     }
 }

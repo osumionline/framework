@@ -142,16 +142,18 @@ class OUrl {
 		// Load URLs, as it's a static method it won't go through the constructor
 		global $core;
 
-		$found = false;
-		$i   = 0;
-		$url = '';
+		$found  = false;
+		$i      = 0;
+		$url    = '';
+		$routes = ORoute::$routes;
 
-		while (!$found && $i < count($core->urls)) {
-			$check_component = $core->urls[$i]['component'];
+		while (!$found && $i < count($routes)) {
+			$check_component = $routes[$i]['component'];
 			$check_component_parts = explode('\\', $check_component);
 			$check_last_part = array_pop($check_component_parts);
+
 			if ($check_last_part == $component) {
-				$url = $core->urls[$i]['url'];
+				$url = $routes[$i]['url'];
 				$found = true;
 			}
 			$i++;

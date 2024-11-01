@@ -35,9 +35,13 @@ class ODBContainer {
 				$driver.':host='.$host.';dbname='.$name.';charset='.$charset,
 				$user,
 				$pass,
-				[PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+				[
+					PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+					PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+					PDO::ATTR_EMULATE_PREPARES => false,
+					PDO::ATTR_STRINGIFY_FETCHES => false
+				]
 			);
-			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			$this->connections[$index] = $conn;
 		}
 
