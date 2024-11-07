@@ -78,7 +78,7 @@ class OUrl {
 	 *
 	 * @return array Array of configuration information
 	 */
-	public function process(string $url=null): array {
+	public function process(string $url = null): array {
 		if (!is_null($url)) {
 			$this->check_url = $url;
 		}
@@ -94,6 +94,7 @@ class OUrl {
 			'headers'          => getallheaders(),
 			'method'           => $this->method,
 			'component_method' => '',
+			'is_view'          => false,
 			'res'              => false
 		];
 
@@ -105,8 +106,9 @@ class OUrl {
 			if (!is_null($chk)) {
 				$found      = true;
 				$ret['res'] = true;
-				$ret['component'] = $this->urls[$i]['component'];
+				$ret['component']        = $this->urls[$i]['component'];
 				$ret['component_method'] = $this->urls[$i]['method'];
+				$ret['is_view']          = $this->urls[$i]['is_view'];
 
 				if (array_key_exists('filters', $this->urls[$i])) {
 					$ret['filters'] = $this->urls[$i]['filters'];

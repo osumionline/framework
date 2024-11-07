@@ -19,8 +19,20 @@ msgstr "403 Autentifikazio errorea"
 msgid "ERROR_404_LABEL"
 msgstr "404 Orria ez da aurkitu"
 
+msgid "ERROR_405_LABEL"
+msgstr "405 Metodoa ez da onartzen"
+
+msgid "ERROR_405_MESSAGE"
+msgstr ""%s" espero zen baina "%s" jaso zen."
+
 msgid "ERROR_500_LABEL"
 msgstr "500 Zerbitzariaren barneko errorea"
+
+msgid "ERROR_VIEW_LABEL"
+msgstr "Ikuspegi fitxategia ez da aurkitu"
+
+msgid "ERROR_VIEW_MESSAGE"
+msgstr "Ezin izan da ikuspegi "%s" fitxategia aurkitu."
 
 msgid "ERROR_SEE_MORE_LABEL"
 msgstr "Xehetasun gehiago ikusi"
@@ -93,6 +105,33 @@ msgstr "Eredu-fitxategia sortua: %s"
 
 msgid "TASK_GENERATE_MODEL_NO_DATABASE"
 msgstr "Ez da definitu datu-baserik."
+
+msgid "TASK_GENERATE_MODEL_FROM"
+msgstr "JSON fitxategi batetik eredu-klaseak sortzeko funtzioa."
+
+msgid "TASK_GENERATE_MODEL_FROM_WARNING"
+msgstr "Kontuz!"
+
+msgid "TASK_GENERATE_MODEL_FROM_CONTINUE"
+msgstr "Igo beharreko fitxategiaren izena adierazi behar duzu."
+
+msgid "TASK_GENERATE_MODEL_FROM_FILE_NOT_FOUND"
+msgstr "Adierazitako fitxategia ez da existitzen."
+
+msgid "TASK_GENERATE_MODEL_FROM_OK"
+msgstr ""%s" eredu-klase berria sortu da "%s" fitxategian."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_EXISTS"
+msgstr ""%s" fitxategia dagoeneko existitzen da."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_PK"
+msgstr ""%s" taulak ez du OPK gisa definitutako eremurik."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_CREATED_AT"
+msgstr ""%s" taulak ez du OCreatedAt gisa definitutako eremurik."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_UPDATED_AT"
+msgstr ""%s" taulak ez du OUpdatedAt gisa definitutako eremurik."
 
 msgid "TASK_VERSION"
 msgstr "Frameworkaren oraingo bertsioaren informazioa jaso."

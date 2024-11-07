@@ -158,8 +158,8 @@ class OBuild {
 		$template_path = $core->config->getDir('ofw_template').'add/actionTemplate.php';
 		$folders = str_ireplace('/', '\\', $values['folders']);
 		$str_action = OTools::getTemplate($template_path, '', [
-			'folders' => $folders,
-			'action' => $values['action_name'],
+			'folders'      => $folders,
+			'action'       => $values['action_name'],
 			'str_template' => $str_template
 		]);
 
@@ -292,14 +292,14 @@ class OBuild {
 		$template_path = $core->config->getDir('ofw_template').'add/modelListComponentTemplate.php';
 		$list_component_content = OTools::getTemplate($template_path, '', [
 			'model_name' => $values['model_name'],
-			'list_name' => $values['list_name']
+			'list_name'  => $values['list_name']
 		]);
 
 		$template_path = $core->config->getDir('ofw_template').'add/modelListTemplate.php';
 		$list_template_content = OTools::getTemplate($template_path, '', [
-			'model_name' => $values['model_name'],
+			'model_name'       => $values['model_name'],
 			'model_name_lower' => $values['model_name_lower'],
-			'component_name' => $component_name
+			'component_name'   => $component_name
 		]);
 
 		if (file_put_contents($values['list_folder'].$values['list_file'], $list_component_content)===false) {
@@ -311,8 +311,8 @@ class OBuild {
 
 		$template_path = $core->config->getDir('ofw_template').'add/modelComponentTemplate.php';
 		$component_content = OTools::getTemplate($template_path, '', [
-			'component_name' => $component_name,
-			'model_name' => $values['model_name'],
+			'component_name'   => $component_name,
+			'model_name'       => $values['model_name'],
 			'model_name_lower' => $values['model_name_lower']
 		]);
 
@@ -362,9 +362,9 @@ class OBuild {
 
 		$template_path = $core->config->getDir('ofw_template').'add/modelTemplate.php';
 		$template_content = OTools::getTemplate($template_path, '', [
-			'model_name' => $values['model_name'],
+			'model_name'       => $values['model_name'],
 			'model_name_lower' => $values['model_name_lower'],
-			'str_fields' => $str_fields
+			'str_fields'       => $str_fields
 		]);
 
 		if (file_put_contents($values['component_folder'] . $values['component_file'], $component_content) === false) {
@@ -434,10 +434,109 @@ class OBuild {
 
 		$template_path = $core->config->getDir('ofw_template').'add/filterTemplate.php';
 		$str_component = OTools::getTemplate($template_path, '', [
-			'name' => $values['filter_name'],
+			'name'        => $values['filter_name'],
 			'description' => OTools::getMessage('TASK_ADD_FILTER_TEMPLATE', [$values['filter_name']])
 		]);
 		file_put_contents($values['filter_file'], $str_component);
+
+		return 'ok';
+	}
+
+	/**
+	 * Creates a model class
+	 *
+	 * @param array $values Information about the class that has to be created
+	 *
+	 * @return string Status of the operation
+	 */
+	public static function addModelClass(array $values): string {
+		global $core;
+
+		// Check if class file already exists
+		if (file_exists($values['class_file'])) {
+			return 'error-exists';
+		}
+
+		// Validations
+		$has_pk = false;
+		$has_created_at = false;
+		$has_updated_at = false;
+		$fields = '';
+
+		// Add fields and check validations
+		foreach ($values['fields'] as $field) {
+			if ($field['decorator'] === 'OPK') {
+				$has_pk = true;
+			}
+			if ($field['decorator'] === 'OCreatedAt') {
+				$has_created_at = true;
+			}
+			if ($field['decorator'] === 'OUpdatedAt') {
+				$has_updated_at = true;
+			}
+
+			if (in_array($field['decorator'], ['OCreatedAt', 'OUpdatedAt'])) {
+				$field['attribute_type'] = 'string';
+			}
+			if ($field['decorator'] === 'OPK' && !array_key_exists('attribute_type', $field)) {
+				$field['attribute_type'] = 'int';
+			}
+			$fields .= "	#[".$field['decorator']."(\n";
+			$field_properties = [];
+			foreach ($field as $key => $value) {
+				if (!in_array($key, ['name', 'decorator', 'attribute_type'])) {
+					if (is_null($value)) {
+						$field_value = "null";
+					} elseif (is_bool($value)) {
+						$field_value = $value ? "true" : "false";
+					} elseif (is_string($value)) {
+						if ($key !== 'type') {
+							$field_value = "'" . $value . "'";
+						}
+						else {
+							$field_value = $value;
+						}
+					} else {
+						$field_value = (string) $value;
+					}
+					$field_properties[] = "		" . $key . ": " . $field_value;
+				}
+			}
+			$fields .= implode(",\n", $field_properties)."\n";
+			$fields .= "	)]\n";
+			$fields .= "	public ?".$field['attribute_type']." $".$field['name'].";\n\n";
+		}
+
+		// Check validations
+		if (!$has_pk) {
+			return 'error-pk';
+		}
+		if (!$has_created_at) {
+			return 'error-created-at';
+		}
+		if (!$has_updated_at) {
+			return 'error-updated-at';
+		}
+
+		// Add references to other tables
+		if (count($values['refs']) > 0) {
+			$ref_template_path = $core->config->getDir('ofw_template').'generateModelFrom/refTemplate.php';
+			foreach ($values['refs'] as $ref) {
+				$fields .= OTools::getTemplate($ref_template_path, '', [
+					'to'         => OTools::underscoresToCamelCase($ref['to'], true),
+					'to_name'    => $ref['to'],
+					'to_field'   => $ref['field_to'],
+					'from_field' => $ref['field_from']
+				]);
+			}
+		}
+
+		$template_path = $core->config->getDir('ofw_template').'generateModelFrom/modelTemplate.php';
+		$str_component = OTools::getTemplate($template_path, '', [
+			'table_name' => $values['table_name'],
+			'fields'     => $fields
+		]);
+		file_put_contents($values['class_file'], $str_component);
 
 		return 'ok';
 	}

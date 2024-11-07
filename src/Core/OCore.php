@@ -121,11 +121,11 @@ class OCore {
 			if ($file === '.' || $file === '..') {
 				continue;
 			}
-			require_once $routes_path.$file;
+			require_once $routes_path . $file;
 		}
 
 		// Load global functions
-		require_once $this->config->getDir('ofw_tools').'functions.php';
+		require_once $this->config->getDir('ofw_tools') . 'functions.php';
 	}
 
 	/**
@@ -159,7 +159,7 @@ class OCore {
 
 			// Check method
 			if ($url_result['method'] !== $url_result['component_method']) {
-				$url_result['message'] = 'Method not allowed, expected "' . $url_result['component_method'].'" but received "' . $url_result['method'].'".';
+				$url_result['message'] = OTools::getMessage('ERROR_405_MESSAGE', [$url_result['component_method'], $url_result['method']]);
 				OTools::showErrorPage($url_result, '405');
 				exit;
 			}
@@ -203,22 +203,36 @@ class OCore {
 				}
 			}
 
-			$component_instance = new $url_result['component']();
-			$reflection_param = new ReflectionParameter([$component_instance, 'run'], 0);
-			$reflection_param_type = $reflection_param->getType()->getName();
+			// If route has a component
+			if (!$url_result['is_view']) {
+				$component_instance    = new $url_result['component']();
+				$reflection_param      = new ReflectionParameter([$component_instance, 'run'], 0);
+				$reflection_param_type = $reflection_param->getType()->getName();
 
-			$req = new ORequest($url_result, $filter_results);
-			if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
-				$param = new $reflection_param_type();
-				$param->load($req);
+				$req = new ORequest($url_result, $filter_results);
+				if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
+					$param = new $reflection_param_type();
+					$param->load($req);
+				}
+				else {
+					$param = $req;
+				}
+
+				$body = $component_instance->render($param);
+				$return_type = $component_instance->component_info['template_type'];
 			}
 			else {
-				$param = $req;
+				// Route is a view
+				$view_file = $this->config->getDir('app') . $url_result['component'];
+				if (file_exists($view_file)) {
+					$body = file_get_contents($view_file);
+					$return_type = pathinfo($view_file, PATHINFO_EXTENSION);
+				}
+				else {
+					$url_result['message'] = OTools::getMessage('ERROR_VIEW_MESSAGE', [$url_result['component']]);
+					OTools::showErrorPage($url_result, 'view');
+				}
 			}
-
-			$component_instance->run($param);
-			$body = $component_instance->render();
-			$return_type = $component_instance->component_info['template_type'];
 
 			// If there is a layout defined
 			if (!is_null($url_result['layout'])) {

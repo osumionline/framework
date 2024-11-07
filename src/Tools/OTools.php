@@ -239,7 +239,7 @@ class OTools {
 	 *
 	 * @param array $res Array containing information about the error
 	 *
-	 * @param string $mode Error mode (403 / 404 / 500 / action)
+	 * @param string $mode Error mode (403 / 404 / 405 / 500 / action / view)
 	 *
 	 * @return void
 	 */

@@ -19,8 +19,20 @@ msgstr "403 Authentication error"
 msgid "ERROR_404_LABEL"
 msgstr "404 Page not found"
 
+msgid "ERROR_405_LABEL"
+msgstr "405 Method not allowed"
+
+msgid "ERROR_405_MESSAGE"
+msgstr ""%s" was expected but "%s" was received."
+
 msgid "ERROR_500_LABEL"
 msgstr "500 Internal server error"
+
+msgid "ERROR_VIEW_LABEL"
+msgstr "View file not found"
+
+msgid "ERROR_VIEW_MESSAGE"
+msgstr "View file "%s" could not be found."
 
 msgid "ERROR_SEE_MORE_LABEL"
 msgstr "See more details"
@@ -93,6 +105,33 @@ msgstr "Model file generated: %s"
 
 msgid "TASK_GENERATE_MODEL_NO_DATABASE"
 msgstr "There are no databases configured."
+
+msgid "TASK_GENERATE_MODEL_FROM"
+msgstr "Function to generate model classes from a JSON file."
+
+msgid "TASK_GENERATE_MODEL_FROM_WARNING"
+msgstr "Warning!"
+
+msgid "TASK_GENERATE_MODEL_FROM_CONTINUE"
+msgstr "You must indicate the name of the file to upload."
+
+msgid "TASK_GENERATE_MODEL_FROM_FILE_NOT_FOUND"
+msgstr "The specified file does not exist."
+
+msgid "TASK_GENERATE_MODEL_FROM_OK"
+msgstr "New model class "%s" created in file "%s"."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_EXISTS"
+msgstr "The file "%s" already exists."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_PK"
+msgstr "Table "%s" has no field defined as OPK."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_CREATED_AT"
+msgstr "Table "%s" has no field defined as OCreatedAt."
+
+msgid "TASK_GENERATE_MODEL_FROM_ERROR_UPDATED_AT"
+msgstr "Table "%s" has no field defined as OUpdatedAt."
 
 msgid "TASK_VERSION"
 msgstr "Get Frameworks current version information."

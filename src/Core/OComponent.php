@@ -3,6 +3,7 @@
 namespace Osumi\OsumiFramework\Core;
 
 use Osumi\OsumiFramework\Tools\OTools;
+use Osumi\OsumiFramework\Tools\OPipeFunctions;
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Log\OLog;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
@@ -201,30 +202,134 @@ class OComponent {
   }
 
   /**
+   * Method to apply template substitutions such as {{variable}} with class properties
+   *
+   * @param string $content Content of the template
+   *
+   * @return string Returns content with substitutions applied
+   */
+  private function applyTemplateSubstitutions(string $content): string {
+    $reflection = new ReflectionClass($this);
+    $public_properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
+
+    foreach ($public_properties as $property) {
+      $property_name = $property->getName();
+      $property_value = $this->$property_name;
+
+      // If the value is a component, render it and replace the marker with the rendered content
+      if ($property_value instanceof OComponent) {
+        $content = preg_replace(
+          "/\{\{\s*" . preg_quote($property_name) . "\s*\}\}/",
+          $property_value->render(),
+          $content
+        );
+        continue;
+      }
+
+      // Checking and handling {{variable | filter}}
+      $content = preg_replace_callback(
+        "/\{\{\s*" . preg_quote($property_name) . "\.([a-zA-Z0-9_]+)\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
+        function ($matches) use ($property_value) {
+          $sub_property = $matches[1];
+          $filter_name = $matches[2];
+
+          $params = isset($matches[3]) ? str_getcsv($matches[3], ',', '"') : [];
+          $params = array_map('trim', $params);
+
+          // Apply pipe function to value
+          if (is_object($property_value) && property_exists($property_value, $sub_property)) {
+            $sub_value = $property_value->$sub_property;
+
+            switch ($filter_name) {
+              case 'date':
+                array_unshift($params, $sub_value);
+                return OPipeFunctions::getDateValue(...$params);
+              case 'number':
+                array_unshift($params, $sub_value);
+                return OPipeFunctions::getNumberValue(...$params);
+              case 'string':
+                return OPipeFunctions::getStringValue($sub_value);
+              case 'bool':
+                return OPipeFunctions::getBoolValue($sub_value);
+              default:
+                return $matches[0]; // If the pipe function is not valid just return the value
+            }
+          }
+          return $matches[0]; // If property is not right just return it
+        },
+        $content
+      );
+
+      // Direct handling of {{variable | filter}} (no additional properties)
+      $content = preg_replace_callback(
+        "/\{\{\s*" . preg_quote($property_name) . "\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
+        function ($matches) use ($property_value) {
+          $filter_name = $matches[1];
+
+          $params = isset($matches[2]) ? str_getcsv($matches[2], ',', '"') : [];
+          $params = array_map('trim', $params);
+
+          switch ($filter_name) {
+            case 'date':
+              array_unshift($params, $property_value);
+              return OPipeFunctions::getDateValue(...$params);
+            case 'number':
+              array_unshift($params, $property_value);
+              return OPipeFunctions::getNumberValue(...$params);
+            case 'string':
+              return OPipeFunctions::getStringValue($property_value);
+            case 'bool':
+              return OPipeFunctions::getBoolValue($property_value);
+            default:
+              return $matches[0]; // If the pipe function is not valid just return the value
+          }
+        },
+        $content
+      );
+
+      // Handling {{object.property}}
+      if (is_object($property_value)) {
+        preg_match_all("/\{\{\s*" . preg_quote($property_name) . "\.([a-zA-Z0-9_]+)\s*\}\}/", $content, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+          $sub_property = $match[1];
+          if (property_exists($property_value, $sub_property)) {
+            $sub_value = $property_value->$sub_property;
+            $content = str_replace($match[0], strval($sub_value), $content);
+          }
+        }
+      }
+      else {
+        // Direct substitution of {{variable}} or {{  variable  }}
+        $content = preg_replace("/\{\{\s*" . preg_quote($property_name) . "\s*\}\}/", strval($property_value), $content);
+      }
+    }
+
+    return $content;
+  }
+
+  /**
    * Render a component mixing it's properties into the template
+   *
+   * @param mixed $data Data to be passed to the "run" method, if exists
    *
    * @return string Return resulting string
    */
-  public function render(): string {
+  public function render($data = null): string {
+    // Check if component has a "run" method
+    if (method_exists($this, 'run')) {
+      $this->run($data);
+    }
+
     if ($this->component_info['template_type'] === 'php') {
       return $this->renderPHP();
     }
 
     // Get template file's content
     $template_content = file_get_contents($this->component_info['template_name']);
-    $reflection = new ReflectionClass($this);
 
-    // Get component's public property list
-    $public_properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
-
-    // Put variables into the template
-    foreach ($public_properties as $property) {
-      $property_name = $property->getName();
-      $property_value = $this->$property_name;
-      $template_content = str_replace("{{" . $property_name . "}}", strval($property_value), $template_content);
-    }
-
-    return $template_content;
+    // Apply substitutions
+    return $this->applyTemplateSubstitutions($template_content);
   }
 
   /**
@@ -246,7 +351,10 @@ class OComponent {
 
     // Include template file so it get's executed and mixed with previously created variables
     include($this->component_info['template_name']);
-    return ob_get_clean();
+    $content = ob_get_clean();
+
+    // Apply substitutions
+    return $this->applyTemplateSubstitutions($content);
   }
 
   /**

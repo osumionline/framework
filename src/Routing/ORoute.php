@@ -3,9 +3,9 @@
 namespace Osumi\OsumiFramework\Routing;
 
 class ORoute {
-  public static array $routes = [];
-  private static string $currentPrefix = '';
-  private static ?string $currentLayout = null;
+  public  static array   $routes         = [];
+  private static string  $current_prefix = '';
+  private static ?string $current_layout = null;
 
   /**
    * Register a new GET route with the router.
@@ -21,10 +21,10 @@ class ORoute {
    * @return void
    */
   public static function get(string $url, string $component, array $filters = [], ?string $layout = null): void {
-    $fullUrl = self::$currentPrefix . $url;
-    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
+    $full_url = self::$current_prefix . $url;
+    $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
-    self::addRoute('GET', $fullUrl, $component, $filters, $layout);
+    self::addRoute('GET', $full_url, $component, $filters, $layout);
   }
 
   /**
@@ -41,10 +41,10 @@ class ORoute {
    * @return void
    */
   public static function post(string $url, string $component, array $filters = [], ?string $layout = null): void {
-    $fullUrl = self::$currentPrefix . $url;
-    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
+    $full_url = self::$current_prefix . $url;
+    $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
-    self::addRoute('POST', $fullUrl, $component, $filters, $layout);
+    self::addRoute('POST', $full_url, $component, $filters, $layout);
   }
 
   /**
@@ -61,10 +61,10 @@ class ORoute {
    * @return void
    */
   public static function put(string $url, string $component, array $filters = [], ?string $layout = null): void {
-    $fullUrl = self::$currentPrefix . $url;
-    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
+    $full_url = self::$current_prefix . $url;
+    $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
-    self::addRoute('PUT', $fullUrl, $component, $filters, $layout);
+    self::addRoute('PUT', $full_url, $component, $filters, $layout);
   }
 
   /**
@@ -81,10 +81,30 @@ class ORoute {
    * @return void
    */
   public static function delete(string $url, string $component, array $filters = [], ?string $layout = null): void {
-    $fullUrl = self::$currentPrefix . $url;
-    $layout = (!is_null(self::$currentLayout)) ? self::$currentLayout : $layout;
+    $full_url = self::$current_prefix . $url;
+    $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
-    self::addRoute('DELETE', $fullUrl, $component, $filters, $layout);
+    self::addRoute('DELETE', $full_url, $component, $filters, $layout);
+  }
+
+  /**
+   * Register a static file to a route with the router.
+   *
+   * @param string $url URL to respond.
+   *
+   * @param string $file File to be displayed.
+   *
+   * @param array $filters List of filters to be applied.
+   *
+   * @param ?string $layout Layout component, optional.
+   *
+   * @return void
+   */
+  public static function view(string $url, string $file, array $filters = [], ?string $layout = null): void {
+    $full_url = self::$current_prefix . $url;
+    $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
+
+    self::addRoute('GET', $full_url, $file, $filters, $layout, true);
   }
 
   /**
@@ -100,15 +120,18 @@ class ORoute {
    *
    * @param ?string $layout Layout component, optional.
    *
+   * @param bool $is_view View mark for static file routes, optional.
+   *
    * @return void
    */
-  public static function addRoute(string $method, string $url, string $component, array $filters, ?string $layout = null): void {
+  public static function addRoute(string $method, string $url, string $component, array $filters, ?string $layout = null, bool $is_view = false): void {
     $route = [
-      'method' => $method,
-      'url' => $url,
+      'method'    => $method,
+      'url'       => $url,
       'component' => $component,
-      'filters' => $filters,
-      'layout' => $layout
+      'filters'   => $filters,
+      'layout'    => $layout,
+      'is_view'   => $is_view
     ];
 
     self::$routes[] = $route;
@@ -124,12 +147,12 @@ class ORoute {
    * @return void
    */
   public static function prefix(string $prefix, callable $callback): void {
-    $previousPrefix = self::$currentPrefix;
-    self::$currentPrefix = $prefix;
+    $previous_prefix = self::$current_prefix;
+    self::$current_prefix = $prefix;
 
     $callback();
 
-    self::$currentPrefix = $previousPrefix;
+    self::$current_prefix = $previous_prefix;
   }
 
   /**
@@ -142,12 +165,12 @@ class ORoute {
    * @return void
    */
   public static function layout(string $layout, callable $callback): void {
-    $previousLayout = self::$currentLayout;
-    self::$currentLayout = $layout;
+    $previous_layout = self::$current_layout;
+    self::$current_layout = $layout;
 
     $callback();
 
-    self::$currentLayout = $previousLayout;
+    self::$current_layout = $previous_layout;
   }
 
   /**
@@ -162,14 +185,14 @@ class ORoute {
    * @return void
    */
   public static function group(string $prefix, string $layout, callable $callback): void {
-    $previousPrefix = self::$currentPrefix;
-    self::$currentPrefix = $prefix;
-    $previousLayout = self::$currentLayout;
-    self::$currentLayout = $layout;
+    $previous_prefix = self::$current_prefix;
+    self::$current_prefix = $prefix;
+    $previous_layout = self::$current_layout;
+    self::$current_layout = $layout;
 
     $callback();
 
-    self::$currentPrefix = $previousPrefix;
-    self::$currentLayout = $previousLayout;
+    self::$current_prefix = $previous_prefix;
+    self::$current_layout = $previous_layout;
   }
 }
