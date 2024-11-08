@@ -322,34 +322,23 @@ class OBuild {
 			$str_fields .= "	\"".OTools::underscoresToCamelCase($field_name)."\": ";
 
 			if (array_key_exists('primary', $field) && $field['primary'] === true) {
-				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ?>";
+				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." }}";
 			}
 			elseif ($field['type'] === OField::BOOL) {
-				$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ? 'true' : 'false' ?>";
+				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | bool }}";
 			}
-			else {
+			else if (in_array($field['type'], $date_fields)) {
+				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | date }}";
+			}
+			else if (in_array($field['type'], $text_fields)) {
+				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | string }}";
+			}
+			else if (in_array($field['type'], $number_fields)) {
 				if ($field['nullable']) {
-					if (in_array($field['type'], $date_fields)) {
-						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : '\"'.$".$values['model_name_lower']."->get('".$field_name."', 'd/m/Y H:i:s').'\"' ?>";
-					}
-					if (in_array($field['type'], $number_fields)) {
-						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : $".$values['model_name_lower']."->".$field_name." ?>";
-					}
-					if (in_array($field['type'], $text_fields)) {
-						echo "4\n";
-						$str_fields .= "<"."?php echo is_null($".$values['model_name_lower']."->".$field_name.") ? 'null' : '\"'.urlencode($".$values['model_name_lower']."->".$field_name.").'\"' ?>";
-					}
+					$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | number }}";
 				}
 				else {
-					if (in_array($field['type'], $date_fields)) {
-						$str_fields .= "\"<"."?php echo $".$values['model_name_lower']."->get('".$field_name."', 'd/m/Y H:i:s') ?>\"";
-					}
-					if (in_array($field['type'], $number_fields)) {
-						$str_fields .= "<"."?php echo $".$values['model_name_lower']."->".$field_name." ?>";
-					}
-					if (in_array($field['type'], $text_fields)) {
-						$str_fields .= "\"<"."?php echo urlencode($".$values['model_name_lower']."->".$field_name.") ?>\"";
-					}
+					$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." }}";
 				}
 			}
 
