@@ -216,6 +216,11 @@ class OComponent {
       $property_name = $property->getName();
       $property_value = $this->$property_name;
 
+      // Check if there is any pattern of the variable in the content before proceeding
+      if (!preg_match("/\{\{\s*" . preg_quote($property_name) . "(\.|(\s*\|\s*[a-zA-Z0-9_]+(\(.*?\))?)?)?\s*\}\}/", $content)) {
+        continue;
+      }
+
       // If the value is a component, render it and replace the marker with the rendered content
       if ($property_value instanceof OComponent) {
         $content = preg_replace(
