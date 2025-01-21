@@ -1,7 +1,7 @@
 {
   "name": "osumionline/framework",
   "description": "Framework PHP de Osumi para aplicaciones web.",
-  "version": "9.4.3",
+  "version": "9.5.0",
   "type": "library",
   "keywords": ["framework", "php", "web", "osumi"],
   "homepage": "https://github.com/osumionline/framework",
@@ -23,6 +23,6 @@
     }
   },
   "extra": {
-    "version-description": "Correcciones en componentes."
+    "version-description": "Nuevo sistema de DTOs."
   }
 }

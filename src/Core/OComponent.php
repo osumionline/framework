@@ -217,7 +217,7 @@ class OComponent {
       $property_value = $this->$property_name;
 
       // Check if there is any pattern of the variable in the content before proceeding
-      if (!preg_match("/\{\{\s*" . preg_quote($property_name) . "(\.[a-zA-Z0-9_]+)?(\s*\|\s*[a-zA-Z0-9_]+(\(.*?\))?)?\s*\}\}/", $content)) {
+      if (!preg_match("/\{\{\s*" . preg_quote($property_name) . "(\.|(\s*\|\s*[a-zA-Z0-9_]+(\(.*?\))?)?)?\s*\}\}/", $content)) {
         continue;
       }
 

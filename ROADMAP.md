@@ -2,8 +2,28 @@
 
 Proximamente en Osumi Framework:
 
-**9.5.0**
-Coming soon...
+**9.6.0**
+
+* Nuevo sistema de `middlewares`.
+* Sustituyen a los filtros actuales.
+* Permite encadenar filtros indicando el orden.
+* Se puede indicar si se deben ejecutar antes o después de la ejecución del componente: `before` sirve para validar usuarios o datos que se reciben y `after` sirve para realizar operaciones sobre el resultado obtenido.
+
+Por ejemplo:
+
+```
+ORoute::get('/get-book-cover', GetBookCoverComponent::class)
+	->addMiddlewareBefore(CheckUserMiddleware::class)
+	->addMiddlewareBefore(GetBookMiddleware::class)
+	->addMiddlewareAfter(MinifyJSONMiddleware::class);
+```
+
+**~~9.5.0~~**
+
+* ~~Nuevo sistema de DTOs basado en decoradores.~~
+* ~~Extiende la clase `ODTO` en lugar de implementar una interfaz.~~
+* ~~Elimininación de getters/setters.~~
+* ~~Elimininación de funciones `load` e `isValid`.~~
 
 **~~9.4.0~~**
 

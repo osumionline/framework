@@ -81,7 +81,7 @@ class OBuild {
     	$contents = file_get_contents($file_path);
 		}
 		else {
-			$template_path = $core->config->getDir('ofw_template').'add/urlsTemplate.php';
+			$template_path = $core->config->getDir('ofw_template') . 'add/urlsTemplate.tpl';
 			$contents = file_get_contents($template_path);
     }
 
@@ -155,7 +155,7 @@ class OBuild {
 
 		// New action's content
 		$str_template = OTools::getMessage('TASK_ADD_ACTION_TEMPLATE', [$values['action_name']]);
-		$template_path = $core->config->getDir('ofw_template').'add/actionTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/actionTemplate.tpl';
 		$folders = str_ireplace('/', '\\', $values['folders']);
 		$str_action = OTools::getTemplate($template_path, '', [
 			'folders'      => $folders,
@@ -192,13 +192,13 @@ class OBuild {
 			mkdir($core->config->getDir('app_service'));
 		}
 
-		$service_file = $core->config->getDir('app_service').ucfirst($name).'Service.php';
+		$service_file = $core->config->getDir('app_service') . ucfirst($name).'Service.php';
 
 		if (file_exists($service_file)) {
 			return ['status' => 'exists', 'name' => $name];
 		}
 
-		$template_path = $core->config->getDir('ofw_template').'add/serviceTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/serviceTemplate.tpl';
 		$str_service = OTools::getTemplate($template_path, '', [
 			'uc_name' => ucfirst($name)
 		]);
@@ -225,7 +225,7 @@ class OBuild {
 		}
 
 		$task_file = $tasks_path.ucfirst($name).'Task.php';
-		$ofw_task_file = $core->config->getDir('ofw_task').ucfirst($name).'Task.php';
+		$ofw_task_file = $core->config->getDir('ofw_task') . ucfirst($name).'Task.php';
 
 		if (file_exists($task_file)) {
 			return ['status' => 'exists', 'name' => $name];
@@ -236,7 +236,7 @@ class OBuild {
 
 		$str_message = str_ireplace('"', '\"', OTools::getMessage('TASK_ADD_TASK_MESSAGE', [$name]));
 
-		$template_path = $core->config->getDir('ofw_template').'add/taskTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/taskTemplate.tpl';
 		$str_task = OTools::getTemplate($template_path, '', [
 			'uc_name'     => ucfirst($name),
 			'name'        => $name,
@@ -289,27 +289,27 @@ class OBuild {
 
 		$component_name = $values['model_name'].'Component';
 
-		$template_path = $core->config->getDir('ofw_template').'add/modelListComponentTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/modelListComponentTemplate.tpl';
 		$list_component_content = OTools::getTemplate($template_path, '', [
 			'model_name' => $values['model_name'],
 			'list_name'  => $values['list_name']
 		]);
 
-		$template_path = $core->config->getDir('ofw_template').'add/modelListTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/modelListTemplate.tpl';
 		$list_template_content = OTools::getTemplate($template_path, '', [
 			'model_name'       => $values['model_name'],
 			'model_name_lower' => $values['model_name_lower'],
 			'component_name'   => $component_name
 		]);
 
-		if (file_put_contents($values['list_folder'].$values['list_file'], $list_component_content)===false) {
+		if (file_put_contents($values['list_folder'] . $values['list_file'], $list_component_content) === false) {
 			return 'list-file-cant-create';
 		}
-		if (file_put_contents($values['list_folder'].$values['list_template_file'], $list_template_content)===false) {
+		if (file_put_contents($values['list_folder'] . $values['list_template_file'], $list_template_content)===false) {
 			return 'list-file-cant-create';
 		}
 
-		$template_path = $core->config->getDir('ofw_template').'add/modelComponentTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/modelComponentTemplate.tpl';
 		$component_content = OTools::getTemplate($template_path, '', [
 			'component_name'   => $component_name,
 			'model_name'       => $values['model_name'],
@@ -349,7 +349,7 @@ class OBuild {
 			$str_fields .= "\n";
 		}
 
-		$template_path = $core->config->getDir('ofw_template').'add/modelTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/modelTemplate.tpl';
 		$template_content = OTools::getTemplate($template_path, '', [
 			'model_name'       => $values['model_name'],
 			'model_name_lower' => $values['model_name_lower'],
@@ -389,7 +389,7 @@ class OBuild {
 		// Create component's folder recursively
 		mkdir($values['path'], 0777, true);
 
-		$template_path = $core->config->getDir('ofw_template').'add/componentTemplate.php';
+		$template_path = $core->config->getDir('ofw_template').'add/componentTemplate.tpl';
 		$str_component = OTools::getTemplate($template_path, '', [
 			'name' => $values['component_name'],
 			'path' => str_ireplace("/", "\\", $values['folders'])
@@ -421,7 +421,7 @@ class OBuild {
 			return 'exists';
 		}
 
-		$template_path = $core->config->getDir('ofw_template').'add/filterTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'add/filterTemplate.tpl';
 		$str_component = OTools::getTemplate($template_path, '', [
 			'name'        => $values['filter_name'],
 			'description' => OTools::getMessage('TASK_ADD_FILTER_TEMPLATE', [$values['filter_name']])
@@ -509,7 +509,7 @@ class OBuild {
 
 		// Add references to other tables
 		if (count($values['refs']) > 0) {
-			$ref_template_path = $core->config->getDir('ofw_template').'generateModelFrom/refTemplate.php';
+			$ref_template_path = $core->config->getDir('ofw_template') . 'generateModelFrom/refTemplate.php';
 			foreach ($values['refs'] as $ref) {
 				$fields .= OTools::getTemplate($ref_template_path, '', [
 					'to'         => OTools::underscoresToCamelCase($ref['to'], true),
@@ -520,7 +520,7 @@ class OBuild {
 			}
 		}
 
-		$template_path = $core->config->getDir('ofw_template').'generateModelFrom/modelTemplate.php';
+		$template_path = $core->config->getDir('ofw_template') . 'generateModelFrom/modelTemplate.tpl';
 		$str_component = OTools::getTemplate($template_path, '', [
 			'table_name' => $values['table_name'],
 			'fields'     => $fields

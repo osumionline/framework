@@ -211,8 +211,7 @@ class OCore {
 
 				$req = new ORequest($url_result, $filter_results);
 				if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
-					$param = new $reflection_param_type();
-					$param->load($req);
+					$param = new $reflection_param_type($req);
 				}
 				else {
 					$param = $req;
