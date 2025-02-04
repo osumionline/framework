@@ -9,6 +9,7 @@ class ODTOField {
     public function __construct(
         public bool $required = false,
         public ?string $requiredIf = null,
-        public ?string $filter = null
+        public ?string $filter = null,
+        public ?string $filterProperty = null
     ) {}
 }

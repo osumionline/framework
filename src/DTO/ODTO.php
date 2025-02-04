@@ -29,9 +29,9 @@ class ODTO {
         // Get value from the filter if defined
         if (!is_null($field_definition->filter)) {
           $filter_values = $req->getFilter($field_definition->filter);
-          if (is_array($filter_values) && array_key_exists($property_name, $filter_values)) {
-            $this->$property_name = $filter_values[$property_name];
-            $field_values[$property_name] = $filter_values[$property_name];
+          if (is_array($filter_values) && array_key_exists($field_definition->filterProperty, $filter_values)) {
+            $this->$property_name = $filter_values[$field_definition->filterProperty];
+            $field_values[$property_name] = $filter_values[$field_definition->filterProperty];
             continue;
           }
         }
