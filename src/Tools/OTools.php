@@ -278,11 +278,11 @@ class OTools {
 	 *
 	 * @param string $key Key code of the message
 	 *
-	 * @param array $params Key / value array with parameters to be rendered on the message
+	 * @param array | null $params Key / value array with parameters to be rendered on the message
 	 *
 	 * @return string Localized message with parameters rendered
 	 */
-	public static function getMessage(string $key, array $params=null): string {
+	public static function getMessage(string $key, array | null $params = null): string {
 		global $core;
 
 		$translation = $core->translate->getTranslation($key);

@@ -9,7 +9,7 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
  * OService - Base class for the service classes
  */
 class OService {
-	protected ?OLog    $log    = null;
+	protected ?OLog $log = null;
 
 	/**
 	 * Load global configuration and logger to use in the service

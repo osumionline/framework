@@ -22,9 +22,9 @@ class OLog {
 	/**
 	 * Start up the object by getting the logging configuration from the global config
 	 *
-	 * @param string $class_name Name of the class where the logger is used
+	 * @param string | null $class_name Name of the class where the logger is used
 	 */
-	function __construct(string $class_name=null) {
+	function __construct(string | null $class_name = null) {
 		global $core;
 		OTools::checkOfw('logs');
 		$this->log_dir = $core->config->getDir('ofw_logs');

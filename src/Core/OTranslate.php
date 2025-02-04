@@ -203,11 +203,11 @@ class OTranslate {
 	/**
 	 * Save current loaded translations and headers into a file
 	 *
-	 * @param string $path Path of the file
+	 * @param string | null $path Path of the file
 	 *
 	 * @return bool Returns if save operation was successful or not
 	 */
-	public function save(string $path = null): bool {
+	public function save(string | null $path = null): bool {
 		if (is_null($path)) {
 			$path = $this->path;
 		}
@@ -243,13 +243,13 @@ class OTranslate {
 	/**
 	 * Create a new PO file
 	 *
-	 * @param string $path Path to the new PO file
+	 * @param string | null $path Path to the new PO file
 	 *
 	 * @param string $lang Language code of the new PO file (eg: en/es/eu)
 	 *
 	 * @return bool Returns if create operation was successful or not
 	 */
-	public function new(string $path = null, string $lang = 'en'): bool {
+	public function new(string | null $path = null, string $lang = 'en'): bool {
 		if (is_null($path)) {
 			$path = $this->path;
 		}

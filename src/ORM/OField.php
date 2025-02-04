@@ -26,7 +26,7 @@ class OField {
     /**
      * OField constructor.
      *
-     * @param string $type Field type (mandatory).
+     * @param string | null $type Field type (mandatory).
      *
      * @param bool $nullable Indicates whether the field can be null. Default is true.
      *
@@ -41,7 +41,7 @@ class OField {
      * @param string $ref Reference to another table and field. Default is empty string.
      */
     public function __construct(
-        ?string $type = null,
+        string | null $type = null,
         bool $nullable = true,
         mixed $default = null,
         int $max = 50,

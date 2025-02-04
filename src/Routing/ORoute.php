@@ -16,11 +16,11 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @return void
    */
-  public static function get(string $url, string $component, array $filters = [], ?string $layout = null): void {
+  public static function get(string $url, string $component, array $filters = [], string | null $layout = null): void {
     $full_url = self::$current_prefix . $url;
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -36,11 +36,11 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @return void
    */
-  public static function post(string $url, string $component, array $filters = [], ?string $layout = null): void {
+  public static function post(string $url, string $component, array $filters = [], string | null $layout = null): void {
     $full_url = self::$current_prefix . $url;
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -56,11 +56,11 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @return void
    */
-  public static function put(string $url, string $component, array $filters = [], ?string $layout = null): void {
+  public static function put(string $url, string $component, array $filters = [], string | null $layout = null): void {
     $full_url = self::$current_prefix . $url;
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -76,11 +76,11 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @return void
    */
-  public static function delete(string $url, string $component, array $filters = [], ?string $layout = null): void {
+  public static function delete(string $url, string $component, array $filters = [], string | null $layout = null): void {
     $full_url = self::$current_prefix . $url;
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -96,11 +96,11 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @return void
    */
-  public static function view(string $url, string $file, array $filters = [], ?string $layout = null): void {
+  public static function view(string $url, string $file, array $filters = [], string | null $layout = null): void {
     $full_url = self::$current_prefix . $url;
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -118,13 +118,13 @@ class ORoute {
    *
    * @param array $filters List of filters to be applied.
    *
-   * @param ?string $layout Layout component, optional.
+   * @param string | null $layout Layout component, optional.
    *
    * @param bool $is_view View mark for static file routes, optional.
    *
    * @return void
    */
-  public static function addRoute(string $method, string $url, string $component, array $filters, ?string $layout = null, bool $is_view = false): void {
+  public static function addRoute(string $method, string $url, string $component, array $filters, string | null $layout = null, bool $is_view = false): void {
     $route = [
       'method'    => $method,
       'url'       => $url,

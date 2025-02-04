@@ -338,11 +338,11 @@ class OConfig {
 	/**
 	* Get path of a given directory or full list of configured directories if ommitted
 	*
-	* @param string $dir Name or code of the directory
+	* @param string | null $dir Name or code of the directory
 	*
-	* @return string|array Path of requested directory or full list of configured directories
+	* @return string | array Path of requested directory or full list of configured directories
 	*/
-	public function getDir(string $dir=null) {
+	public function getDir(string | null $dir = null) {
 		if (is_null($dir)) {
 			return $this->dirs;
 		}

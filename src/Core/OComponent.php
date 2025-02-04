@@ -320,7 +320,7 @@ class OComponent {
    *
    * @return string Return resulting string
    */
-  public function render($data = null): string {
+  public function render(mixed $data = null): string {
     // Check if component has a "run" method
     if (method_exists($this, 'run')) {
       $this->run($data);

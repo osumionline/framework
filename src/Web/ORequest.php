@@ -96,7 +96,7 @@ class ORequest {
 	 *
 	 * @param mixed $default Default value if key not found
 	 */
-	public function getParam(string $key, $default=null) {
+	public function getParam(string $key, mixed $default = null) {
 		return array_key_exists($key, $this->params) ? $this->params[$key] : $default;
 	}
 
@@ -109,7 +109,7 @@ class ORequest {
 	 *
 	 * @return ?string String value of the required parameter
 	 */
-	public function getParamString(string $key, $default=null): ?string {
+	public function getParamString(string $key, mixed $default = null): ?string {
 		$param = $this->getParam($key, $default);
 		return !is_null($param) ? strval($param) : null;
 	}
@@ -123,9 +123,9 @@ class ORequest {
 	 *
 	 * @return ?int Int value of the required parameter
 	 */
-	public function getParamInt(string $key, $default=null): ?int {
+	public function getParamInt(string $key, mixed $default = null): ?int {
 		$param = $this->getParam($key, $default);
-		return (!is_null($param) && $param!=='null' && is_numeric($param)) ? intval($param) : null;
+		return (!is_null($param) && $param !== 'null' && is_numeric($param)) ? intval($param) : null;
 	}
 
 	/**
@@ -137,9 +137,9 @@ class ORequest {
 	 *
 	 * @return ?float Float value of the required parameter
 	 */
-	public function getParamFloat(string $key, $default=null): ?float {
+	public function getParamFloat(string $key, mixed $default = null): ?float {
 		$param = $this->getParam($key, $default);
-		return (!is_null($param) && $param!=='null' && is_numeric($param)) ? floatval($param) : null;
+		return (!is_null($param) && $param !== 'null' && is_numeric($param)) ? floatval($param) : null;
 	}
 
 	/**
@@ -151,7 +151,7 @@ class ORequest {
 	 *
 	 * @return ?bool Boolean value of the required parameter
 	 */
-	public function getParamBool(string $key, $default=null): ?bool {
+	public function getParamBool(string $key, mixed $default = null): ?bool {
 		$param = $this->getParam($key, $default);
 		return !is_null($param) ? filter_var($param, FILTER_VALIDATE_BOOLEAN) : null;
 	}

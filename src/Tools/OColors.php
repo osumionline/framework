@@ -45,13 +45,13 @@ class OColors {
 	 *
 	 * @param string String to be returned colored
 	 *
-	 * @param string $foreground_color Color key for the color of the letters in the string
+	 * @param string | null $foreground_color Color key for the color of the letters in the string
 	 *
-	 * @param string $background_color Color key for the color of the background in the string
+	 * @param string | null $background_color Color key for the color of the background in the string
 	 *
 	 * @return string Colored string
 	 */
-	public function getColoredString(string $string, string $foreground_color = null, string $background_color = null): string {
+	public function getColoredString(string $string, string | null $foreground_color = null, string | null $background_color = null): string {
 		$colored_string = "";
 
 		if (isset($this->foreground_colors[$foreground_color])) {

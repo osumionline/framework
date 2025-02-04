@@ -34,15 +34,15 @@ class OUrl {
 	 *
 	 * @param string $check_url URL to be checked
 	 *
-	 * @param array $get Array of parameters passed by GET method
+	 * @param array | null $get Array of parameters passed by GET method
 	 *
-	 * @param array $post Array of parameters passed by POST method
+	 * @param array | null $post Array of parameters passed by POST method
 	 *
-	 * @param array $files Array of files submitted by a form (multipart/form-data)
+	 * @param array | null $files Array of files submitted by a form (multipart/form-data)
 	 *
 	 * @return void
 	 */
-	public function setCheckUrl(string $check_url, ?array $get = null, ?array $post = null, ?array $files = null): void {
+	public function setCheckUrl(string $check_url, array | null $get = null, array | null $post = null, array | null $files = null): void {
 		$this->check_url = $check_url;
 		$check_params = stripos($check_url, '?');
 		if ($check_params !== false) {
@@ -74,11 +74,11 @@ class OUrl {
 	/**
 	 * Process the given URL checking it against user defined URLs and get its configuration information if found
 	 *
-	 * @param string $url URL to be checked
+	 * @param string | null $url URL to be checked
 	 *
 	 * @return array Array of configuration information
 	 */
-	public function process(string $url = null): array {
+	public function process(string | null $url = null): array {
 		if (!is_null($url)) {
 			$this->check_url = $url;
 		}
