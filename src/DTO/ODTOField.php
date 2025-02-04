@@ -10,6 +10,7 @@ class ODTOField {
         public bool $required = false,
         public string | null $requiredIf = null,
         public string | null $filter = null,
-        public string | null $filterProperty = null
+        public string | null $filterProperty = null,
+        public string | null $header = null
     ) {}
 }

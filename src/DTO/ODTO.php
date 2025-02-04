@@ -36,7 +36,15 @@ class ODTO {
           }
         }
 
-        // If there is not a filter, get value from request
+        // Get value from the header if defined
+        if (!is_null($field_definition->header)) {
+          $header_value = $req->getHeader($field_definition->header);
+          $this->$property_name = $header_value;
+          $field_values[$property_name] = $header_value;
+          continue;
+        }
+
+        // If there is not a filter or a header, get value from request
         $type = $property->getType()?->getName();
         $value = match ($type) {
           'int'    => $req->getParamInt($property_name),
