@@ -40,8 +40,8 @@ class OPipeFunctions {
       return "null";
     }
 
-    // Convertir a número si es int o float y aplicar `number_format`
-    if (is_float($value) || is_int($value)) {
+    // Convert to number if it is a float and apply `number_format`
+    if (is_float($value)) {
       return number_format($value, (int)$decimals, $decimal_separator, $thousands_separator);
     }
 
