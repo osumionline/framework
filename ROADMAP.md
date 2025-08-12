@@ -2,7 +2,7 @@
 
 Proximamente en Osumi Framework:
 
-**9.6.0**
+**9.7.0**
 
 * Nuevo sistema de `middlewares`.
 * Sustituyen a los filtros actuales.
@@ -17,6 +17,10 @@ ORoute::get('/get-book-cover', GetBookCoverComponent::class)
 	->addMiddlewareBefore(GetBookMiddleware::class)
 	->addMiddlewareAfter(MinifyJSONMiddleware::class);
 ```
+
+**~~9.6.0~~**
+
+* Nueva tarea `generateModelFromDB` para generar las clases de modelo directamente a partir de una conexión configurada.
 
 **~~9.5.0~~**
 

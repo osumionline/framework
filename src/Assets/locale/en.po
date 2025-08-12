@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 9.0\n"
 "POT-Creation-Date: 2021-04-06\n"
-"PO-Revision-Date: 2024-09-11\n"
+"PO-Revision-Date: 2025-08-12\n"
 "Last-Translator: igorosabel\n"
 "Language-Team: Osumi\n"
 "Language: en\n"
@@ -109,11 +109,17 @@ msgstr "There are no databases configured."
 msgid "TASK_GENERATE_MODEL_FROM"
 msgstr "Function to generate model classes from a JSON file."
 
+msgid "TASK_GENERATE_MODEL_FROM_DB"
+msgstr "Function to generate model classes from a database connection."
+
 msgid "TASK_GENERATE_MODEL_FROM_WARNING"
 msgstr "Warning!"
 
 msgid "TASK_GENERATE_MODEL_FROM_CONTINUE"
 msgstr "You must indicate the name of the file to upload."
+
+msgid "TASK_GENERATE_MODEL_FROM_DB_CONTINUE"
+msgstr "You must configure the database connection to continue."
 
 msgid "TASK_GENERATE_MODEL_FROM_FILE_NOT_FOUND"
 msgstr "The specified file does not exist."

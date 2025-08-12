@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 9.0\n"
 "POT-Creation-Date: 2021-04-06\n"
-"PO-Revision-Date: 2024-09-11\n"
+"PO-Revision-Date: 2025-08-12\n"
 "Last-Translator: igorosabel\n"
 "Language-Team: Osumi\n"
 "Language: es\n"
@@ -109,11 +109,17 @@ msgstr "No se ha definido ninguna base de datos."
 msgid "TASK_GENERATE_MODEL_FROM"
 msgstr "Función para generar las clases de modelo a partir de un archivo JSON."
 
+msgid "TASK_GENERATE_MODEL_FROM_DB"
+msgstr "Función para generar las clases de modelo a partir de una conexión a la base de datos."
+
 msgid "TASK_GENERATE_MODEL_FROM_WARNING"
 msgstr "¡Atención!"
 
 msgid "TASK_GENERATE_MODEL_FROM_CONTINUE"
 msgstr "Debes indicar el nombre del archivo a cargar."
+
+msgid "TASK_GENERATE_MODEL_FROM_DB_CONTINUE"
+msgstr "Debes configurar la conexión de la base de datos para continuar."
 
 msgid "TASK_GENERATE_MODEL_FROM_FILE_NOT_FOUND"
 msgstr "El archivo indicado no existe."

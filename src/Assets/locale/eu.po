@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 9.0\n"
 "POT-Creation-Date: 2021-04-06\n"
-"PO-Revision-Date: 2024-09-11\n"
+"PO-Revision-Date: 2025-08-12\n"
 "Last-Translator: igorosabel\n"
 "Language-Team: Osumi\n"
 "Language: eu\n"
@@ -109,11 +109,17 @@ msgstr "Ez da definitu datu-baserik."
 msgid "TASK_GENERATE_MODEL_FROM"
 msgstr "JSON fitxategi batetik eredu-klaseak sortzeko funtzioa."
 
+msgid "TASK_GENERATE_MODEL_FROM_DB"
+msgstr "Datu-base bateko konexio batetik eredu-klaseak sortzeko funtzioa."
+
 msgid "TASK_GENERATE_MODEL_FROM_WARNING"
 msgstr "Kontuz!"
 
 msgid "TASK_GENERATE_MODEL_FROM_CONTINUE"
 msgstr "Igo beharreko fitxategiaren izena adierazi behar duzu."
+
+msgid "TASK_GENERATE_MODEL_FROM_DB_CONTINUE"
+msgstr "Datu-basearen konexioa konfiguratu behar duzu jarraitzeko."
 
 msgid "TASK_GENERATE_MODEL_FROM_FILE_NOT_FOUND"
 msgstr "Adierazitako fitxategia ez da existitzen."
