@@ -78,7 +78,7 @@ class GenerateModelFromDBTask extends OTask {
 				$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
 
 				// Text
-				if ($res['DATA_TYPE'] === 'text') {
+				if ($res['DATA_TYPE'] === 'text' || $res['DATA_TYPE'] === 'longtext') {
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::LONGTEXT';
           $field['attribute_type'] = 'string';
@@ -87,7 +87,7 @@ class GenerateModelFromDBTask extends OTask {
 																: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
 				// Float
-				if ($res['DATA_TYPE'] === 'float') {
+				if ($res['DATA_TYPE'] === 'float' || $res['DATA_TYPE'] === 'decimal') {
 					$field['decorator'] = 'OField';
           $field['attribute_type'] = 'float';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
@@ -108,7 +108,7 @@ class GenerateModelFromDBTask extends OTask {
 					$field['default'] = $res['COLUMN_DEFAULT'] === '1';
 				}
 				// String
-				if ($res['DATA_TYPE'] === 'varchar') {
+				if ($res['DATA_TYPE'] === 'varchar' || $res['DATA_TYPE'] === 'char') {
 					$field['decorator'] = 'OField';
 					$field['max'] = $res['CHARACTER_MAXIMUM_LENGTH'];
           $field['attribute_type'] = 'string';
@@ -117,7 +117,7 @@ class GenerateModelFromDBTask extends OTask {
 																: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
 				// Int
-				if ($res['DATA_TYPE'] === 'int') {
+				if ($res['DATA_TYPE'] === 'int' || $res['DATA_TYPE'] === 'bigint') {
 					$field['decorator'] = 'OField';
           $field['attribute_type'] = 'int';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
