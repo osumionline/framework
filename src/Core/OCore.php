@@ -38,6 +38,7 @@ class OCore {
 		'json' => 'application/json',
 		'xml'  => 'text/xml'
 	];
+	private int $http_status = 200;
 
 	/**
 	 * Get the start time in milliseconds to use in benchmarks
@@ -160,6 +161,8 @@ class OCore {
 			// Check method
 			if ($url_result['method'] !== $url_result['component_method']) {
 				$url_result['message'] = OTools::getMessage('ERROR_405_MESSAGE', [$url_result['component_method'], $url_result['method']]);
+				$this->setHttpStatus(405);
+				header($_SERVER['SERVER_PROTOCOL'].' '.$this->getHttpStatus());
 				OTools::showErrorPage($url_result, '405');
 				exit;
 			}
@@ -198,6 +201,7 @@ class OCore {
 						OUrl::goToUrl($filter_return);
 					}
 					else {
+						$this->setHttpStatus(403);
 						OTools::showErrorPage($url_result, '403');
 					}
 				}
@@ -264,12 +268,14 @@ class OCore {
 			echo $body;
 		}
 		else {
+			$this->setHttpStatus(404);
 			OTools::showErrorPage($url_result, '404');
 		}
 
 		if (!is_null($this->db_container)) {
 			$this->db_container->closeAllConnections();
 		}
+		header($_SERVER['SERVER_PROTOCOL'].' '.$this->getHttpStatus());
 	}
 
 	/**
@@ -357,6 +363,44 @@ class OCore {
 
     return $ret;
   }
+
+	/**
+	 * Sets the HTTP status
+	 *
+	 * @param int $http_status HTTP status number
+	 *
+	 * @return void
+	 */
+	public function setHttpStatus(int $http_status): void {
+		$this->http_status = $http_status;
+	}
+
+	/**
+	 * Gets full HTTP status
+	 *
+	 * @return string Fullt HTTP status string
+	 */
+	private function getHttpStatus(): string {
+			switch ($this->http_status) {
+				case 200: return '200 OK';
+				break;
+				case 201: return '201 Created';
+				break;
+				case 400: return '400 Bad Request';
+				break;
+				case 403: return '403 Forbidden';
+				break;
+				case 404: return '404 Not Found';
+				break;
+				case 405: return '405 Method Not Allowed';
+				break;
+				case 409: return '409 Conflict';
+				break;
+				case 500: return '500 Internal Server Error';
+				break;
+			}
+			return '200 OK';
+	}
 
 	/**
 	 * Custom error handler, shows an error page and the error's stack trace
