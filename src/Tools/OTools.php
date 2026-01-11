@@ -264,6 +264,7 @@ class OTools {
 		}
 		$path = $core->config->getDir('ofw_template').'error.php';
 
+		header($_SERVER['SERVER_PROTOCOL'].' '.$core->getHttpStatus());
 		echo self::getPartial($path, $params);
 		exit;
 	}

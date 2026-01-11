@@ -380,7 +380,7 @@ class OCore {
 	 *
 	 * @return string Fullt HTTP status string
 	 */
-	private function getHttpStatus(): string {
+	public function getHttpStatus(): string {
 			switch ($this->http_status) {
 				case 200: return '200 OK';
 				break;
