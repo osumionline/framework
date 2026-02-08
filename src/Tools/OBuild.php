@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tools;
 
-use \ReflectionClass;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\ORM\OField;
 
@@ -10,7 +11,7 @@ use Osumi\OsumiFramework\ORM\OField;
  * OBuild - Utility class with tools to build framework components
  */
 class OBuild {
-  /**
+	/**
 	 * Returns an array of model objects (one object per model)
 	 *
 	 * @return array Array of model objects
@@ -22,7 +23,7 @@ class OBuild {
 		if ($model = opendir($core->config->getDir('app_model'))) {
 			while (false !== ($entry = readdir($model))) {
 				if ($entry != '.' && $entry != '..') {
-					$table = "\\Osumi\\OsumiFramework\\App\\Model\\".str_ireplace('.php','',$entry);
+					$table = "\\Osumi\\OsumiFramework\\App\\Model\\" . str_ireplace('.php', '', $entry);
 					$ret[] = new $table();
 				}
 			}
@@ -33,12 +34,12 @@ class OBuild {
 		return $ret;
 	}
 
-  /**
+	/**
 	 * Generates a SQL file to build the database based on models defined by the user
 	 *
 	 * @return string SQL string to build all the tables in the database (also written to ofw/export/model.sql)
 	 */
-	public static function generateModel(): string  {
+	public static function generateModel(): string {
 		global $core;
 		$sql = "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n\n";
 		$models = self::getModelList();
@@ -52,7 +53,7 @@ class OBuild {
 		$sql .= "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n";
 
 		OTools::checkOfw('export');
-		$sql_file = $core->config->getDir('ofw_export').'model.sql';
+		$sql_file = $core->config->getDir('ofw_export') . 'model.sql';
 		if (file_exists($sql_file)) {
 			unlink($sql_file);
 		}
@@ -76,61 +77,60 @@ class OBuild {
 	public static function updateRoutesFile(string $file_path, string $new_route, string $new_use_statement): void {
 		global $core;
 
-    // Read the current file contents
+		// Read the current file contents
 		if (file_exists($file_path)) {
-    	$contents = file_get_contents($file_path);
-		}
-		else {
+			$contents = file_get_contents($file_path);
+		} else {
 			$template_path = $core->config->getDir('ofw_template') . 'add/urlsTemplate.tpl';
 			$contents = file_get_contents($template_path);
-    }
+		}
 
-    // Split the file into lines
-    $lines = explode("\n", $contents);
+		// Split the file into lines
+		$lines = explode("\n", $contents);
 
-    // Find the last 'use' statement
-    $last_use_index = -1;
-    $use_statement_exists = false;
-    foreach ($lines as $index => $line) {
-        if (strpos($line, 'use ') === 0) {
-            $last_use_index = $index;
-            // Check if the use statement already exists
-            if (trim($line) === trim($new_use_statement)) {
-                $use_statement_exists = true;
-            }
-        }
-    }
+		// Find the last 'use' statement
+		$last_use_index = -1;
+		$use_statement_exists = false;
+		foreach ($lines as $index => $line) {
+			if (strpos($line, 'use ') === 0) {
+				$last_use_index = $index;
+				// Check if the use statement already exists
+				if (trim($line) === trim($new_use_statement)) {
+					$use_statement_exists = true;
+				}
+			}
+		}
 
-    // Add the new 'use' statement after the last existing one
-    if (!$use_statement_exists && $last_use_index !== -1) {
-        array_splice($lines, $last_use_index + 1, 0, $new_use_statement);
-    }
+		// Add the new 'use' statement after the last existing one
+		if (!$use_statement_exists && $last_use_index !== -1) {
+			array_splice($lines, $last_use_index + 1, 0, $new_use_statement);
+		}
 
-    // Find the last line with content (ignoring empty lines at the end)
-    $last_content_line = count($lines) - 1;
-    while ($last_content_line >= 0 && trim($lines[$last_content_line]) === '') {
-        $last_content_line--;
-    }
+		// Find the last line with content (ignoring empty lines at the end)
+		$last_content_line = count($lines) - 1;
+		while ($last_content_line >= 0 && trim($lines[$last_content_line]) === '') {
+			$last_content_line--;
+		}
 
-    // Add the new route
-    if ($last_content_line >= 0) {
-        // Add a blank line if the last line isn't already blank
-        if (trim($lines[$last_content_line]) !== '') {
-            $last_content_line++;
-            $lines[$last_content_line] = '';
-        }
-        $last_content_line++;
-        $lines[$last_content_line] = $new_route;
-    }
+		// Add the new route
+		if ($last_content_line >= 0) {
+			// Add a blank line if the last line isn't already blank
+			if (trim($lines[$last_content_line]) !== '') {
+				$last_content_line++;
+				$lines[$last_content_line] = '';
+			}
+			$last_content_line++;
+			$lines[$last_content_line] = $new_route;
+		}
 
-    // Combine lines back into a single string
-    $new_contents = implode("\n", $lines)."\n";
+		// Combine lines back into a single string
+		$new_contents = implode("\n", $lines) . "\n";
 
-    // Write the updated contents back to the file
-    file_put_contents($file_path, $new_contents);
+		// Write the updated contents back to the file
+		file_put_contents($file_path, $new_contents);
 	}
 
-  /**
+	/**
 	 * Creates a new empty action with the given name, URL and type
 	 *
 	 * @param array $values New actions configuration options
@@ -167,17 +167,17 @@ class OBuild {
 		file_put_contents($values['action_template'], $str_template);
 
 		// Update URLs file
-		$urls_path = $core->config->getDir('app_routes').'Web.php';
+		$urls_path = $core->config->getDir('app_routes') . 'Web.php';
 
-		$new_url = "ORoute::get('".$values['action_url']."', ".$values['action_name']."Component::class);";
-		$use_url = "use Osumi\OsumiFramework\App\\".$folders."\\".$values['action_name']."Component;";
+		$new_url = "ORoute::get('" . $values['action_url'] . "', " . $values['action_name'] . "Component::class);";
+		$use_url = "use Osumi\OsumiFramework\App\\" . $folders . "\\" . $values['action_name'] . "Component;";
 
 		self::updateRoutesFile($urls_path, $new_url, $use_url);
 
 		return 'ok';
 	}
 
-  /**
+	/**
 	 * Creates a new empty service with the given name
 	 *
 	 * @param string $name Name of the new service
@@ -192,7 +192,7 @@ class OBuild {
 			mkdir($core->config->getDir('app_service'));
 		}
 
-		$service_file = $core->config->getDir('app_service') . ucfirst($name).'Service.php';
+		$service_file = $core->config->getDir('app_service') . ucfirst($name) . 'Service.php';
 
 		if (file_exists($service_file)) {
 			return ['status' => 'exists', 'name' => $name];
@@ -208,7 +208,7 @@ class OBuild {
 		return ['status' => 'ok', 'name' => $name];
 	}
 
-  /**
+	/**
 	 * Creates a new empty task with the given name
 	 *
 	 * @param string $name Name of the new task
@@ -224,8 +224,8 @@ class OBuild {
 			mkdir($tasks_path);
 		}
 
-		$task_file = $tasks_path.ucfirst($name).'Task.php';
-		$ofw_task_file = $core->config->getDir('ofw_task') . ucfirst($name).'Task.php';
+		$task_file = $tasks_path . ucfirst($name) . 'Task.php';
+		$ofw_task_file = $core->config->getDir('ofw_task') . ucfirst($name) . 'Task.php';
 
 		if (file_exists($task_file)) {
 			return ['status' => 'exists', 'name' => $name];
@@ -247,7 +247,7 @@ class OBuild {
 		return ['status' => 'ok', 'name' => $name];
 	}
 
-  /**
+	/**
 	 * Creates a model component file and a component for lists of such model
 	 *
 	 * @param array $values Information about the files that have to be created
@@ -260,19 +260,19 @@ class OBuild {
 		if (file_exists($values['list_folder'])) {
 			return 'list-folder-exists';
 		}
-		if (file_exists($values['list_folder'].$values['list_file'])) {
+		if (file_exists($values['list_folder'] . $values['list_file'])) {
 			return 'list-file-exists';
 		}
-		if (file_exists($values['list_folder'].$values['list_template_file'])) {
+		if (file_exists($values['list_folder'] . $values['list_template_file'])) {
 			return 'list-file-exists';
 		}
 		if (file_exists($values['component_folder'])) {
 			return 'component-folder-exists';
 		}
-		if (file_exists($values['component_folder'].$values['component_file'])) {
+		if (file_exists($values['component_folder'] . $values['component_file'])) {
 			return 'component-file-exists';
 		}
-		if (file_exists($values['component_folder'].$values['component_template_file'])) {
+		if (file_exists($values['component_folder'] . $values['component_template_file'])) {
 			return 'component-file-exists';
 		}
 		if (!mkdir($values['list_folder'], 0755, true)) {
@@ -287,7 +287,7 @@ class OBuild {
 		$date_fields   = [OField::DATE];
 		$cont          = 0;
 
-		$component_name = $values['model_name'].'Component';
+		$component_name = $values['model_name'] . 'Component';
 
 		$template_path = $core->config->getDir('ofw_template') . 'add/modelListComponentTemplate.tpl';
 		$list_component_content = OTools::getTemplate($template_path, '', [
@@ -305,7 +305,7 @@ class OBuild {
 		if (file_put_contents($values['list_folder'] . $values['list_file'], $list_component_content) === false) {
 			return 'list-file-cant-create';
 		}
-		if (file_put_contents($values['list_folder'] . $values['list_template_file'], $list_template_content)===false) {
+		if (file_put_contents($values['list_folder'] . $values['list_template_file'], $list_template_content) === false) {
 			return 'list-file-cant-create';
 		}
 
@@ -319,26 +319,21 @@ class OBuild {
 		$str_fields = '';
 		foreach ($values['model']['fields'] as $field_name => $field) {
 			$cont++;
-			$str_fields .= "	\"".OTools::underscoresToCamelCase($field_name)."\": ";
+			$str_fields .= "	\"" . OTools::underscoresToCamelCase($field_name) . "\": ";
 
 			if (array_key_exists('primary', $field) && $field['primary'] === true) {
-				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." }}";
-			}
-			elseif ($field['type'] === OField::BOOL) {
-				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | bool }}";
-			}
-			else if (in_array($field['type'], $date_fields)) {
-				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | date }}";
-			}
-			else if (in_array($field['type'], $text_fields)) {
-				$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | string }}";
-			}
-			else if (in_array($field['type'], $number_fields)) {
+				$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " }}";
+			} elseif ($field['type'] === OField::BOOL) {
+				$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " | bool }}";
+			} else if (in_array($field['type'], $date_fields)) {
+				$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " | date }}";
+			} else if (in_array($field['type'], $text_fields)) {
+				$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " | string }}";
+			} else if (in_array($field['type'], $number_fields)) {
 				if ($field['nullable']) {
-					$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." | number }}";
-				}
-				else {
-					$str_fields .= "{{ ".$values['model_name_lower'].".".$field_name." }}";
+					$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " | number }}";
+				} else {
+					$str_fields .= "{{ " . $values['model_name_lower'] . "." . $field_name . " }}";
 				}
 			}
 
@@ -366,7 +361,7 @@ class OBuild {
 		return 'ok';
 	}
 
-  /**
+	/**
 	 * Creates a empty component file
 	 *
 	 * @param array $values Information about the files that have to be created
@@ -389,7 +384,7 @@ class OBuild {
 		// Create component's folder recursively
 		mkdir($values['path'], 0777, true);
 
-		$template_path = $core->config->getDir('ofw_template').'add/componentTemplate.tpl';
+		$template_path = $core->config->getDir('ofw_template') . 'add/componentTemplate.tpl';
 		$str_component = OTools::getTemplate($template_path, '', [
 			'name' => $values['component_name'],
 			'path' => str_ireplace("/", "\\", $values['folders'])
@@ -401,7 +396,7 @@ class OBuild {
 		return 'ok';
 	}
 
-  /**
+	/**
 	 * Creates a empty filter file
 	 *
 	 * @param array $values Information about the files that have to be created
@@ -470,7 +465,7 @@ class OBuild {
 			if ($field['decorator'] === 'OPK' && !array_key_exists('attribute_type', $field)) {
 				$field['attribute_type'] = 'int';
 			}
-			$fields .= "	#[".$field['decorator']."(\n";
+			$fields .= "	#[" . $field['decorator'] . "(\n";
 			$field_properties = [];
 			foreach ($field as $key => $value) {
 				if (!in_array($key, ['name', 'decorator', 'attribute_type'])) {
@@ -481,8 +476,7 @@ class OBuild {
 					} elseif (is_string($value)) {
 						if ($key !== 'type') {
 							$field_value = "'" . $value . "'";
-						}
-						else {
+						} else {
 							$field_value = $value;
 						}
 					} else {
@@ -491,9 +485,9 @@ class OBuild {
 					$field_properties[] = "		" . $key . ": " . $field_value;
 				}
 			}
-			$fields .= implode(",\n", $field_properties)."\n";
+			$fields .= implode(",\n", $field_properties) . "\n";
 			$fields .= "	)]\n";
-			$fields .= "	public ?".$field['attribute_type']." $".$field['name'].";\n\n";
+			$fields .= "	public ?" . $field['attribute_type'] . " $" . $field['name'] . ";\n\n";
 		}
 
 		// Check validations

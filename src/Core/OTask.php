@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
@@ -11,8 +13,8 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
  * OTask - Base class for the task classes
  */
 class OTask {
-	protected ?OColors $colors = null;
-	protected ?OLog    $log    = null;
+	protected OColors | null $colors = null;
+	protected OLog | null    $log    = null;
 
 	/**
 	 * Load global configuration and logger to use in the service
@@ -27,9 +29,9 @@ class OTask {
 	/**
 	 * Get the colors object used to colorize messages in the CLI tasks
 	 *
-	 * @return ?OColors Message colorizer object
+	 * @return OColors | null Message colorizer object
 	 */
-	public final function getColors(): ?OColors {
+	public final function getColors(): OColors | null {
 		return $this->colors;
 	}
 
@@ -48,7 +50,7 @@ class OTask {
 	 *
 	 * @return OLog Information logger object
 	 */
-	public final function getLog(): OLog {
+	public final function getLog(): OLog | null {
 		return $this->log;
 	}
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -12,7 +14,7 @@ use Osumi\OsumiFramework\ORM\ODB;
  */
 class GenerateModelFromDBTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString('generateModelFromDB', 'light_green').': '.OTools::getMessage('TASK_GENERATE_MODEL_FROM_DB');
+		return $this->getColors()->getColoredString('generateModelFromDB', 'light_green') . ': ' . OTools::getMessage('TASK_GENERATE_MODEL_FROM_DB');
 	}
 
 	private string $db_name = '';
@@ -73,56 +75,55 @@ class GenerateModelFromDBTask extends OTask {
 			// Updated At
 			else if ($field['name'] === 'updated_at') {
 				$field['decorator'] = 'OUpdatedAt';
-			}
-			else {
+			} else {
 				$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
 
 				// Text
 				if ($res['DATA_TYPE'] === 'text' || $res['DATA_TYPE'] === 'longtext') {
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::LONGTEXT';
-          $field['attribute_type'] = 'string';
+					$field['attribute_type'] = 'string';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-																? ($field['nullable'] ? null : '')
-																: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
+						? ($field['nullable'] ? null : '')
+						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
 				// Float
 				if ($res['DATA_TYPE'] === 'float' || $res['DATA_TYPE'] === 'decimal') {
 					$field['decorator'] = 'OField';
-          $field['attribute_type'] = 'float';
+					$field['attribute_type'] = 'float';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-																? ($field['nullable'] ? null : 0.0)
-																: floatval($res['COLUMN_DEFAULT']);
+						? ($field['nullable'] ? null : 0.0)
+						: floatval($res['COLUMN_DEFAULT']);
 				}
 				// Datetime
 				if ($res['DATA_TYPE'] === 'datetime') {
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::DATE';
-          $field['attribute_type'] = 'string';
+					$field['attribute_type'] = 'string';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL' ? null : $res['COLUMN_DEFAULT'];
 				}
 				// Bool
 				if ($res['DATA_TYPE'] === 'tinyint' && ($res['COLUMN_DEFAULT'] === '0' || $res['COLUMN_DEFAULT'] === '1')) {
 					$field['decorator'] = 'OField';
-          $field['attribute_type'] = 'bool';
+					$field['attribute_type'] = 'bool';
 					$field['default'] = $res['COLUMN_DEFAULT'] === '1';
 				}
 				// String
 				if ($res['DATA_TYPE'] === 'varchar' || $res['DATA_TYPE'] === 'char') {
 					$field['decorator'] = 'OField';
 					$field['max'] = $res['CHARACTER_MAXIMUM_LENGTH'];
-          $field['attribute_type'] = 'string';
+					$field['attribute_type'] = 'string';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-																? ($field['nullable'] ? null : '')
-																: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
+						? ($field['nullable'] ? null : '')
+						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
 				// Int
 				if ($res['DATA_TYPE'] === 'int' || $res['DATA_TYPE'] === 'bigint') {
 					$field['decorator'] = 'OField';
-          $field['attribute_type'] = 'int';
+					$field['attribute_type'] = 'int';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-																? ($field['nullable'] ? null : 0)
-																: intval($res['COLUMN_DEFAULT']);
+						? ($field['nullable'] ? null : 0)
+						: intval($res['COLUMN_DEFAULT']);
 				}
 			}
 			$ret[] = $field;
@@ -191,7 +192,7 @@ class GenerateModelFromDBTask extends OTask {
 				if ($models[$i]['name'] === $ref['TABLE_NAME']) {
 					for ($j = 0; $j < count($models[$i]['fields']); $j++) {
 						if ($models[$i]['fields'][$j]['name'] === $ref['COLUMN_NAME']) {
-							$models[$i]['fields'][$j]['ref'] = $ref['REFERENCED_TABLE_NAME'].'.'.$ref['REFERENCED_COLUMN_NAME'];
+							$models[$i]['fields'][$j]['ref'] = $ref['REFERENCED_TABLE_NAME'] . '.' . $ref['REFERENCED_COLUMN_NAME'];
 						}
 					}
 				}
@@ -211,60 +212,60 @@ class GenerateModelFromDBTask extends OTask {
 		return $models;
 	}
 
-  /**
-   * Load specified file
-   *
-   * @param string $content Content of the specified file
-   *
-   * @return void
-   */
-  private function loadFile(string $content): void {
-    $data = json_decode($content, true);
-    foreach ($data['model'] as $table) {
-      $this->generateTable($table);
-    }
-  }
+	/**
+	 * Load specified file
+	 *
+	 * @param string $content Content of the specified file
+	 *
+	 * @return void
+	 */
+	private function loadFile(string $content): void {
+		$data = json_decode($content, true);
+		foreach ($data['model'] as $table) {
+			$this->generateTable($table);
+		}
+	}
 
-  /**
-   * Generate a table
-   *
-   * @param array $table Data of a table
-   *
-   * @return void
-   */
-  private function generateTable(array $table): void {
-    $table_name = OTools::underscoresToCamelCase($table['name'], true);
-    $values = [
-      'table_name' => $table_name,
-      'class_file' => $this->getConfig()->getDir('app_model') . $table_name . '.php',
-      'fields'     => $table['fields'],
-      'refs'       => array_key_exists('refs', $table) ? $table['refs'] : []
-    ];
-    $status = OBuild::addModelClass($values);
+	/**
+	 * Generate a table
+	 *
+	 * @param array $table Data of a table
+	 *
+	 * @return void
+	 */
+	private function generateTable(array $table): void {
+		$table_name = OTools::underscoresToCamelCase($table['name'], true);
+		$values = [
+			'table_name' => $table_name,
+			'class_file' => $this->getConfig()->getDir('app_model') . $table_name . '.php',
+			'fields'     => $table['fields'],
+			'refs'       => array_key_exists('refs', $table) ? $table['refs'] : []
+		];
+		$status = OBuild::addModelClass($values);
 
-    switch ($status) {
-      case 'ok': {
-        echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_OK', [$values['table_name'], $values['class_file']])."\n";
-      }
-      break;
+		switch ($status) {
+			case 'ok': {
+					echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_OK', [$values['table_name'], $values['class_file']]) . "\n";
+				}
+				break;
 			case 'error-exists': {
-				echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_EXISTS', [$values['class_file']])."\n";
-			}
-			break;
-      case 'error-pk': {
-        echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_PK', [$table['name']])."\n";
-      }
-      break;
-      case 'error-created-at': {
-        echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_CREATED_AT', [$table['name']])."\n";
-      }
-      break;
-      case 'error-updated-at': {
-        echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_UPDATED_AT', [$table['name']])."\n";
-      }
-      break;
-    }
-  }
+					echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_EXISTS', [$values['class_file']]) . "\n";
+				}
+				break;
+			case 'error-pk': {
+					echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_PK', [$table['name']]) . "\n";
+				}
+				break;
+			case 'error-created-at': {
+					echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_CREATED_AT', [$table['name']]) . "\n";
+				}
+				break;
+			case 'error-updated-at': {
+					echo OTools::getMessage('TASK_GENERATE_MODEL_FROM_ERROR_UPDATED_AT', [$table['name']]) . "\n";
+				}
+				break;
+		}
+	}
 
 	/**
 	 * Run the task
@@ -274,11 +275,11 @@ class GenerateModelFromDBTask extends OTask {
 	public function run(array $options = []): void {
 		$db_name = $this->getConfig()->getDB('name');
 		if (empty($db_name)) {
-			echo "\n  ".$this->getColors()->getColoredString(OTools::getMessage('TASK_GENERATE_MODEL_FROM_WARNING'), 'red')."\n\n";
-			echo "  ".OTools::getMessage('TASK_GENERATE_MODEL_FROM_CONTINUE')."\n\n";
-      exit;
+			echo "\n  " . $this->getColors()->getColoredString(OTools::getMessage('TASK_GENERATE_MODEL_FROM_WARNING'), 'red') . "\n\n";
+			echo "  " . OTools::getMessage('TASK_GENERATE_MODEL_FROM_CONTINUE') . "\n\n";
+			exit;
 		}
-    $this->db_name = $db_name;
+		$this->db_name = $db_name;
 
 		$models = [];
 		$tables = $this->getTables();

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\ORM;
 
@@ -32,7 +34,7 @@ class ODBContainer {
 
 		if (!array_key_exists($index, $this->connections)) {
 			$conn = new PDO(
-				$driver.':host='.$host.';dbname='.$name.';charset='.$charset,
+				$driver . ':host=' . $host . ';dbname=' . $name . ';charset=' . $charset,
 				$user,
 				$pass,
 				[
@@ -45,7 +47,7 @@ class ODBContainer {
 			$this->connections[$index] = $conn;
 		}
 
-		return [ 'index' => $index, 'link' => $this->connections[$index] ];
+		return ['index' => $index, 'link' => $this->connections[$index]];
 	}
 
 	/**
@@ -53,15 +55,13 @@ class ODBContainer {
 	 *
 	 * @param string $index Hashed index of the connection
 	 *
-	 * @return array Connection data, array with the connection index and the PDO connection link
+	 * @return array | null Connection data, array with the connection index and the PDO connection link
 	 */
-	public function getConnectionByIndex(string $index): array {
-		if (array_key_exists($index, $this->connections)){
-			return [ 'index' => $index, 'link' => $this->connections[$index] ];
+	public function getConnectionByIndex(string $index): array | null {
+		if (array_key_exists($index, $this->connections)) {
+			return ['index' => $index, 'link' => $this->connections[$index]];
 		}
-		else{
-			return null;
-		}
+		return null;
 	}
 
 	/**
@@ -72,10 +72,9 @@ class ODBContainer {
 	 * @return bool Returns connection was closed or not
 	 */
 	public function closeConnection(string $index): bool {
-		if (array_key_exists($index, $this->connections)){
+		if (array_key_exists($index, $this->connections)) {
 			$this->connections[$index] = null;
 			unset($this->connections[$index]);
-
 			return true;
 		}
 
@@ -88,7 +87,7 @@ class ODBContainer {
 	 * @return void
 	 */
 	public function closeAllConnections(): void {
-		foreach ($this->connections as $index => $link){
+		foreach ($this->connections as $index => $link) {
 			$this->connections[$index] = null;
 			unset($this->connections[$index]);
 		}

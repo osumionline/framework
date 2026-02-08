@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Log;
 
@@ -9,8 +11,8 @@ use Osumi\OsumiFramework\Tools\OTools;
  * OLog - Class to log information to a debug log file
  */
 class OLog {
-	private ?string $class_name   = null;
-	private ?string $log_dir      = null;
+	private string | null $class_name = null;
+	private string | null $log_dir = null;
 	private string $log_file_name = 'osumi';
 	private string $log_file_ext  = 'log';
 	private string $log_path      = '';
@@ -29,7 +31,7 @@ class OLog {
 		OTools::checkOfw('logs');
 		$this->log_dir = $core->config->getDir('ofw_logs');
 		$this->log_file_name = $core->config->getLog('name');
-		$this->log_path = $this->log_dir.$this->log_file_name.'.'.$this->log_file_ext;
+		$this->log_path = $this->log_dir . $this->log_file_name . '.' . $this->log_file_ext;
 		$this->max_file_size = $core->config->getLog('max_file_size');
 		$this->max_num_files = $core->config->getLog('max_num_files');
 		$this->log_level = array_key_exists($core->config->getLog('level'), $this->levels) ? $core->config->getLog('level') : 'ALL';
@@ -95,12 +97,12 @@ class OLog {
 	 * @return bool Returns if the message was written to the log file or not
 	 */
 	private function putLog(string $level, string $str, array $caller): bool {
-		$data = '['.date('Y-m-d H:i:s',time()).'] - ['.$level.'] - ';
+		$data = '[' . date('Y-m-d H:i:s', time()) . '] - [' . $level . '] - ';
 		if (!is_null($this->class_name)) {
-			$data .= '['.$this->class_name.'] - ';
+			$data .= '[' . $this->class_name . '] - ';
 		}
-		$data .= '['.basename($caller['file']).' - '.$caller['line'].'] - ';
-		$data .= $str."\n";
+		$data .= '[' . basename($caller['file']) . ' - ' . $caller['line'] . '] - ';
+		$data .= $str . "\n";
 
 		$rotate = false;
 		$truncate = false;
@@ -114,8 +116,7 @@ class OLog {
 		if (($log_file_size + $data_file_size) > $max_size) {
 			if ($this->max_num_files > 1) {
 				$rotate = true;
-			}
-			else {
+			} else {
 				$truncate = true;
 			}
 		}
@@ -125,28 +126,29 @@ class OLog {
 		}
 		if ($truncate) {
 			$old_log = file_get_contents($this->log_path, false, null, -1 * ($max_size - $data_file_size));
-			return (file_put_contents($this->log_path, $old_log.$data) !== false);
+			return (file_put_contents($this->log_path, $old_log . $data) !== false);
 		}
 		if ($rotate) {
-			$check_path = $this->log_dir.$this->log_file_name.'*.'.$this->log_file_ext;
+			$check_path = $this->log_dir . $this->log_file_name . '*.' . $this->log_file_ext;
 			$current_log_files = glob($check_path);
 
-			$check_max = $this->log_dir.$this->log_file_name.'_'.$this->max_num_files.'.'.$this->log_file_ext;
+			$check_max = $this->log_dir . $this->log_file_name . '_' . $this->max_num_files . '.' . $this->log_file_ext;
 			if (in_array($check_max, $current_log_files)) {
 				unlink($check_max);
 				$last = array_pop($current_log_files);
 			}
-			for ($i=($this->max_num_files-1); $i>0; $i--) {
-				$check_from = $this->log_dir.$this->log_file_name.'_'.$i.'.'.$this->log_file_ext;
-				$check_to = $this->log_dir.$this->log_file_name.'_'.($i+1).'.'.$this->log_file_ext;
+			for ($i = ($this->max_num_files - 1); $i > 0; $i--) {
+				$check_from = $this->log_dir . $this->log_file_name . '_' . $i . '.' . $this->log_file_ext;
+				$check_to = $this->log_dir . $this->log_file_name . '_' . ($i + 1) . '.' . $this->log_file_ext;
 
 				if (file_exists($check_from)) {
 					rename($check_from, $check_to);
 				}
 			}
-			$first_rotate = $this->log_dir.$this->log_file_name.'_1.'.$this->log_file_ext;
+			$first_rotate = $this->log_dir . $this->log_file_name . '_1.' . $this->log_file_ext;
 			rename($this->log_path, $first_rotate);
 			return (file_put_contents($this->log_path, $data) !== false);
 		}
+		return false;
 	}
 }

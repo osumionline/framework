@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
@@ -155,11 +157,9 @@ class OTranslate {
 				if (substr($line, 0, 1) === '"') {
 					if ($doing_keys) {
 						$current[] = trim(substr(trim($line), 1, -1));
-					}
-					elseif ($doing_translations) {
+					} elseif ($doing_translations) {
 						$translation[] = trim(substr(trim($line), 1, -1));
-					}
-					else {
+					} else {
 						$header = explode(':', trim(substr(trim($line), 1, -1)));
 						$header[1] = str_ireplace("\\n", "", $header[1]);
 						$headers[$header[0]] = trim($header[1]);
@@ -169,13 +169,12 @@ class OTranslate {
 					}
 				}
 				if (substr($line, 0, 5) === 'msgid') {
-					$headers_end = true;
-					if (count($current)!=0 && count($translation)!=0) {
+					if (count($current) != 0 && count($translation) != 0) {
 						$translations[implode("\n", $current)] = implode("\n", $translation);
 					}
 					$doing_keys = true;
 					$doing_translations = false;
-					$key = trim(substr(trim(substr($line,5)), 1, -1));
+					$key = trim(substr(trim(substr($line, 5)), 1, -1));
 					$current = [];
 					if ($key !== '') {
 						$current[] = $key;
@@ -192,7 +191,7 @@ class OTranslate {
 				}
 			}
 
-			if (count($current)!=0 && count($translation)!=0) {
+			if (count($current) != 0 && count($translation) != 0) {
 				$translations[implode("\n", $current)] = implode("\n", $translation);
 			}
 		}

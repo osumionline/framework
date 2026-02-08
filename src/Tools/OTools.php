@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tools;
 
@@ -21,16 +23,24 @@ class OTools {
 		$special = array_key_exists('special', $options) ? $options['special'] : false;
 
 		$seed = '';
-		if ($lower) { $seed .= 'abcdefghijklmnopqrstuvwxyz'; }
-		if ($upper) { $seed .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; }
-		if ($numbers) { $seed .= '0123456789'; }
-		if ($special) { $seed .= '!@#$%^&*()'; }
+		if ($lower) {
+			$seed .= 'abcdefghijklmnopqrstuvwxyz';
+		}
+		if ($upper) {
+			$seed .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		}
+		if ($numbers) {
+			$seed .= '0123456789';
+		}
+		if ($special) {
+			$seed .= '!@#$%^&*()';
+		}
 
 		$seed = str_split($seed);
 		shuffle($seed);
 		$rand = '';
 		$list = array_rand($seed, $num);
-		if (!is_array($list)){
+		if (!is_array($list)) {
 			$list = [$list];
 		}
 
@@ -52,18 +62,17 @@ class OTools {
 	 *
 	 * @return string Loaded template with rendered parameters
 	 */
-	public static function getTemplate(string $path, string $html, array $values): ?string  {
-		if ($path!='') {
+	public static function getTemplate(string $path, string $html, array $values): ?string {
+		if ($path != '') {
 			if (file_exists($path)) {
 				$html = file_get_contents($path);
-			}
-			else{
+			} else {
 				return null;
 			}
 		}
 
 		foreach ($values as $key => $value) {
-			$html = str_ireplace('{{'.$key.'}}', $value, $html);
+			$html = str_ireplace('{{' . $key . '}}', $value, $html);
 		}
 
 		return $html;
@@ -78,7 +87,7 @@ class OTools {
 	 *
 	 * @return string Loaded template with rendered parameters
 	 */
-	public static function getPartial(string $path, array $values): ?string {
+	public static function getPartial(string $path, array $values): string | null {
 		if (file_exists($path)) {
 			ob_start();
 			include($path);
@@ -99,18 +108,19 @@ class OTools {
 	 *
 	 * @return string Loaded component with rendered parameters
 	 */
-	public static function getComponent(string $name, array $values=[]): ?string {
+	public static function getComponent(string $name, array $values = []): string | null {
 		global $core;
 		$component_name = $name;
-		if (stripos($component_name, '/')!==false) {
-			$component_name = array_pop(explode('/', $component_name));
+		if (stripos($component_name, '/') !== false) {
+			$parts = explode('/', $component_name);
+			$component_name = array_pop($parts);
 		}
 
-		$component_file = $core->config->getDir('app_component').$name.'/'.$component_name.'Component.php';
+		$component_file = $core->config->getDir('app_component') . $name . '/' . $component_name . 'Component.php';
 		$output = self::getPartial($component_file, $values);
 
 		if (is_null($output)) {
-			$output = 'ERROR: File '.$name.' not found';
+			$output = 'ERROR: File ' . $name . ' not found';
 		}
 
 		return $output;
@@ -127,7 +137,7 @@ class OTools {
 	 *
 	 * @return string JSON string representation of the object or null if given object was null or not a model object
 	 */
-	public static function getModelComponent($obj, array $exclude=[], array $empty=[]): string {
+	public static function getModelComponent($obj, array $exclude = [], array $empty = []): string {
 		return (!is_null($obj) && method_exists($obj, 'generate')) ? $obj->generate('json', $exclude, $empty) : 'null';
 	}
 
@@ -141,7 +151,7 @@ class OTools {
 	public static function fileToBase64(string $filename): ?string {
 		if (file_exists($filename)) {
 			$finfo = finfo_open(FILEINFO_MIME_TYPE);
-			$filebinary = (filesize($filename)>0) ? fread(fopen($filename, 'r'), filesize($filename)) : '';
+			$filebinary = (filesize($filename) > 0) ? fread(fopen($filename, 'r'), filesize($filename)) : '';
 			return 'data:' . finfo_file($finfo, $filename) . ';base64,' . base64_encode($filebinary);
 		}
 		return null;
@@ -247,7 +257,7 @@ class OTools {
 		global $core;
 
 		if (!is_null($core->config->getErrorPage($mode))) {
-			header('Location:'.$core->config->getErrorPage($mode));
+			header('Location:' . $core->config->getErrorPage($mode));
 			exit;
 		}
 
@@ -262,9 +272,9 @@ class OTools {
 		if ($params['title'] === '') {
 			$params['title'] = 'Osumi Framework';
 		}
-		$path = $core->config->getDir('ofw_template').'error.php';
+		$path = $core->config->getDir('ofw_template') . 'error.php';
 
-		header($_SERVER['SERVER_PROTOCOL'].' '.$core->getHttpStatus());
+		header($_SERVER['SERVER_PROTOCOL'] . ' ' . $core->getHttpStatus());
 		echo self::getPartial($path, $params);
 		exit;
 	}
@@ -276,9 +286,9 @@ class OTools {
 	 *
 	 * @param array | null $params Key / value array with parameters to be rendered on the message
 	 *
-	 * @return string Localized message with parameters rendered
+	 * @return string | null Localized message with parameters rendered or null if message was not found
 	 */
-	public static function getMessage(string $key, array | null $params = null): string {
+	public static function getMessage(string $key, array | null $params = null): string | null {
 		global $core;
 
 		$translation = $core->translate->getTranslation($key);
@@ -288,10 +298,9 @@ class OTools {
 
 		$translation = str_ireplace("\\n", "\n", $translation);
 
-		if (is_null($params)){
+		if (is_null($params)) {
 			return $translation;
-		}
-		else{
+		} else {
 			return vsprintf($translation, $params);
 		}
 	}
@@ -346,42 +355,270 @@ class OTools {
 	 */
 	public static function slugify(string $text, string $separator = '-'): string {
 		$bad = [
-			'À','à','Á','á','Â','â','Ã','ã','Ä','ä','Å','å','Ă','ă','Ą','ą',
-			'Ć','ć','Č','č','Ç','ç',
-			'Ď','ď','Đ','đ',
-			'È','è','É','é','Ê','ê','Ë','ë','Ě','ě','Ę','ę',
-			'Ğ','ğ',
-			'Ì','ì','Í','í','Î','î','Ï','ï',
-			'Ĺ','ĺ','Ľ','ľ','Ł','ł',
-			'Ñ','ñ','Ň','ň','Ń','ń',
-			'Ò','ò','Ó','ó','Ô','ô','Õ','õ','Ö','ö','Ø','ø','ő',
-			'Ř','ř','Ŕ','ŕ',
-			'Š','š','Ş','ş','Ś','ś',
-			'Ť','ť','Ť','ť','Ţ','ţ',
-			'Ù','ù','Ú','ú','Û','û','Ü','ü','Ů','ů',
-			'Ÿ','ÿ','ý','Ý',
-			'Ž','ž','Ź','ź','Ż','ż',
-			'Þ','þ','Ð','ð','ß','Œ','œ','Æ','æ','µ',
-			'”','“','‘','’',"'","\n","\r",'_','º','ª','¿'];
+			'À',
+			'à',
+			'Á',
+			'á',
+			'Â',
+			'â',
+			'Ã',
+			'ã',
+			'Ä',
+			'ä',
+			'Å',
+			'å',
+			'Ă',
+			'ă',
+			'Ą',
+			'ą',
+			'Ć',
+			'ć',
+			'Č',
+			'č',
+			'Ç',
+			'ç',
+			'Ď',
+			'ď',
+			'Đ',
+			'đ',
+			'È',
+			'è',
+			'É',
+			'é',
+			'Ê',
+			'ê',
+			'Ë',
+			'ë',
+			'Ě',
+			'ě',
+			'Ę',
+			'ę',
+			'Ğ',
+			'ğ',
+			'Ì',
+			'ì',
+			'Í',
+			'í',
+			'Î',
+			'î',
+			'Ï',
+			'ï',
+			'Ĺ',
+			'ĺ',
+			'Ľ',
+			'ľ',
+			'Ł',
+			'ł',
+			'Ñ',
+			'ñ',
+			'Ň',
+			'ň',
+			'Ń',
+			'ń',
+			'Ò',
+			'ò',
+			'Ó',
+			'ó',
+			'Ô',
+			'ô',
+			'Õ',
+			'õ',
+			'Ö',
+			'ö',
+			'Ø',
+			'ø',
+			'ő',
+			'Ř',
+			'ř',
+			'Ŕ',
+			'ŕ',
+			'Š',
+			'š',
+			'Ş',
+			'ş',
+			'Ś',
+			'ś',
+			'Ť',
+			'ť',
+			'Ť',
+			'ť',
+			'Ţ',
+			'ţ',
+			'Ù',
+			'ù',
+			'Ú',
+			'ú',
+			'Û',
+			'û',
+			'Ü',
+			'ü',
+			'Ů',
+			'ů',
+			'Ÿ',
+			'ÿ',
+			'ý',
+			'Ý',
+			'Ž',
+			'ž',
+			'Ź',
+			'ź',
+			'Ż',
+			'ż',
+			'Þ',
+			'þ',
+			'Ð',
+			'ð',
+			'ß',
+			'Œ',
+			'œ',
+			'Æ',
+			'æ',
+			'µ',
+			'”',
+			'“',
+			'‘',
+			'’',
+			"'",
+			"\n",
+			"\r",
+			'_',
+			'º',
+			'ª',
+			'¿'
+		];
 
 		$good = [
-			'A','a','A','a','A','a','A','a','Ae','ae','A','a','A','a','A','a',
-			'C','c','C','c','C','c',
-			'D','d','D','d',
-			'E','e','E','e','E','e','E','e','E','e','E','e',
-			'G','g',
-			'I','i','I','i','I','i','I','i',
-			'L','l','L','l','L','l',
-			'N','n','N','n','N','n',
-			'O','o','O','o','O','o','O','o','Oe','oe','O','o','o',
-			'R','r','R','r',
-			'S','s','S','s','S','s',
-			'T','t','T','t','T','t',
-			'U','u','U','u','U','u','Ue','ue','U','u',
-			'Y','y','Y','y',
-			'Z','z','Z','z','Z','z',
-			'TH','th','DH','dh','ss','OE','oe','AE','ae','u',
-			'','','','','','','','-','','',''];
+			'A',
+			'a',
+			'A',
+			'a',
+			'A',
+			'a',
+			'A',
+			'a',
+			'Ae',
+			'ae',
+			'A',
+			'a',
+			'A',
+			'a',
+			'A',
+			'a',
+			'C',
+			'c',
+			'C',
+			'c',
+			'C',
+			'c',
+			'D',
+			'd',
+			'D',
+			'd',
+			'E',
+			'e',
+			'E',
+			'e',
+			'E',
+			'e',
+			'E',
+			'e',
+			'E',
+			'e',
+			'E',
+			'e',
+			'G',
+			'g',
+			'I',
+			'i',
+			'I',
+			'i',
+			'I',
+			'i',
+			'I',
+			'i',
+			'L',
+			'l',
+			'L',
+			'l',
+			'L',
+			'l',
+			'N',
+			'n',
+			'N',
+			'n',
+			'N',
+			'n',
+			'O',
+			'o',
+			'O',
+			'o',
+			'O',
+			'o',
+			'O',
+			'o',
+			'Oe',
+			'oe',
+			'O',
+			'o',
+			'o',
+			'R',
+			'r',
+			'R',
+			'r',
+			'S',
+			's',
+			'S',
+			's',
+			'S',
+			's',
+			'T',
+			't',
+			'T',
+			't',
+			'T',
+			't',
+			'U',
+			'u',
+			'U',
+			'u',
+			'U',
+			'u',
+			'Ue',
+			'ue',
+			'U',
+			'u',
+			'Y',
+			'y',
+			'Y',
+			'y',
+			'Z',
+			'z',
+			'Z',
+			'z',
+			'Z',
+			'z',
+			'TH',
+			'th',
+			'DH',
+			'dh',
+			'ss',
+			'OE',
+			'oe',
+			'AE',
+			'ae',
+			'u',
+			'',
+			'',
+			'',
+			'',
+			'',
+			'',
+			'',
+			'-',
+			'',
+			'',
+			''
+		];
 
 		// Convert special characters
 		$text = str_replace($bad, $good, $text);
@@ -419,7 +656,7 @@ class OTools {
 		if (!is_dir($ofw_path)) {
 			mkdir($ofw_path);
 		}
-		$check_path = $core->config->getDir('ofw_'.$name);
+		$check_path = $core->config->getDir('ofw_' . $name);
 		if (!is_dir($check_path)) {
 			mkdir($check_path);
 		}
@@ -434,15 +671,15 @@ class OTools {
 	 *
 	 * @return bool Returns true after the task is complete or false if task file doesn't exist
 	 */
-	public static function runTask(string $task_name, array $params=[]): bool {
+	public static function runTask(string $task_name, array $params = []): bool {
 		global $core;
-		$task_file = $core->config->getDir('app_task').$task_name.'.task.php';
+		$task_file = $core->config->getDir('app_task') . $task_name . '.task.php';
 		if (!file_exists($task_file)) {
 			return false;
 		}
 
 		require_once $task_file;
-		$task_name = "\\OsumiFramework\\App\\Task\\".$task_name."Task";
+		$task_name = "\\OsumiFramework\\App\\Task\\" . $task_name . "Task";
 		$task = new $task_name;
 		$task->loadTask();
 		$task->run($params);
@@ -467,20 +704,19 @@ class OTools {
 			'status' => 'ok',
 			'return' => ''
 		];
-		$task_file = $core->config->getDir('ofw_task').$task_name.'.task.php';
+		$task_file = $core->config->getDir('ofw_task') . $task_name . '.task.php';
 		if (!file_exists($task_file)) {
 			$ret['status'] = 'error';
 			return $ret;
 		}
 
 		require_once $task_file;
-		$task_name = "\\OsumiFramework\\OFW\\Task\\".$task_name."Task";
+		$task_name = "\\OsumiFramework\\OFW\\Task\\" . $task_name . "Task";
 		$task = new $task_name();
 		$task->loadTask();
 		if (!$return) {
 			$task->run($params);
-		}
-		else {
+		} else {
 			ob_start();
 			$task->run($params);
 			$ret['return'] = ob_get_contents();
@@ -497,8 +733,8 @@ class OTools {
 	 */
 	public static function getVersion(): string {
 		global $core;
-		$version_file = $core->config->getDir('ofw_base').'composer.json';
-		$version = json_decode( file_get_contents($version_file), true );
+		$version_file = $core->config->getDir('ofw_base') . 'composer.json';
+		$version = json_decode(file_get_contents($version_file), true);
 		return $version['version'];
 	}
 
@@ -509,8 +745,8 @@ class OTools {
 	 */
 	public static function getVersionInformation(): string {
 		global $core;
-		$version_file = $core->config->getDir('ofw_base').'composer.json';
-		$version = json_decode( file_get_contents($version_file), true );
+		$version_file = $core->config->getDir('ofw_base') . 'composer.json';
+		$version = json_decode(file_get_contents($version_file), true);
 		return $version['extra']['version-description'];
 	}
 

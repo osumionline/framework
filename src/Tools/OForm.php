@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tools;
 
@@ -91,23 +93,23 @@ class OForm {
 		foreach ($this->fields as $name => $field) {
 			$is_valid_field = true;
 			foreach ($this->fields[$name]['validation'] as $validation) {
-				switch ($validation){
+				switch ($validation) {
 					case self::REQUIRED: {
-						if (trim($this->fields[$name]['value']) == '') {
-							$is_valid_field = false;
+							if (trim($this->fields[$name]['value']) == '') {
+								$is_valid_field = false;
+							}
 						}
-					}
-					break;
+						break;
 					case self::VALID_EMAIL: {
-						if (!filter_var($this->fields[$name]['value'], FILTER_VALIDATE_EMAIL)) {
-							$is_valid_field = false;
+							if (!filter_var($this->fields[$name]['value'], FILTER_VALIDATE_EMAIL)) {
+								$is_valid_field = false;
+							}
 						}
-					}
-					break;
+						break;
 				}
 			}
 			$this->fields[$name]['valid'] = $is_valid_field;
-			if (!$is_valid_field){
+			if (!$is_valid_field) {
 				$is_valid = false;
 			}
 		}
@@ -128,7 +130,7 @@ class OForm {
 		echo '</pre>';
 		foreach ($this->fields as $name => $field) {
 			$this->fields[$name]['value'] = $list[$name];
-			echo "LIST[".$name."]: ".$list[$name]."<br>\n";
+			echo "LIST[" . $name . "]: " . $list[$name] . "<br>\n";
 		}
 	}
 }

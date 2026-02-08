@@ -1,21 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Routing;
 
 use Osumi\OsumiFramework\Core\OConfig;
-use Osumi\OsumiFramework\Tools\OTools;
-use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\Routing\ORoute;
 
 /**
  * OUrl - Class with methods to check required URL, get its data, generate new URLs or redirect the user to a new one
  */
 class OUrl {
-	private ?OConfig $config      = null;
-	private ?array   $urls        = null;
-	private string   $check_url   = '';
-	private array    $url_params  = [];
-	private string   $method      = '';
+	private OConfig | null $config = null;
+	private array | null   $urls   = null;
+	private string   $check_url    = '';
+	private array    $url_params   = [];
+	private string   $method       = '';
 
 	/**
 	 * Loads user defined urls, used method to access and URL and path to the routing library
@@ -163,15 +163,15 @@ class OUrl {
 
 		if ($found) {
 			foreach ($params as $key => $value) {
-				$url = str_replace(':'.$key, $value, $url);
+				$url = str_replace(':' . $key, $value, $url);
 			}
 		}
 
 		if ($absolute === true) {
 			$base = $core->config->getUrl('base');
-			$base = substr($base, 0, strlen($base)-1);
+			$base = substr($base, 0, strlen($base) - 1);
 
-			$url = $base.$url;
+			$url = $base . $url;
 		}
 
 		return $url;
@@ -185,7 +185,7 @@ class OUrl {
 	 * @return void
 	 */
 	public static function goToUrl(string $url): void {
-		header('Location:'.$url);
+		header('Location:' . $url);
 		exit;
 	}
 }

@@ -1,28 +1,33 @@
 {
-  "name": "osumionline/framework",
-  "description": "Framework PHP de Osumi para aplicaciones web.",
-  "version": "9.7.1",
-  "type": "library",
-  "keywords": ["framework", "php", "web", "osumi"],
-  "homepage": "https://github.com/osumionline/framework",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Iñigo Gorosabel",
-      "homepage": "https://osumi.es",
-      "role": "Developer"
-    }
-  ],
-  "require": {
-    "php": ">=8.2",
-    "ext-json": "*"
-  },
-  "autoload": {
-    "psr-4": {
-      "Osumi\\OsumiFramework\\": "src/"
-    }
-  },
-  "extra": {
-    "version-description": "Corrección al mostrar páginas de error e indicar el estado HTTP."
-  }
+	"name": "osumionline/framework",
+	"description": "Framework PHP de Osumi para aplicaciones web.",
+	"version": "9.7.2",
+	"type": "library",
+	"keywords": [
+		"framework",
+		"php",
+		"web",
+		"osumi"
+	],
+	"homepage": "https://github.com/osumionline/framework",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Iñigo Gorosabel",
+			"homepage": "https://osumi.es",
+			"role": "Developer"
+		}
+	],
+	"require": {
+		"php": ">=8.2",
+		"ext-json": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"Osumi\\OsumiFramework\\": "src/"
+		}
+	},
+	"extra": {
+		"version-description": "Repaso y limpieza."
+	}
 }

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\ORM;
@@ -129,10 +130,10 @@ class ODB {
      * @return ?array Retrieves next item of the results or null if finished
      */
     public function next(): ?array {
-      if ($this->result_index < count($this->result)) {
-        return $this->result[$this->result_index++];
-      }
-      return null;
+        if ($this->result_index < count($this->result)) {
+            return $this->result[$this->result_index++];
+        }
+        return null;
     }
 
     /**
@@ -141,7 +142,7 @@ class ODB {
      * @return array Results array
      */
     public function all(): array {
-      return $this->result;
+        return $this->result;
     }
 
     /**

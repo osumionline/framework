@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Routing;
 
 class ORoute {
-  public  static array   $routes         = [];
-  private static string  $current_prefix = '';
-  private static ?string $current_layout = null;
+  public  static array         $routes         = [];
+  private static string        $current_prefix = '';
+  private static string | null $current_layout = null;
 
   /**
    * Register a new GET route with the router.

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\ORM;
@@ -123,7 +124,7 @@ abstract class OModel {
           break;
         default:
           throw new Exception("Unsupported type for property '{$field_name}': {$property_type}.");
-        }
+      }
     }
 
     // Validate that the property type matches the expected type
@@ -474,7 +475,7 @@ abstract class OModel {
 
     // If results are cached, return them
     if (isset(self::$results_cache[$cache_key])) {
-        return self::$results_cache[$cache_key];
+      return self::$results_cache[$cache_key];
     }
 
     // Execute query with a limit of one
@@ -534,8 +535,7 @@ abstract class OModel {
       if (is_numeric($options['limit'])) {
         $count = null;
         $start = $options['limit'];
-      }
-      else {
+      } else {
         // Splits the value of "limit" into start and amount if it contains '#'
         list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
       }
@@ -609,8 +609,7 @@ abstract class OModel {
       if (is_numeric($options['limit'])) {
         $count = null;
         $start = $options['limit'];
-      }
-      else {
+      } else {
         // Splits the value of "limit" into start and amount if it contains '#'
         list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
       }
@@ -793,7 +792,7 @@ abstract class OModel {
    *
    * @return bool Result of the operation
    */
-    public function delete(): bool {
+  public function delete(): bool {
     // Empty cache
     self::clearResultsCache();
 
@@ -937,86 +936,86 @@ abstract class OModel {
     $foreign_keys = [];
     $keys = [];
 
-     foreach ($fields as $field_name => $field) {
-         $sql_field = "`{$field_name}`";
+    foreach ($fields as $field_name => $field) {
+      $sql_field = "`{$field_name}`";
 
-         // Field type
-         switch ($field['type']) {
-             case OField::NUMBER:
-                 $sql_field .= " INT(11)";
-                 break;
-             case OField::FLOAT:
-                 $sql_field .= " FLOAT";
-                 break;
-             case OField::TEXT:
-                 $sql_field .= " VARCHAR({$field['max']})";
-                 $sql_field .= " COLLATE utf8mb4_unicode_ci";
-                 break;
-             case OField::LONGTEXT:
-                 $sql_field .= " TEXT COLLATE utf8mb4_unicode_ci";
-                 break;
-             case OField::BOOL:
-                 $sql_field .= " TINYINT(1)";
-                 break;
-             case OField::DATE:
-                 $sql_field .= " DATETIME";
-                 break;
-         }
+      // Field type
+      switch ($field['type']) {
+        case OField::NUMBER:
+          $sql_field .= " INT(11)";
+          break;
+        case OField::FLOAT:
+          $sql_field .= " FLOAT";
+          break;
+        case OField::TEXT:
+          $sql_field .= " VARCHAR({$field['max']})";
+          $sql_field .= " COLLATE utf8mb4_unicode_ci";
+          break;
+        case OField::LONGTEXT:
+          $sql_field .= " TEXT COLLATE utf8mb4_unicode_ci";
+          break;
+        case OField::BOOL:
+          $sql_field .= " TINYINT(1)";
+          break;
+        case OField::DATE:
+          $sql_field .= " DATETIME";
+          break;
+      }
 
-         if (!$field['nullable']) {
-             $sql_field .= " NOT NULL";
-         }
+      if (!$field['nullable']) {
+        $sql_field .= " NOT NULL";
+      }
 
-         // Default value
-         if (isset($field['default'])) {
-             $default_value = $field['default'];
-             if (is_string($default_value)) {
-                 $default_value = "'{$default_value}'";
-             }
-             $sql_field .= " DEFAULT {$default_value}";
-         }
+      // Default value
+      if (isset($field['default'])) {
+        $default_value = $field['default'];
+        if (is_string($default_value)) {
+          $default_value = "'{$default_value}'";
+        }
+        $sql_field .= " DEFAULT {$default_value}";
+      }
 
-         // Field comment
-         if (!empty($field['comment'])) {
-             $sql_field .= " COMMENT '{$field['comment']}'";
-         }
+      // Field comment
+      if (!empty($field['comment'])) {
+        $sql_field .= " COMMENT '{$field['comment']}'";
+      }
 
-         // Primary key
-         if (!empty($field['primary'])) {
-             $primary_key[] = "`{$field_name}`";
-             if (!empty($field['auto_increment'])) {
-                 $sql_field .= " AUTO_INCREMENT";
-             }
-         }
+      // Primary key
+      if (!empty($field['primary'])) {
+        $primary_key[] = "`{$field_name}`";
+        if (!empty($field['auto_increment'])) {
+          $sql_field .= " AUTO_INCREMENT";
+        }
+      }
 
-         // Foreign keys
-         if (!empty($field['ref'])) {
-             [$ref_table, $ref_column] = explode('.', $field['ref']);
-             $foreign_keys[] = "ADD CONSTRAINT `fk_{$table_name}_{$ref_table}` FOREIGN KEY (`{$field_name}`) REFERENCES `{$ref_table}` (`{$ref_column}`) ON DELETE NO ACTION ON UPDATE NO ACTION";
-             $keys[] = "ADD KEY `fk_{$table_name}_{$ref_table}_idx` (`{$field_name}`)";
-         }
+      // Foreign keys
+      if (!empty($field['ref'])) {
+        [$ref_table, $ref_column] = explode('.', $field['ref']);
+        $foreign_keys[] = "ADD CONSTRAINT `fk_{$table_name}_{$ref_table}` FOREIGN KEY (`{$field_name}`) REFERENCES `{$ref_table}` (`{$ref_column}`) ON DELETE NO ACTION ON UPDATE NO ACTION";
+        $keys[] = "ADD KEY `fk_{$table_name}_{$ref_table}_idx` (`{$field_name}`)";
+      }
 
-         // Add field to SQL array
-         $sql_fields[] = $sql_field;
-     }
+      // Add field to SQL array
+      $sql_fields[] = $sql_field;
+    }
 
-     // Build CREATE TABLE sentence
-     $sql = "CREATE TABLE `{$table_name}` (\n  ";
-     $sql .= implode(",\n  ", $sql_fields);
+    // Build CREATE TABLE sentence
+    $sql = "CREATE TABLE `{$table_name}` (\n  ";
+    $sql .= implode(",\n  ", $sql_fields);
 
-     // Add primary key
-     if (!empty($primary_key)) {
-         $sql .= ",\n  PRIMARY KEY (" . implode(', ', $primary_key) . ")";
-     }
+    // Add primary key
+    if (!empty($primary_key)) {
+      $sql .= ",\n  PRIMARY KEY (" . implode(', ', $primary_key) . ")";
+    }
 
-     $sql .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    $sql .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
 
-     // Add foreign keys
-     if (!empty($foreign_keys) || !empty($keys)) {
-         $sql .= "\n\nALTER TABLE `{$table_name}`\n  ";
-         $sql .= implode(",\n  ", array_merge($keys, $foreign_keys)) . ";";
-     }
+    // Add foreign keys
+    if (!empty($foreign_keys) || !empty($keys)) {
+      $sql .= "\n\nALTER TABLE `{$table_name}`\n  ";
+      $sql .= implode(",\n  ", array_merge($keys, $foreign_keys)) . ";";
+    }
 
-     return $sql;
- }
+    return $sql;
+  }
 }

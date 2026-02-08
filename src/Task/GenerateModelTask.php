@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -11,7 +13,7 @@ use Osumi\OsumiFramework\Tools\OBuild;
  */
 class GenerateModelTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString('generateModel', 'light_green').': '.OTools::getMessage('TASK_GENERATE_MODEL');
+		return $this->getColors()->getColoredString('generateModel', 'light_green') . ': ' . OTools::getMessage('TASK_GENERATE_MODEL');
 	}
 
 	/**
@@ -23,7 +25,7 @@ class GenerateModelTask extends OTask {
 		global $core;
 		// Check if there is a database configured and loaded
 		if (is_null($core->db_container)) {
-			$path   = $this->getConfig()->getDir('ofw_template').'generateModel/error.php';
+			$path   = $this->getConfig()->getDir('ofw_template') . 'generateModel/error.php';
 			$values = [
 				'colors' => $this->getColors()
 			];
@@ -33,8 +35,8 @@ class GenerateModelTask extends OTask {
 		}
 
 		OTools::checkOfw('export');
-		$path     = $this->getConfig()->getDir('ofw_template').'generateModel/generateModel.php';
-		$sql_file = $this->getConfig()->getDir('ofw_export').'model.sql';
+		$path     = $this->getConfig()->getDir('ofw_template') . 'generateModel/generateModel.php';
+		$sql_file = $this->getConfig()->getDir('ofw_export') . 'model.sql';
 		$params   = [
 			'colors'      => $this->getColors(),
 			'file'        => $sql_file,

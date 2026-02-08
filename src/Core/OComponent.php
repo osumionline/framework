@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
-use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OPipeFunctions;
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Log\OLog;
@@ -10,12 +11,13 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
 use \ReflectionClass;
 use \ReflectionProperty;
+use \Exception;
 
 /**
  * Base class for components
  */
 class OComponent {
-  protected ?OLog $log = null;
+  protected OLog | null $log = null;
   protected array $allowed_extensions = ['html', 'json', 'xml', 'php'];
   public array $component_info = [
     'initialized' => false,
@@ -105,31 +107,31 @@ class OComponent {
   /**
    * Get component's log object
    *
-   * @return ?Olog Log object
+   * @return Olog | null Log object
    */
-  public function getLog(): ?OLog {
+  public function getLog(): OLog | null {
     return $this->log;
   }
 
   /**
-	 * Get access to the users session information
-	 *
-	 * @return OSession Session configuration class object
-	 */
-	public final function getSession(): OSession {
-		global $core;
-		return $core->session;
-	}
+   * Get access to the users session information
+   *
+   * @return OSession Session configuration class object
+   */
+  public final function getSession(): OSession {
+    global $core;
+    return $core->session;
+  }
 
   /**
-	 * Get access to the cache container
-	 *
-	 * @return OCacheContainer Cache container class object
-	 */
-	public final function getCacheContainer(): OCacheContainer {
-		global $core;
-		return $core->cache_container;
-	}
+   * Get access to the cache container
+   *
+   * @return OCacheContainer Cache container class object
+   */
+  public final function getCacheContainer(): OCacheContainer {
+    global $core;
+    return $core->cache_container;
+  }
 
   /**
    * Add a CSS file (or list) to be added to output
@@ -141,7 +143,7 @@ class OComponent {
   public function addCss(string | array $css): void {
     global $core;
     if (is_string($css)) {
-        $css = [$css];
+      $css = [$css];
     }
     $core->includes['css'] = array_unique(array_merge($core->includes['css'], $css));
   }
@@ -156,11 +158,11 @@ class OComponent {
   public function addInlineCss(string | array $css): void {
     global $core;
     if (is_string($css)) {
-        $css = [$css];
+      $css = [$css];
     }
     $list = [];
     foreach ($css as $item) {
-      $item = $this->component_info['component_base'].$item.'.css';
+      $item = $this->component_info['component_base'] . $item . '.css';
       $list[] = $item;
     }
     $core->includes['inline_css'] = array_unique(array_merge($core->includes['inline_css'], $list));
@@ -176,7 +178,7 @@ class OComponent {
   public function addJs(string | array $js): void {
     global $core;
     if (is_string($js)) {
-        $js = [$js];
+      $js = [$js];
     }
     $core->includes['js'] = array_unique(array_merge($core->includes['js'], $js));
   }
@@ -191,11 +193,11 @@ class OComponent {
   public function addInlineJs(string | array $js): void {
     global $core;
     if (is_string($js)) {
-        $js = [$js];
+      $js = [$js];
     }
     $list = [];
     foreach ($js as $item) {
-      $item = $this->component_info['component_base'].$item.'.js';
+      $item = $this->component_info['component_base'] . $item . '.js';
       $list[] = $item;
     }
     $core->includes['inline_js'] = array_unique(array_merge($core->includes['inline_js'], $list));
@@ -303,8 +305,7 @@ class OComponent {
             $content = str_replace($match[0], strval($sub_value), $content);
           }
         }
-      }
-      else {
+      } else {
         // Direct substitution of {{variable}} or {{  variable  }}
         $content = preg_replace("/\{\{\s*" . preg_quote($property_name) . "\s*\}\}/", strval($property_value), $content);
       }

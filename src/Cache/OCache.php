@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Cache;
 
@@ -8,9 +10,9 @@ use Osumi\OsumiFramework\Tools\OTools;
  * OCache - Cache item instance
  */
 class OCache {
-	private ?string $key = null;
+	private string | null $key = null;
 	private bool $loaded = false;
-	private ?string $route = null;
+	private string | null $route = null;
 	private bool $is_hit = false;
 	private mixed $value;
 	private int $expires_after = 0;
@@ -22,16 +24,16 @@ class OCache {
 		global $core;
 		$this->key = $key;
 		OTools::checkOfw('cache');
-		$this->route = $core->config->getDir('ofw_cache').$key.'.cache.json';
+		$this->route = $core->config->getDir('ofw_cache') . $key . '.cache.json';
 		$this->expires_after = 60 * 60 * 24 * 7; // Default expiration time: one week
 	}
 
 	/**
 	 * Get the cache item key name.
 	 *
-	 * @return string Item key name
+	 * @return string | null Item key name
 	 */
-	public function getKey(): string {
+	public function getKey(): string | null {
 		return $this->key;
 	}
 
@@ -61,7 +63,7 @@ class OCache {
 			$this->is_hit = true;
 			$content = file_get_contents($this->route);
 			$content_parsed = json_decode($content, true);
-			if ($content_parsed===null) {
+			if ($content_parsed === null) {
 				return null;
 			}
 			if (time() > $content_parsed['expiresAt']) {
@@ -104,7 +106,7 @@ class OCache {
 			'expiresAt' => (time() + $this->expires_after),
 			'value' => OTools::base64urlEncode($this->value)
 		];
-		$status = (file_put_contents($this->route, json_encode($content))!==false);
+		$status = (file_put_contents($this->route, json_encode($content)) !== false);
 		if ($status) {
 			$this->is_hit = true;
 			$this->loaded = true;

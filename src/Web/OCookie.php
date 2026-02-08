@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Web;
 
@@ -8,9 +10,9 @@ use Osumi\OsumiFramework\Log\OLog;
  * OCookie - Class with methods to create/modify/delete cookies on clients
  */
 class OCookie {
-	private bool     $debug       = false;
-	private ?Olog    $l           = null;
-	private array    $cookie_list = [];
+	private bool        $debug       = false;
+	private Olog | null $l           = null;
+	private array       $cookie_list = [];
 
 	/**
 	 * Set up a logger for internal operations and get applications configuration (shortcut to $core->config)
@@ -68,7 +70,7 @@ class OCookie {
 	public function add(string $key, string $value): void {
 		global $core;
 		$this->cookie_list[$key] = $value;
-		setcookie ($core->config->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $core->config->getCookieUrl());
+		setcookie($core->config->getCookiePrefix() . '[' . $key . ']', $value, time() + (3600 * 24 * 31), '/', $core->config->getCookieUrl());
 	}
 
 	/**
@@ -115,7 +117,7 @@ class OCookie {
 		$this->log(var_export($this->cookie_list, true));
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie ($this->core->getCookiePrefix().'['.$key.']', $value, time() + (3600*24*31), '/', $this->core->getCookieUrl());
+			setcookie($core->getCookiePrefix() . '[' . $key . ']', $value, time() + (3600 * 24 * 31), '/', $core->getCookieUrl());
 		}
 	}
 
@@ -128,8 +130,8 @@ class OCookie {
 		global $core;
 		$this->log('clean - Cookies removed');
 
-		foreach ($this->cookie_list as $key => $value){
-			setcookie ($this->core->getCookiePrefix().'['.$key.']', $value, 1, '/', $this->core->getCookieUrl());
+		foreach ($this->cookie_list as $key => $value) {
+			setcookie($core->getCookiePrefix() . '[' . $key . ']', $value, 1, '/', $core->getCookieUrl());
 		}
 		$this->cookie_list = [];
 	}

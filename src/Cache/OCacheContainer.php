@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Cache;
 
-use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Tools\OTools;
 
 /**
@@ -94,7 +95,7 @@ class OCacheContainer {
 		if (!$this->hasItem($key)) {
 			return false;
 		}
-		$route = $this->cache_folder.$key.'.cache.json';
+		$route = $this->cache_folder . $key . '.cache.json';
 		if (!file_exists($route)) {
 			return false;
 		}

@@ -1,20 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
-use \PDO;
-use \ReflectionParameter;
-use \ReflectionClass;
 use Osumi\OsumiFramework\ORM\ODBContainer;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
 use Osumi\OsumiFramework\Web\ORequest;
 use Osumi\OsumiFramework\Routing\OUrl;
-use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\Tools\OTools;
-use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\Log\OLog;
-use Osumi\OsumiFramework\Core\OComponent;
+use \PDO;
+use \ReflectionParameter;
+use \ReflectionClass;
+use \Exception;
 
 /**
  * OCore - Base class for the framework with methods to load required files and start the application
@@ -28,11 +28,11 @@ class OCore {
 	public ?float           $start_time = null;
 	public array            $services = [];
 	public array            $includes = [
-    'css' => [],
-    'inline_css' => [],
-    'js' => [],
-    'inline_js' => []
-  ];
+		'css' => [],
+		'inline_css' => [],
+		'js' => [],
+		'inline_js' => []
+	];
 	private array $return_types  = [
 		'html' => 'text/html',
 		'json' => 'application/json',
@@ -66,8 +66,8 @@ class OCore {
 			throw new \RuntimeException("Could not locate project root directory");
 		}
 
-		return $dir.'/';
-  }
+		return $dir . '/';
+	}
 
 	/**
 	 * Include required files for the framework and start up some components like configuration, cache container or database connection container
@@ -76,15 +76,15 @@ class OCore {
 	 *
 	 * @return void
 	 */
-	public function load(bool $from_cli=false): void {
+	public function load(bool $from_cli = false): void {
 		date_default_timezone_set('Europe/Madrid');
 
 		$this->config = new OConfig($this->getBaseDir());
 
 		// Check locale file
-		$locale_file = $this->config->getDir('ofw_locale').$this->config->getLang().'.po';
-		if (!file_exists($locale_file)){
-			echo "ERROR: locale file ".$this->config->getLang()." not found.";
+		$locale_file = $this->config->getDir('ofw_locale') . $this->config->getLang() . '.po';
+		if (!file_exists($locale_file)) {
+			echo "ERROR: locale file " . $this->config->getLang() . " not found.";
 			exit;
 		}
 
@@ -95,13 +95,13 @@ class OCore {
 
 		// Load framework translations
 		$this->translate = new OTranslate();
-		$this->translate->load($this->config->getDir('ofw_locale').$this->config->getLang().'.po');
+		$this->translate->load($this->config->getDir('ofw_locale') . $this->config->getLang() . '.po');
 
 		// If there is a DB connection configured, check drivers and load required classes
-		if ($this->config->getDB('user')!=='' || $this->config->getDB('pass')!=='' || $this->config->getDB('host')!=='' || $this->config->getDB('name')!=='') {
+		if ($this->config->getDB('user') !== '' || $this->config->getDB('pass') !== '' || $this->config->getDB('host') !== '' || $this->config->getDB('name') !== '') {
 			$pdo_drivers = PDO::getAvailableDrivers();
 			if (!in_array($this->config->getDB('driver'), $pdo_drivers)) {
-				echo "ERROR: El sistema no dispone del driver ".$this->config->getDB('driver')." solicitado para realizar la conexión a la base de datos.\n";
+				echo "ERROR: El sistema no dispone del driver " . $this->config->getDB('driver') . " solicitado para realizar la conexión a la base de datos.\n";
 				exit;
 			}
 
@@ -118,7 +118,7 @@ class OCore {
 		// Load routes
 		$routes_path = $this->config->getDir('app_routes');
 		$files = scandir($routes_path);
-    foreach ($files as $file) {
+		foreach ($files as $file) {
 			if ($file === '.' || $file === '..') {
 				continue;
 			}
@@ -153,8 +153,8 @@ class OCore {
 
 		if ($url_result['res']) {
 			// If the call method is OPTIONS, just return OK right away
-			if ($url_result['method'] === 'OPTIONS'){
-				header($_SERVER['SERVER_PROTOCOL'].' 200 OK');
+			if ($url_result['method'] === 'OPTIONS') {
+				header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
 				exit;
 			}
 
@@ -162,7 +162,7 @@ class OCore {
 			if ($url_result['method'] !== $url_result['component_method']) {
 				$url_result['message'] = OTools::getMessage('ERROR_405_MESSAGE', [$url_result['component_method'], $url_result['method']]);
 				$this->setHttpStatus(405);
-				header($_SERVER['SERVER_PROTOCOL'].' '.$this->getHttpStatus());
+				header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->getHttpStatus());
 				OTools::showErrorPage($url_result, '405');
 				exit;
 			}
@@ -179,7 +179,7 @@ class OCore {
 						$url_result['headers']
 					);
 					$reflection = new ReflectionClass($filter_instance);
-  				$class_name = str_ireplace('Filter', '', $reflection->getShortName());
+					$class_name = str_ireplace('Filter', '', $reflection->getShortName());
 
 					// If status is not 'ok', filter checks have failed
 					if ($value['status'] !== 'ok') {
@@ -199,8 +199,7 @@ class OCore {
 					// If return value has been set in any of the filters, go there, otherwise go to error page
 					if (!is_null($filter_return)) {
 						OUrl::goToUrl($filter_return);
-					}
-					else {
+					} else {
 						$this->setHttpStatus(403);
 						OTools::showErrorPage($url_result, '403');
 					}
@@ -216,22 +215,19 @@ class OCore {
 				$req = new ORequest($url_result, $filter_results);
 				if (str_starts_with($reflection_param_type, 'Osumi\OsumiFramework\App\DTO')) {
 					$param = new $reflection_param_type($req);
-				}
-				else {
+				} else {
 					$param = $req;
 				}
 
 				$body = $component_instance->render($param);
 				$return_type = $component_instance->component_info['template_type'];
-			}
-			else {
+			} else {
 				// Route is a view
 				$view_file = $this->config->getDir('app') . $url_result['component'];
 				if (file_exists($view_file)) {
 					$body = file_get_contents($view_file);
 					$return_type = pathinfo($view_file, PATHINFO_EXTENSION);
-				}
-				else {
+				} else {
 					$url_result['message'] = OTools::getMessage('ERROR_VIEW_MESSAGE', [$url_result['component']]);
 					OTools::showErrorPage($url_result, 'view');
 				}
@@ -248,8 +244,8 @@ class OCore {
 
 				// Add any CSS, inline CSS, JS or inline JS
 				if (stripos($layout_body, '</head>') !== false) {
-					$layout_body = str_ireplace('</head>', $this->renderInline().'</head>', $layout_body);
-					$layout_body = str_ireplace('</head>', $this->renderExternal().'</head>', $layout_body);
+					$layout_body = str_ireplace('</head>', $this->renderInline() . '</head>', $layout_body);
+					$layout_body = str_ireplace('</head>', $this->renderExternal() . '</head>', $layout_body);
 				}
 				$body = $layout_body;
 				$return_type = $component_instance->component_info['template_type'];
@@ -261,13 +257,12 @@ class OCore {
 				header('Expires: Thu, 02 Jul 1981 03:00:00 GMT');
 			}
 
-			header('Content-type: '.$this->return_types[$return_type]);
-			header('X-Powered-By: Osumi Framework '.OTools::getVersion());
+			header('Content-type: ' . $this->return_types[$return_type]);
+			header('X-Powered-By: Osumi Framework ' . OTools::getVersion());
 
 			// Show resulting HTML
 			echo $body;
-		}
-		else {
+		} else {
 			$this->setHttpStatus(404);
 			OTools::showErrorPage($url_result, '404');
 		}
@@ -275,66 +270,64 @@ class OCore {
 		if (!is_null($this->db_container)) {
 			$this->db_container->closeAllConnections();
 		}
-		header($_SERVER['SERVER_PROTOCOL'].' '.$this->getHttpStatus());
+		header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->getHttpStatus());
 	}
 
 	/**
-   * Returns inline content (CSS and JS)
-   *
-   * @return string Inline content, if any
-   */
-  private function renderInline(): string {
-    $ret = '';
+	 * Returns inline content (CSS and JS)
+	 *
+	 * @return string Inline content, if any
+	 */
+	private function renderInline(): string {
+		$ret = '';
 		// Add global CSS files
 		if (count($this->config->getCssList())) {
 			foreach ($this->config->getCssList() as $css) {
-				$this->includes['inline_css'][] = $this->config->getDir('public').'css/'.$css.'.css';
+				$this->includes['inline_css'][] = $this->config->getDir('public') . 'css/' . $css . '.css';
 			}
 		}
 		// Add global JS files
 		if (count($this->config->getJsList())) {
 			foreach ($this->config->getJsList() as $js) {
-				$this->includes['inline_js'][] = $this->config->getDir('public').'js/'.$js.'.js';
+				$this->includes['inline_js'][] = $this->config->getDir('public') . 'js/' . $js . '.js';
 			}
 		}
 
 		// Process inline CSS files
-    if (count($this->includes['inline_css']) > 0) {
-      foreach ($this->includes['inline_css'] as $css) {
-        if (file_exists($css)) {
-          $ret .= "<style>\n";
-          $ret .= file_get_contents($css);
-          $ret .= "</style>\n";
-        }
-        else {
-          throw new Exception("No valid inline CSS file found: " . $css);
-        }
-      }
-    }
+		if (count($this->includes['inline_css']) > 0) {
+			foreach ($this->includes['inline_css'] as $css) {
+				if (file_exists($css)) {
+					$ret .= "<style>\n";
+					$ret .= file_get_contents($css);
+					$ret .= "</style>\n";
+				} else {
+					throw new Exception("No valid inline CSS file found: " . $css);
+				}
+			}
+		}
 		// Process inline JS files
-    if (count($this->includes['inline_js']) > 0) {
-      foreach ($this->includes['inline_js'] as $js) {
-        if (file_exists($js)) {
-          $ret .= "<script>\n";
-          $ret .= file_get_contents($js);
-          $ret .= "</script>\n";
-        }
-        else {
-          throw new Exception("No valid inline JS file found for the component: " . $js);
-        }
-      }
-    }
+		if (count($this->includes['inline_js']) > 0) {
+			foreach ($this->includes['inline_js'] as $js) {
+				if (file_exists($js)) {
+					$ret .= "<script>\n";
+					$ret .= file_get_contents($js);
+					$ret .= "</script>\n";
+				} else {
+					throw new Exception("No valid inline JS file found for the component: " . $js);
+				}
+			}
+		}
 
-    return $ret;
-  }
+		return $ret;
+	}
 
 	/**
-   * Returns external content (CSS and JS)
-   *
-   * @return string External content, if any
-   */
-  private function renderExternal(): string {
-    $ret = '';
+	 * Returns external content (CSS and JS)
+	 *
+	 * @return string External content, if any
+	 */
+	private function renderExternal(): string {
+		$ret = '';
 		// Add global external CSS files
 		if (count($this->config->getExtCssList())) {
 			foreach ($this->config->getExtCssList() as $css) {
@@ -349,20 +342,20 @@ class OCore {
 		}
 
 		// Process CSS files
-    if (count($this->includes['css']) > 0) {
-      foreach ($this->includes['css'] as $css) {
-        $ret .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"".$css."\">\n";
-      }
-    }
+		if (count($this->includes['css']) > 0) {
+			foreach ($this->includes['css'] as $css) {
+				$ret .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"" . $css . "\">\n";
+			}
+		}
 		// Process JS files
-    if (count($this->includes['js']) > 0) {
-      foreach ($this->includes['js'] as $js) {
-        $ret .= "<script src=\"".$js."\"></script>\n";
-      }
-    }
+		if (count($this->includes['js']) > 0) {
+			foreach ($this->includes['js'] as $js) {
+				$ret .= "<script src=\"" . $js . "\"></script>\n";
+			}
+		}
 
-    return $ret;
-  }
+		return $ret;
+	}
 
 	/**
 	 * Sets the HTTP status
@@ -381,25 +374,33 @@ class OCore {
 	 * @return string Fullt HTTP status string
 	 */
 	public function getHttpStatus(): string {
-			switch ($this->http_status) {
-				case 200: return '200 OK';
+		switch ($this->http_status) {
+			case 200:
+				return '200 OK';
 				break;
-				case 201: return '201 Created';
+			case 201:
+				return '201 Created';
 				break;
-				case 400: return '400 Bad Request';
+			case 400:
+				return '400 Bad Request';
 				break;
-				case 403: return '403 Forbidden';
+			case 403:
+				return '403 Forbidden';
 				break;
-				case 404: return '404 Not Found';
+			case 404:
+				return '404 Not Found';
 				break;
-				case 405: return '405 Method Not Allowed';
+			case 405:
+				return '405 Method Not Allowed';
 				break;
-				case 409: return '409 Conflict';
+			case 409:
+				return '409 Conflict';
 				break;
-				case 500: return '500 Internal Server Error';
+			case 500:
+				return '500 Internal Server Error';
 				break;
-			}
-			return '200 OK';
+		}
+		return '200 OK';
 	}
 
 	/**
@@ -412,19 +413,19 @@ class OCore {
 	public function errorHandler(\Throwable $ex): void {
 		$log = new OLog(get_class($this));
 		$params = ['message' => OTools::getMessage('ERROR_500_LABEL')];
-		$params['message'] = "<strong>Error:</strong> \"".$ex->getMessage()."\"\n<strong>File:</strong> \"".$ex->getFile()."\" (Line: ".$ex->getLine().")\n\n<strong>Trace:</strong> \n";
+		$params['message'] = "<strong>Error:</strong> \"" . $ex->getMessage() . "\"\n<strong>File:</strong> \"" . $ex->getFile() . "\" (Line: " . $ex->getLine() . ")\n\n<strong>Trace:</strong> \n";
 		foreach ($ex->getTrace() as $trace) {
 			if (array_key_exists('file', $trace)) {
-				$params['message'] .= "  <strong>File:</strong> \"".$trace['file']." (Line: ".$trace['line'].")\"\n";
+				$params['message'] .= "  <strong>File:</strong> \"" . $trace['file'] . " (Line: " . $trace['line'] . ")\"\n";
 			}
 			if (array_key_exists('class', $trace)) {
-				$params['message'] .= "  <strong>Class:</strong> \"".$trace['class']."\"\n";
+				$params['message'] .= "  <strong>Class:</strong> \"" . $trace['class'] . "\"\n";
 			}
 			if (array_key_exists('function', $trace)) {
-				$params['message'] .= "  <strong>Function:</strong> \"".$trace['function']."\"\n\n";
+				$params['message'] .= "  <strong>Function:</strong> \"" . $trace['function'] . "\"\n\n";
 			}
 		}
-		$log->error( str_ireplace('</strong>', '', str_ireplace('<strong>', '', $params['message'])) );
+		$log->error(str_ireplace('</strong>', '', str_ireplace('<strong>', '', $params['message'])));
 		OTools::showErrorPage($params, '500');
 	}
 }

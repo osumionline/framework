@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Web;
 
@@ -8,9 +10,9 @@ use Osumi\OsumiFramework\Log\OLog;
  * OSession - Class with methods to get/set information into the users session
  */
 class OSession {
-	private bool  $debug  = false;
-	private ?OLog $l      = null;
-	private array $params = [];
+	private bool  $debug   = false;
+	private OLog | null $l = null;
+	private array $params  = [];
 
 	/**
 	 * Load on startup the session information
@@ -82,9 +84,9 @@ class OSession {
 	 *
 	 * @param string $key Key code of the parameter
 	 *
-	 * @return string|int|float|bool|void Value of the parameter or null if not found
+	 * @return string | int | float | bool | null Value of the parameter or null if not found
 	 */
-	public function getParam(string $key) {
+	public function getParam(string $key): string | int | float | bool | null {
 		return array_key_exists($key, $this->params) ? $this->params[$key] : null;
 	}
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Web;
 
@@ -6,7 +8,7 @@ namespace Osumi\OsumiFramework\Web;
  * ORequest - Container class with information about a user made request (method, headers, parameters and filters)
  */
 class ORequest {
-	private ?string $method = null;
+	private string | null $method = null;
 	private array $headers = [];
 	private array $params = [];
 	private array $filters = [];
@@ -32,9 +34,9 @@ class ORequest {
 	/**
 	 * Get HTTP method used in the call
 	 *
-	 * @return string HTTP method used in the call
+	 * @return string | null HTTP method used in the call
 	 */
-	public function getMethod(): ?string {
+	public function getMethod(): string | null {
 		return $this->method;
 	}
 
@@ -63,9 +65,9 @@ class ORequest {
 	 *
 	 * @param string $key Key code of the HTTP header
 	 *
-	 * @return ?string Value of the requested HTTP header or null if not found
+	 * @return string | null Value of the requested HTTP header or null if not found
 	 */
-	public function getHeader(string $key): ?string {
+	public function getHeader(string $key): string | null {
 		return array_key_exists($key, $this->headers) ? $this->headers[$key] : null;
 	}
 
@@ -107,9 +109,9 @@ class ORequest {
 	 *
 	 * @param mixed $default Default value if key not found
 	 *
-	 * @return ?string String value of the required parameter
+	 * @return string | null String value of the required parameter
 	 */
-	public function getParamString(string $key, mixed $default = null): ?string {
+	public function getParamString(string $key, mixed $default = null): string | null {
 		$param = $this->getParam($key, $default);
 		return !is_null($param) ? strval($param) : null;
 	}
@@ -121,9 +123,9 @@ class ORequest {
 	 *
 	 * @param mixed $default Default value if key not found
 	 *
-	 * @return ?int Int value of the required parameter
+	 * @return int | null Int value of the required parameter
 	 */
-	public function getParamInt(string $key, mixed $default = null): ?int {
+	public function getParamInt(string $key, mixed $default = null): int | null {
 		$param = $this->getParam($key, $default);
 		return (!is_null($param) && $param !== 'null' && is_numeric($param)) ? intval($param) : null;
 	}
@@ -135,9 +137,9 @@ class ORequest {
 	 *
 	 * @param mixed $default Default value if key not found
 	 *
-	 * @return ?float Float value of the required parameter
+	 * @return float | null Float value of the required parameter
 	 */
-	public function getParamFloat(string $key, mixed $default = null): ?float {
+	public function getParamFloat(string $key, mixed $default = null): float | null {
 		$param = $this->getParam($key, $default);
 		return (!is_null($param) && $param !== 'null' && is_numeric($param)) ? floatval($param) : null;
 	}
@@ -149,9 +151,9 @@ class ORequest {
 	 *
 	 * @param mixed $default Default value if key not found
 	 *
-	 * @return ?bool Boolean value of the required parameter
+	 * @return bool | null Boolean value of the required parameter
 	 */
-	public function getParamBool(string $key, mixed $default = null): ?bool {
+	public function getParamBool(string $key, mixed $default = null): bool | null {
 		$param = $this->getParam($key, $default);
 		return !is_null($param) ? filter_var($param, FILTER_VALIDATE_BOOLEAN) : null;
 	}
@@ -194,9 +196,9 @@ class ORequest {
 	 *
 	 * @param string $key Name of the filter
 	 *
-	 * @return ?array Values returned by the filter or null if not found
+	 * @return array | null Values returned by the filter or null if not found
 	 */
-	public function getFilter(string $key): ?array {
+	public function getFilter(string $key): array | null {
 		return array_key_exists($key, $this->filters) ? $this->filters[$key] : null;
 	}
 }

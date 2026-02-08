@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
@@ -40,7 +42,7 @@ class OConfig {
 	private string $cookie_prefix = '';
 	private string $cookie_url    = '';
 
-	private ?array $url_list = null;
+	private array | null $url_list = null;
 
 	private array $error_pages  = [
 		'403' => null,
@@ -68,10 +70,10 @@ class OConfig {
 	 */
 	function __construct(string $bd) {
 		$this->setBaseDir($bd);
-		$json_file = $this->getDir('app_config').'Config.json';
+		$json_file = $this->getDir('app_config') . 'Config.json';
 		$config = [];
 		if (file_exists($json_file)) {
-			$config = json_decode( file_get_contents($json_file), true );
+			$config = json_decode(file_get_contents($json_file), true);
 			if (is_null($config)) {
 				echo "ERROR: config.json file is malformed.\n";
 				exit;
@@ -81,11 +83,11 @@ class OConfig {
 		if (array_key_exists('environment', $config)) {
 			$this->setEnvironment($config['environment']);
 
-			$json_env_file = $this->getDir('app_config').'Config_'.$config['environment'].'.json';
+			$json_env_file = $this->getDir('app_config') . 'Config_' . $config['environment'] . '.json';
 			if (file_exists($json_env_file)) {
-				$config_env = json_decode( file_get_contents($json_env_file), true );
+				$config_env = json_decode(file_get_contents($json_env_file), true);
 				if (!$config_env) {
-					echo "ERROR: config.".$config['environment'].".json file is malformed.\n";
+					echo "ERROR: config." . $config['environment'] . ".json file is malformed.\n";
 					exit;
 				}
 				$this->loadConfig($config_env);
@@ -175,7 +177,7 @@ class OConfig {
 			$this->setExtJsList($config['ext_js']);
 		}
 		if (array_key_exists('extra', $config)) {
-			foreach ($config['extra'] as $key => $value){
+			foreach ($config['extra'] as $key => $value) {
 				$this->setExtra($key, $value);
 			}
 		}
@@ -239,11 +241,11 @@ class OConfig {
 	 *
 	 * @param string $key "dir" -log directory- of "level" -logging importance level-
 	 *
-	 * @param string|int $value Value of the logging configuration
+	 * @param string | int $value Value of the logging configuration
 	 *
 	 * @return void
 	 */
-	public function setLog(string $key, string|int $value): void {
+	public function setLog(string $key, string | int $value): void {
 		$this->log[$key] = $value;
 	}
 
@@ -252,9 +254,9 @@ class OConfig {
 	 *
 	 * @param string $key "dir" -log directory- of "level" -logging importance level-
 	 *
-	 * @return string|int|null Value of the logging configuration
+	 * @return string | int | null Value of the logging configuration
 	 */
-	public function getLog(string $key): string|int|null {
+	public function getLog(string $key): string | int | null {
 		return array_key_exists($key, $this->log) ? $this->log[$key] : null;
 	}
 
@@ -316,9 +318,9 @@ class OConfig {
 	 *
 	 * @param string $plugin Name of the plugin
 	 *
-	 * @return array Array of configuration fields for the plugin or null if not found
+	 * @return array | null Array of configuration fields for the plugin or null if not found
 	 */
-	public function getPluginConfig(string $plugin): ?array {
+	public function getPluginConfig(string $plugin): array | null {
 		return array_key_exists($plugin, $this->plugin_config) ? $this->plugin_config[$plugin] : null;
 	}
 
@@ -336,12 +338,12 @@ class OConfig {
 	}
 
 	/**
-	* Get path of a given directory or full list of configured directories if ommitted
-	*
-	* @param string | null $dir Name or code of the directory
-	*
-	* @return string | array Path of requested directory or full list of configured directories
-	*/
+	 * Get path of a given directory or full list of configured directories if ommitted
+	 *
+	 * @param string | null $dir Name or code of the directory
+	 *
+	 * @return string | array Path of requested directory or full list of configured directories
+	 */
 	public function getDir(string | null $dir = null) {
 		if (is_null($dir)) {
 			return $this->dirs;
@@ -358,30 +360,30 @@ class OConfig {
 	 */
 	private function setBaseDir(string $bd): void {
 		$this->setDir('base',           $bd);
-		$this->setDir('app',            $bd.'src/');
-		$this->setDir('app_component',  $bd.'src/Component/');
-		$this->setDir('app_config',     $bd.'src/Config/');
-		$this->setDir('app_dto',        $bd.'src/DTO/');
-		$this->setDir('app_filter',     $bd.'src/Filter/');
-		$this->setDir('app_layout',     $bd.'src/Layout/');
-		$this->setDir('app_model',      $bd.'src/Model/');
-		$this->setDir('app_routes',     $bd.'src/Routes/');
-		$this->setDir('app_service',    $bd.'src/Service/');
-		$this->setDir('app_task',       $bd.'src/Task/');
-		$this->setDir('app_utils',      $bd.'src/Utils/');
-		$this->setDir('ofw',            $bd.'ofw/');
-		$this->setDir('ofw_cache',      $bd.'ofw/cache/');
-		$this->setDir('ofw_export',     $bd.'ofw/export/');
-		$this->setDir('ofw_tmp',        $bd.'ofw/tmp/');
-		$this->setDir('ofw_logs',       $bd.'ofw/logs/');
-		$this->setDir('ofw_base',       $bd.'vendor/osumionline/framework/');
-		$this->setDir('ofw_vendor',     $bd.'vendor/osumionline/framework/src/');
-		$this->setDir('ofw_assets',     $bd.'vendor/osumionline/framework/src/Assets/');
-		$this->setDir('ofw_locale',     $bd.'vendor/osumionline/framework/src/Assets/locale/');
-		$this->setDir('ofw_template',   $bd.'vendor/osumionline/framework/src/Assets/template/');
-		$this->setDir('ofw_task',       $bd.'vendor/osumionline/framework/src/Task/');
-		$this->setDir('ofw_tools',      $bd.'vendor/osumionline/framework/src/Tools/');
-		$this->setDir('public',         $bd.'public/');
+		$this->setDir('app',            $bd . 'src/');
+		$this->setDir('app_component',  $bd . 'src/Component/');
+		$this->setDir('app_config',     $bd . 'src/Config/');
+		$this->setDir('app_dto',        $bd . 'src/DTO/');
+		$this->setDir('app_filter',     $bd . 'src/Filter/');
+		$this->setDir('app_layout',     $bd . 'src/Layout/');
+		$this->setDir('app_model',      $bd . 'src/Model/');
+		$this->setDir('app_routes',     $bd . 'src/Routes/');
+		$this->setDir('app_service',    $bd . 'src/Service/');
+		$this->setDir('app_task',       $bd . 'src/Task/');
+		$this->setDir('app_utils',      $bd . 'src/Utils/');
+		$this->setDir('ofw',            $bd . 'ofw/');
+		$this->setDir('ofw_cache',      $bd . 'ofw/cache/');
+		$this->setDir('ofw_export',     $bd . 'ofw/export/');
+		$this->setDir('ofw_tmp',        $bd . 'ofw/tmp/');
+		$this->setDir('ofw_logs',       $bd . 'ofw/logs/');
+		$this->setDir('ofw_base',       $bd . 'vendor/osumionline/framework/');
+		$this->setDir('ofw_vendor',     $bd . 'vendor/osumionline/framework/src/');
+		$this->setDir('ofw_assets',     $bd . 'vendor/osumionline/framework/src/Assets/');
+		$this->setDir('ofw_locale',     $bd . 'vendor/osumionline/framework/src/Assets/locale/');
+		$this->setDir('ofw_template',   $bd . 'vendor/osumionline/framework/src/Assets/template/');
+		$this->setDir('ofw_task',       $bd . 'vendor/osumionline/framework/src/Task/');
+		$this->setDir('ofw_tools',      $bd . 'vendor/osumionline/framework/src/Tools/');
+		$this->setDir('public',         $bd . 'public/');
 	}
 
 	/**
@@ -404,7 +406,7 @@ class OConfig {
 	 *
 	 * @return string Configuration value
 	 */
-	public function getDB(string $key): string {
+	public function getDB(string $key): string | null {
 		return array_key_exists($key, $this->db) ? $this->db[$key] : null;
 	}
 
@@ -422,13 +424,13 @@ class OConfig {
 	}
 
 	/**
-	* Get a stored URL based on a key
-	*
-	* @param string $key Key code of the URL to be retrieved
-	*
-	* @return string Stored URL or null if key doesn't exist
-	*/
-	public function getUrl(string $key): string {
+	 * Get a stored URL based on a key
+	 *
+	 * @param string $key Key code of the URL to be retrieved
+	 *
+	 * @return string | null Stored URL or null if key doesn't exist
+	 */
+	public function getUrl(string $key): string | null {
 		return array_key_exists($key, $this->urls) ? $this->urls[$key] : null;
 	}
 
@@ -488,7 +490,7 @@ class OConfig {
 	 *
 	 * @return array Array of the application URLs and their configuration
 	 */
-	public function getUrlList(): ?array {
+	public function getUrlList(): array | null {
 		return $this->url_list;
 	}
 
@@ -510,10 +512,10 @@ class OConfig {
 	 *
 	 * @param string $status Status code to be checked
 	 *
-	 * @return string URL where the user has to be redirected
+	 * @return string URL where the user has to be redirected or null if it hasn't been customized
 	 */
-	public function getErrorPage(string $status): ?string {
-		if (array_key_exists($status, $this->error_pages)){
+	public function getErrorPage(string $status): string | null {
+		if (array_key_exists($status, $this->error_pages)) {
 			return $this->error_pages[$status];
 		}
 		return null;
@@ -752,9 +754,9 @@ class OConfig {
 	 *
 	 * @param string $key Key of the item to be retrieved
 	 *
-	 * @return string|int|float|bool Value of the stored item
+	 * @return string | int | float | bool | null Value of the stored item or null if not found
 	 */
-	public function getExtra(string $key) {
+	public function getExtra(string $key): string | int | float | bool | null {
 		return array_key_exists($key, $this->extras) ? $this->extras[$key] : null;
 	}
 }

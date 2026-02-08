@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Routing;
 
@@ -117,7 +119,7 @@ class ORouteCheck {
 
 		// Parse
 		foreach ($this->tokens as $token) {
-			call_user_func_array(array($this, 'compileFor'.ucfirst(array_shift($token))), $token);
+			call_user_func_array(array($this, 'compileFor' . ucfirst(array_shift($token))), $token);
 		}
 
 		$this->postCompile();
@@ -128,7 +130,7 @@ class ORouteCheck {
 			$separator = 'separator' == $lastToken[0] ? $lastToken[2] : '';
 		}
 
-		$this->regex = "#^".implode("", $this->segments)."".preg_quote($separator, '#')."$#x";
+		$this->regex = "#^" . implode("", $this->segments) . "" . preg_quote($separator, '#') . "$#x";
 	}
 
 	/**
@@ -139,21 +141,21 @@ class ORouteCheck {
 	protected function preCompile(): void {
 		// A route must start with a slash
 		if (empty($this->pattern) || '/' != $this->pattern[0]) {
-			$this->pattern = '/'.$this->pattern;
+			$this->pattern = '/' . $this->pattern;
 		}
 	}
 
 	/**
 	 * Post-compiles a route.
-	  *
-	  * @return void
+	 *
+	 * @return void
 	 */
 	protected function postCompile(): void {
 		// All segments after the last static segment are optional.
 		// Be careful, the n-1 is optional only if n is empty.
 		for ($i = $this->firstOptional, $max = count($this->segments); $i < $max; $i++) {
-			$this->segments[$i] = (0 == $i ? '/?' : '').str_repeat(' ', $i - $this->firstOptional).'(?:'.$this->segments[$i];
-			$this->segments[] = str_repeat(' ', $max - $i - 1).')?';
+			$this->segments[$i] = (0 == $i ? '/?' : '') . str_repeat(' ', $i - $this->firstOptional) . '(?:' . $this->segments[$i];
+			$this->segments[] = str_repeat(' ', $max - $i - 1) . ')?';
 		}
 
 		$this->staticPrefix = '';
@@ -164,7 +166,7 @@ class ORouteCheck {
 				case 'text':
 					if ($token[2] !== '*') {
 						// Non-star text is static
-						$this->staticPrefix .= $token[1].$token[2];
+						$this->staticPrefix .= $token[1] . $token[2];
 						break;
 					}
 				default:
@@ -176,8 +178,8 @@ class ORouteCheck {
 
 	/**
 	 * Tokenizes the route.
-	  *
-	  * @return void
+	 *
+	 * @return void
 	 */
 	protected function tokenize(): void {
 		$this->tokens = [];
@@ -190,36 +192,31 @@ class ORouteCheck {
 			if (false !== $this->tokenizeBufferBefore($buffer, $tokens, $afterASeparator, $currentSeparator)) {
 				// A custom token
 				$this->customToken = true;
-			}
-			else if ($afterASeparator && preg_match('#^'.$this->options['variable_prefix_regex'].'('.$this->options['variable_regex'].')#', $buffer, $match)) {
+			} else if ($afterASeparator && preg_match('#^' . $this->options['variable_prefix_regex'] . '(' . $this->options['variable_regex'] . ')#', $buffer, $match)) {
 				// A variable
 				$this->tokens[] = ['variable', $currentSeparator, $match[0], $match[1]];
 
 				$currentSeparator = '';
 				$buffer = substr($buffer, strlen($match[0]));
 				$afterASeparator = false;
-			}
-			else if ($afterASeparator && preg_match('#^('.$this->options['text_regex'].')(?:'.$this->options['segment_separators_regex'].'|$)#', $buffer, $match)) {
+			} else if ($afterASeparator && preg_match('#^(' . $this->options['text_regex'] . ')(?:' . $this->options['segment_separators_regex'] . '|$)#', $buffer, $match)) {
 				// A text
 				$this->tokens[] = ['text', $currentSeparator, $match[1], null];
 
 				$currentSeparator = '';
 				$buffer = substr($buffer, strlen($match[1]));
 				$afterASeparator = false;
-			}
-			else if (!$afterASeparator && preg_match('#^/|^'.$this->options['segment_separators_regex'].'#', $buffer, $match)) {
+			} else if (!$afterASeparator && preg_match('#^/|^' . $this->options['segment_separators_regex'] . '#', $buffer, $match)) {
 				// Beginning of URL (^/) or a separator
 				$this->tokens[] = array('separator', $currentSeparator, $match[0], null);
 
 				$currentSeparator = $match[0];
 				$buffer = substr($buffer, strlen($match[0]));
 				$afterASeparator = true;
-			}
-			else if (false !== $this->tokenizeBufferAfter($buffer, $tokens, $afterASeparator, $currentSeparator)) {
+			} else if (false !== $this->tokenizeBufferAfter($buffer, $tokens, $afterASeparator, $currentSeparator)) {
 				// A custom token
 				$this->customToken = true;
-			}
-			else {
+			} else {
 				// Parsing problem
 				throw new \InvalidArgumentException(sprintf('Unable to parse "%s" route near "%s".', $this->pattern, $buffer));
 			}
@@ -247,7 +244,7 @@ class ORouteCheck {
 	 * @return Boolean true if a token has been generated, false otherwise
 	 */
 	protected function tokenizeBufferBefore(&$buffer, &$tokens, &$afterASeparator, &$currentSeparator): bool {
-    	return false;
+		return false;
 	}
 
 	/**
@@ -279,12 +276,11 @@ class ORouteCheck {
 	 */
 	protected function compileForText(string $separator, string $text): void {
 		if ('*' == $text) {
-			$this->segments[] = '(?:'.preg_quote($separator, '#').'(?P<_star>.*))?';
-		}
-		else {
+			$this->segments[] = '(?:' . preg_quote($separator, '#') . '(?P<_star>.*))?';
+		} else {
 			$this->firstOptional = count($this->segments) + 1;
 
-			$this->segments[] = preg_quote($separator, '#').preg_quote($text, '#');
+			$this->segments[] = preg_quote($separator, '#') . preg_quote($text, '#');
 		}
 	}
 
@@ -304,7 +300,7 @@ class ORouteCheck {
 			$this->requirements[$variable] = $this->options['variable_content_regex'];
 		}
 
-		$this->segments[] = preg_quote($separator, '#').'(?P<'.$variable.'>'.$this->requirements[$variable].')';
+		$this->segments[] = preg_quote($separator, '#') . '(?P<' . $variable . '>' . $this->requirements[$variable] . ')';
 		$this->variables[$variable] = $name;
 
 		if (!isset($this->defaults[$variable])) {
@@ -321,7 +317,8 @@ class ORouteCheck {
 	 *
 	 * @return void
 	 */
-	protected function compileForSeparator(string $separator, string $regexSeparator): void {}
+	protected function compileForSeparator(string $separator, string $regexSeparator): void {
+	}
 
 	/**
 	 * Returns the default parameter list
@@ -357,21 +354,21 @@ class ORouteCheck {
 			'extra_parameters_as_query_string' => true,
 		], $this->getDefaultOptions(), $this->options);
 
-		$preg_quote_hash = function($a) {
+		$preg_quote_hash = function ($a) {
 			return preg_quote($a, '#');
 		};
 
 		// Compute some regexes
-		$this->options['variable_prefix_regex'] = '(?:'.implode('|', array_map($preg_quote_hash, $this->options['variable_prefixes'])).')';
+		$this->options['variable_prefix_regex'] = '(?:' . implode('|', array_map($preg_quote_hash, $this->options['variable_prefixes'])) . ')';
 
 		if (count($this->options['segment_separators'])) {
-			$this->options['segment_separators_regex'] = '(?:'.implode('|', array_map($preg_quote_hash, $this->options['segment_separators'])).')';
+			$this->options['segment_separators_regex'] = '(?:' . implode('|', array_map($preg_quote_hash, $this->options['segment_separators'])) . ')';
 
-			$this->options['variable_content_regex'] = '[^'.implode('',
+			$this->options['variable_content_regex'] = '[^' . implode(
+				'',
 				array_map($preg_quote_hash, $this->options['segment_separators'])
-		    ).']+';
-		}
-		else {
+			) . ']+';
+		} else {
 			// Use simplified regexes for case where no separators are used
 			$this->options['segment_separators_regex'] = '()';
 			$this->options['variable_content_regex']   = '.+';
@@ -424,8 +421,7 @@ class ORouteCheck {
 		foreach ($this->defaults as $key => $value) {
 			if (ctype_digit($key)) {
 				$this->defaults[$value] = true;
-			}
-			else {
+			} else {
 				$this->defaults[$key] = urldecode($value);
 			}
 		}
@@ -464,18 +460,15 @@ class ORouteCheck {
 		if ($length > 0 && '/' == $this->pattern[$length - 1]) {
 			// Route ends by / (directory)
 			$this->suffix = '/';
-		}
-		else if ($length > 0 && '.' == $this->pattern[$length - 1]) {
+		} else if ($length > 0 && '.' == $this->pattern[$length - 1]) {
 			// Route ends by . (no suffix)
 			$this->suffix = '';
 			$this->pattern = substr($this->pattern, 0, $length - 1);
-		}
-		else if (preg_match('#\.(?:'.$this->options['variable_prefix_regex'].$this->options['variable_regex'].'|'.$this->options['variable_content_regex'].')$#i', $this->pattern)) {
+		} else if (preg_match('#\.(?:' . $this->options['variable_prefix_regex'] . $this->options['variable_regex'] . '|' . $this->options['variable_content_regex'] . ')$#i', $this->pattern)) {
 			// Specific suffix for this route
 			// A . with a variable after or some chars without any separators
 			$this->suffix = '';
-		}
-		else {
+		} else {
 			$this->suffix = $this->options['suffix'];
 		}
 	}

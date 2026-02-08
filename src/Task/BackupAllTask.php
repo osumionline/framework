@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -10,7 +12,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  */
 class backupAllTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString("backupAll", "light_green").": ".OTools::getMessage('TASK_BACKUP_ALL');
+		return $this->getColors()->getColoredString("backupAll", "light_green") . ": " . OTools::getMessage('TASK_BACKUP_ALL');
 	}
 
 	/**
@@ -19,7 +21,7 @@ class backupAllTask extends OTask {
 	 * @return void Echoes messages generated while performing the backup
 	 */
 	public function run(): void {
-		$path             = $this->getConfig()->getDir('ofw_template').'backupAll/backupAll.php';
+		$path             = $this->getConfig()->getDir('ofw_template') . 'backupAll/backupAll.php';
 		$backupdb_result  = OTools::runOFWTask('backupDB',  ['silent' => 'true', 'from_all' => 'true'], true);
 		$extractor_result = OTools::runOFWTask('extractor', [], true);
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\CLI;
 
@@ -56,7 +58,7 @@ class CLI {
         }
       } else {
         // Handle non-parameter arguments if needed
-        $params['param_'.$i] = $arg;
+        $params['param_' . $i] = $arg;
         $i++;
       }
     }
@@ -72,12 +74,12 @@ class CLI {
   private function loadOFWTasks(): void {
     global $core;
     if ($model = opendir($core->config->getDir('ofw_task'))) {
-    	while (false !== ($entry = readdir($model))) {
-    		if ($entry !== "." && $entry !== "..") {
-    			$this->ofw_task_list[] = str_ireplace("Task.php", "", $entry);
-    		}
-    	}
-    	closedir($model);
+      while (false !== ($entry = readdir($model))) {
+        if ($entry !== "." && $entry !== "..") {
+          $this->ofw_task_list[] = str_ireplace("Task.php", "", $entry);
+        }
+      }
+      closedir($model);
     }
   }
 
@@ -90,15 +92,15 @@ class CLI {
     global $core;
     $tasks_path = $core->config->getDir('app_task');
     if (file_exists($tasks_path)) {
-    	if ($model = opendir($tasks_path)) {
-    		while (false !== ($entry = readdir($model))) {
-    			if ($entry !== "." && $entry !== "..") {
-    				require_once $tasks_path.$entry;
-    				$this->app_task_list[] = str_ireplace('Task.php', '', $entry);
-    			}
-    		}
-    		closedir($model);
-    	}
+      if ($model = opendir($tasks_path)) {
+        while (false !== ($entry = readdir($model))) {
+          if ($entry !== "." && $entry !== "..") {
+            require_once $tasks_path . $entry;
+            $this->app_task_list[] = str_ireplace('Task.php', '', $entry);
+          }
+        }
+        closedir($model);
+      }
     }
   }
 
@@ -108,24 +110,24 @@ class CLI {
    * @return string List of tasks
    */
   private function taskOptions(): string {
-  	$ret = "";
-  	$ret .= OTools::getMessage('OFW_OPTIONS');
-  	asort($this->ofw_task_list);
-  	foreach ($this->ofw_task_list as $task) {
-  		$task_name = "\\Osumi\\OsumiFramework\\Task\\".$task."Task";
-  		$task = new $task_name;
-  		$task->loadTask();
-  		$ret .= "  ·  ".$task."\n";
-  	}
-  	asort($this->app_task_list);
-  	foreach ($this->app_task_list as $task) {
-  		$task_name = "\\Osumi\\OsumiFramework\\App\\Task\\".$task."Task";
-  		$task = new $task_name;
-  		$task->loadTask();
-  		$ret .= "  ·  ".$task."\n";
-  	}
-  	$ret .= "\n".OTools::getMessage('OFW_EXAMPLE').": php of ".lcfirst($this->ofw_task_list[0])."\n\n";
-  	return $ret;
+    $ret = "";
+    $ret .= OTools::getMessage('OFW_OPTIONS');
+    asort($this->ofw_task_list);
+    foreach ($this->ofw_task_list as $task) {
+      $task_name = "\\Osumi\\OsumiFramework\\Task\\" . $task . "Task";
+      $task = new $task_name;
+      $task->loadTask();
+      $ret .= "  ·  " . $task . "\n";
+    }
+    asort($this->app_task_list);
+    foreach ($this->app_task_list as $task) {
+      $task_name = "\\Osumi\\OsumiFramework\\App\\Task\\" . $task . "Task";
+      $task = new $task_name;
+      $task->loadTask();
+      $ret .= "  ·  " . $task . "\n";
+    }
+    $ret .= "\n" . OTools::getMessage('OFW_EXAMPLE') . ": php of " . lcfirst($this->ofw_task_list[0]) . "\n\n";
+    return $ret;
   }
 
   /**
@@ -153,18 +155,18 @@ class CLI {
   public function run(array $argv = []): void {
     // Check if option exists
     if (!array_key_exists(1, $argv)) {
-    	echo "\n  ".$this->colors->getColoredString("Osumi Framework", "white", "blue")."\n\n";
-    	echo OTools::getMessage('OFW_INDICATE_OPTION')."\n";
-    	echo $this->taskOptions();
-    	exit;
+      echo "\n  " . $this->colors->getColoredString("Osumi Framework", "white", "blue") . "\n\n";
+      echo OTools::getMessage('OFW_INDICATE_OPTION') . "\n";
+      echo $this->taskOptions();
+      exit;
     }
 
     // Check if option is valid
     $option = $argv[1];
     if (!in_array(ucfirst($option), $this->ofw_task_list) && !in_array(ucfirst($option), $this->app_task_list)) {
-    	echo OTools::getMessage('OFW_WRONG_OPTION', [$option])."\n\n";
-    	echo $this->taskOptions();
-    	exit;
+      echo OTools::getMessage('OFW_WRONG_OPTION', [$option]) . "\n\n";
+      echo $this->taskOptions();
+      exit;
     }
 
     // Get parameters
@@ -172,10 +174,10 @@ class CLI {
 
     // Check if it is an OFW task or user task
     if (in_array(ucfirst($option), $this->ofw_task_list)) {
-    	$task_name = "\\Osumi\\OsumiFramework\\Task\\".ucfirst($option).'Task';
+      $task_name = "\\Osumi\\OsumiFramework\\Task\\" . ucfirst($option) . 'Task';
     }
     if (in_array(ucfirst($option), $this->app_task_list)) {
-    	$task_name = "\\Osumi\\OsumiFramework\\App\\Task\\".ucfirst($option).'Task';
+      $task_name = "\\Osumi\\OsumiFramework\\App\\Task\\" . ucfirst($option) . 'Task';
     }
 
     $this->runTask($task_name, $options);

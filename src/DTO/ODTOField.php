@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\DTO;
 
@@ -12,5 +14,6 @@ class ODTOField {
         public string | null $filter = null,
         public string | null $filterProperty = null,
         public string | null $header = null
-    ) {}
+    ) {
+    }
 }

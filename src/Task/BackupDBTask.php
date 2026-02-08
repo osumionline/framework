@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -10,7 +12,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  */
 class BackupDBTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString("backupDB", "light_green").": ".OTools::getMessage('TASK_BACKUP_DB');
+		return $this->getColors()->getColoredString("backupDB", "light_green") . ": " . OTools::getMessage('TASK_BACKUP_DB');
 	}
 
 	/**
@@ -26,7 +28,7 @@ class BackupDBTask extends OTask {
 			$silent = true;
 		}
 
-		$path   = $this->getConfig()->getDir('ofw_template').'backupDB/backupDB.php';
+		$path   = $this->getConfig()->getDir('ofw_template') . 'backupDB/backupDB.php';
 		$values = [
 			'colors'      => $this->getColors(),
 			'from_all'    => (array_key_exists('from_all', $params) && $params['from_all'] === 'true'),
@@ -37,18 +39,19 @@ class BackupDBTask extends OTask {
 			'success'     => false,
 		];
 
-		if ($this->getConfig()->getDB('host') === '' ||
-				$this->getConfig()->getDB('user') === '' ||
-				$this->getConfig()->getDB('pass') === '' ||
-				$this->getConfig()->getDB('name') === ''
-			) {
+		if (
+			$this->getConfig()->getDB('host') === '' ||
+			$this->getConfig()->getDB('user') === '' ||
+			$this->getConfig()->getDB('pass') === '' ||
+			$this->getConfig()->getDB('name') === ''
+		) {
 			$values['hasDB'] = false;
 		}
 
 		if ($values['hasDB']) {
 			OTools::checkOfw('export');
 			$values['db_name']     = $this->getColors()->getColoredString($this->getConfig()->getDb('name'));
-			$values['dump_file']   = $this->getConfig()->getDir('ofw_export').$this->getConfig()->getDb('name').'.sql';
+			$values['dump_file']   = $this->getConfig()->getDir('ofw_export') . $this->getConfig()->getDb('name') . '.sql';
 			$values['dump_exists'] = file_exists($values['dump_file']);
 
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -11,7 +13,7 @@ use Osumi\OsumiFramework\Tools\OBuild;
  */
 class AddTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString('add', 'light_green').': '.OTools::getMessage('TASK_ADD');
+		return $this->getColors()->getColoredString('add', 'light_green') . ': ' . OTools::getMessage('TASK_ADD');
 	}
 
 	/**
@@ -22,7 +24,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createAction(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createAction.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createAction.php';
 		$values = [
 			'colors'          => $this->getColors(),
 			'folders'         => '',
@@ -46,12 +48,12 @@ class AddTask extends OTask {
 			$action_name_parts[$i] = ucfirst($action_name_parts[$i]);
 		}
 		$values['folders'] = implode('/', $action_name_parts);
-		$values['action_folder']   = $this->getConfig()->getDir('app').$values['folders'].'/';
-		$values['action_name']     = $action_name_parts[count($action_name_parts) -1];
+		$values['action_folder']   = $this->getConfig()->getDir('app') . $values['folders'] . '/';
+		$values['action_name']     = $action_name_parts[count($action_name_parts) - 1];
 		$values['action_url']      = $params['url'];
 		$values['action_type']     = isset($params['type']) ? $params['type'] : 'html';
-		$values['action_file']     = $values['action_folder'].$values['action_name'].'Component.php';
-		$values['action_template'] = $values['action_folder'].$values['action_name'].'Template.'.$values['action_type'];
+		$values['action_file']     = $values['action_folder'] . $values['action_name'] . 'Component.php';
+		$values['action_template'] = $values['action_folder'] . $values['action_name'] . 'Template.' . $values['action_type'];
 
 		$add = OBuild::addAction($values);
 
@@ -78,7 +80,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createService(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createService.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createService.php';
 		$values = [
 			'colors'       => $this->getColors(),
 			'service_name' => '',
@@ -93,7 +95,7 @@ class AddTask extends OTask {
 		}
 
 		$values['service_name'] = $params['name'];
-		$values['service_file'] = $this->getConfig()->getDir('app_service').ucfirst($values['service_name']).'Service.php';
+		$values['service_file'] = $this->getConfig()->getDir('app_service') . ucfirst($values['service_name']) . 'Service.php';
 
 		$add = OBuild::addService($values['service_name']);
 
@@ -115,7 +117,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createTask(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createTask.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createTask.php';
 		$values = [
 			'colors'    => $this->getColors(),
 			'task_name' => '',
@@ -130,7 +132,7 @@ class AddTask extends OTask {
 		}
 
 		$values['task_name'] = $params['name'];
-		$values['task_file'] = $this->getConfig()->getDir('app_task').ucfirst($values['task_name']).'Task.php';
+		$values['task_file'] = $this->getConfig()->getDir('app_task') . ucfirst($values['task_name']) . 'Task.php';
 
 		$add = OBuild::addTask($values['task_name']);
 
@@ -141,7 +143,7 @@ class AddTask extends OTask {
 		}
 		if ($add['status'] === 'ofw-exists') {
 			$values['error'] = 2;
-			$values['task_file'] = $this->getConfig()->getDir('ofw_task').ucfirst($values['task_name']).'Task.php';
+			$values['task_file'] = $this->getConfig()->getDir('ofw_task') . ucfirst($values['task_name']) . 'Task.php';
 			echo OTools::getPartial($path, $values);
 			exit;
 		}
@@ -158,7 +160,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createModelComponent(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createModelComponent.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createModelComponent.php';
 		$values = [
 			'colors'           => $this->getColors(),
 			'model_name'       => '',
@@ -186,9 +188,9 @@ class AddTask extends OTask {
 			if ($model = opendir($model_path)) {
 				while (false !== ($entry = readdir($model))) {
 					if ($entry !== '.' && $entry !== '..') {
-						$model_content = file_get_contents($model_path.$entry);
-						if (stripos($model_content, 'class '.$values['model_name'].' extends') !== false) {
-							$values['model_file'] = $this->getConfig()->getDir('app_model').$entry;
+						$model_content = file_get_contents($model_path . $entry);
+						if (stripos($model_content, 'class ' . $values['model_name'] . ' extends') !== false) {
+							$values['model_file'] = $this->getConfig()->getDir('app_model') . $entry;
 							break;
 						}
 					}
@@ -204,17 +206,17 @@ class AddTask extends OTask {
 		}
 
 		$component_path = $this->getConfig()->getDir('app_component');
-		$model_name = "\\Osumi\\OsumiFramework\\App\\Model\\".$values['model_name'];
+		$model_name = "\\Osumi\\OsumiFramework\\App\\Model\\" . $values['model_name'];
 		$model = new $model_name;
 		$values['model']                   = $model->getModel();
-		$values['list_name']               = $values['model_name'].'ListComponent';
-		$values['list_folder']             = $component_path.'Model/'.$values['model_name'].'List/';
-		$values['list_file']               = $values['model_name'].'ListComponent.php';
-		$values['list_template_file']      = $values['model_name'].'ListTemplate.php';
+		$values['list_name']               = $values['model_name'] . 'ListComponent';
+		$values['list_folder']             = $component_path . 'Model/' . $values['model_name'] . 'List/';
+		$values['list_file']               = $values['model_name'] . 'ListComponent.php';
+		$values['list_template_file']      = $values['model_name'] . 'ListTemplate.php';
 		$values['component_name']          = $values['model_name'];
-		$values['component_folder']        = $component_path.'Model/'.$values['model_name'].'/';
-		$values['component_file']          = $values['model_name'].'Component.php';
-		$values['component_template_file'] = $values['model_name'].'Template.php';
+		$values['component_folder']        = $component_path . 'Model/' . $values['model_name'] . '/';
+		$values['component_file']          = $values['model_name'] . 'Component.php';
+		$values['component_template_file'] = $values['model_name'] . 'Template.php';
 
 		$add = OBuild::addModelComponent($values);
 
@@ -271,7 +273,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createComponent(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createComponent.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createComponent.php';
 		$values = [
 			'colors'         => $this->getColors(),
 			'folders'        => '',
@@ -293,10 +295,10 @@ class AddTask extends OTask {
 			$component_name_parts[$i] = ucfirst($component_name_parts[$i]);
 		}
 		$values['folders']        = implode('/', $component_name_parts);
-		$values['path']           = $this->getConfig()->getDir('app_component').$values['folders'].'/';
-		$values['component_name'] = $component_name_parts[count($component_name_parts) -1];
-		$values['component_file'] = $values['path'].$values['component_name'].'Component.php';
-		$values['template_file']  = $values['path'].$values['component_name'].'Template.php';
+		$values['path']           = $this->getConfig()->getDir('app_component') . $values['folders'] . '/';
+		$values['component_name'] = $component_name_parts[count($component_name_parts) - 1];
+		$values['component_file'] = $values['path'] . $values['component_name'] . 'Component.php';
+		$values['template_file']  = $values['path'] . $values['component_name'] . 'Template.php';
 
 		$add = OBuild::addComponent($values);
 
@@ -318,7 +320,7 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	private function createFilter(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template').'add/createFilter.php';
+		$path = $this->getConfig()->getDir('ofw_template') . 'add/createFilter.php';
 		$values = [
 			'colors'      => $this->getColors(),
 			'filter_name' => '',
@@ -333,7 +335,7 @@ class AddTask extends OTask {
 		}
 
 		$values['filter_name'] = ucfirst($params['name']);
-		$values['filter_file'] = $this->getConfig()->getDir('app_filter').$values['filter_name'].'Filter.php';
+		$values['filter_file'] = $this->getConfig()->getDir('app_filter') . $values['filter_name'] . 'Filter.php';
 
 		$add = OBuild::addFilter($values);
 
@@ -355,43 +357,43 @@ class AddTask extends OTask {
 	 * @return void Echoes framework information
 	 */
 	public function run(array $params): void {
-		$available_options = ['action', 'service', 'task', 'modelComponent','component', 'filter'];
+		$available_options = ['action', 'service', 'task', 'modelComponent', 'component', 'filter'];
 		$option = (array_key_exists('option', $params)) ? $params['option'] : 'none';
 		$option = in_array($option, $available_options) ? $option : 'none';
 
 		switch ($option) {
 			case 'action': {
-				$this->createAction($params);
-			}
-			break;
+					$this->createAction($params);
+				}
+				break;
 			case 'service': {
-				$this->createService($params);
-			}
-			break;
+					$this->createService($params);
+				}
+				break;
 			case 'task': {
-				$this->createTask($params);
-			}
-			break;
+					$this->createTask($params);
+				}
+				break;
 			case 'modelComponent': {
-				$this->createModelComponent($params);
-			}
-			break;
+					$this->createModelComponent($params);
+				}
+				break;
 			case 'component': {
-				$this->createComponent($params);
-			}
-			break;
+					$this->createComponent($params);
+				}
+				break;
 			case 'filter': {
-				$this->createFilter($params);
-			}
-			break;
+					$this->createFilter($params);
+				}
+				break;
 			case 'none': {
-				$path   = $this->getConfig()->getDir('ofw_template').'add/add.php';
-				$values = [
-					'colors' => $this->getColors()
-				];
+					$path   = $this->getConfig()->getDir('ofw_template') . 'add/add.php';
+					$values = [
+						'colors' => $this->getColors()
+					];
 
-				echo OTools::getPartial($path, $values);
-			}
+					echo OTools::getPartial($path, $values);
+				}
 		}
 	}
 }

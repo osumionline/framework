@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Task;
 
@@ -10,7 +12,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  */
 class VersionTask extends OTask {
 	public function __toString() {
-		return $this->getColors()->getColoredString('version', 'light_green').': '.OTools::getMessage('TASK_VERSION');
+		return $this->getColors()->getColoredString('version', 'light_green') . ': ' . OTools::getMessage('TASK_VERSION');
 	}
 
 	private string $repo_url = 'https://github.com/osumionline/framework';
@@ -22,7 +24,7 @@ class VersionTask extends OTask {
 	 * @return void Echoes framework information
 	 */
 	public function run(): void {
-		$path   = $this->getConfig()->getDir('ofw_template').'version/version.php';
+		$path   = $this->getConfig()->getDir('ofw_template') . 'version/version.php';
 		$values = [
 			'colors'   => $this->getColors(),
 			'repo_url' => $this->repo_url,
