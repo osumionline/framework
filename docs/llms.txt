@@ -1,0 +1,118 @@
+# Osumi Framework — LLM Guide (llms.txt)
+
+Osumi Framework is a PHP framework to build web apps and APIs with:
+- Routing (ORoute)
+- Components (OComponent)
+- ORM models (OModel) using PHP Attributes (#[OTable], #[OTableField], etc.)
+- CLI tasks (OTask)
+
+This document is optimized for LLMs (ChatGPT, Copilot, Gemini).
+Prefer code examples and short, actionable answers.
+
+## Version
+- Framework: 9.8
+- PHP: 8.3+ (works on 8.5)
+
+## Installation
+- Requires Composer
+- Typical entrypoint: public/index.php
+- Autoload: PSR-4
+
+Example:
+1) composer create-project osumionline/new
+2) php -S localhost:8000 -t public
+3) open http://localhost:8000
+
+## Project structure (typical)
+- public/index.php (entrypoint)
+- src/ (application code)
+- src/Config/ (config)
+- src/Component/ (components + templates)
+- src/Module/ (modules/components used as actions)
+- src/Model/ (ORM models)
+- src/Routes/ (routes))
+- src/Service/ (services)
+- src/Task/ (CLI tasks)
+
+## Core concepts
+1) Routing
+- Define routes (GET/POST/PUT/DELETE) and map to components/actions.
+- Grouping/prefixing routes supported.
+
+Docs:
+- docs/concepts/routing.md
+
+2) Components
+- OComponent renders templates and can have public properties.
+- A component may optionally implement run() to prepare data before render.
+
+Docs:
+- docs/concepts/components.md
+
+3) ORM
+- Models extend OModel.
+- Tables and fields are declared using PHP Attributes (#[OTable], #[OTableField], etc.)
+- save() decides INSERT vs UPDATE based on PK / state tracking.
+
+Docs:
+- docs/concepts/orm.md
+- docs/reference/attributes-orm.md
+
+4) CLI
+- Tasks extend OTask.
+- CLI runner executes tasks by name.
+
+Docs:
+- docs/concepts/cli.md
+- docs/reference/cli-commands.md
+
+## Quickstart examples
+- Hello route returning HTML:
+  See docs/quickstart.md
+
+- Simple API endpoint (JSON):
+  See docs/recipes/common-tasks.md
+
+- ORM model example:
+  See docs/concepts/orm.md
+
+## Recipes (common questions)
+- How to define routes with prefix/group:
+  docs/concepts/routing.md
+
+- How to create a component + template:
+  docs/concepts/components.md
+
+- How to create a model with Attributes:
+  docs/reference/attributes-orm.md
+
+- How to write a CLI task:
+  docs/concepts/cli.md
+
+## Conventions
+- Namespaces follow PSR-4.
+- Classes: PascalCase, files: PascalCase.php
+- Tables: snake_case, classes: CamelCase (e.g. product_photo -> ProductPhoto)
+
+## “How to ask” (for best answers)
+When asking about Osumi Framework include:
+- Framework version (e.g. 9.8)
+- PHP version
+- What you are trying to do
+- Relevant code snippet (route/component/model)
+- Expected vs actual behavior
+
+## Changelog / migrations
+- docs/migrations/9.7-to-9.8.md
+
+## Known pitfalls
+- Avoid accessing uninitialized typed properties
+- Use prepared statements to avoid SQL injection.
+- For Windows exec commands, ensure PATH is visible to the PHP process.
+
+## Minimal glossary
+- OCore: framework bootstrap
+- ORoute: router
+- OComponent: component rendering base
+- OModel: ORM base model
+- OTask: CLI task base
