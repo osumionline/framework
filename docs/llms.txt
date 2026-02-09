@@ -1,9 +1,9 @@
-# Osumi Framework — LLM Guide (llms.txt)
+# Osumi Framework - LLM Guide (llms.txt)
 
 Osumi Framework is a PHP framework to build web apps and APIs with:
 - Routing (ORoute)
 - Components (OComponent)
-- ORM models (OModel) using PHP Attributes (#[OTable], #[OTableField], etc.)
+- ORM models (OModel) using PHP Attributes (#[OField], #[OPK], etc.)
 - CLI tasks (OTask)
 
 This document is optimized for LLMs (ChatGPT, Copilot, Gemini).
@@ -30,7 +30,7 @@ Example:
 - src/Component/ (components + templates)
 - src/Module/ (modules/components used as actions)
 - src/Model/ (ORM models)
-- src/Routes/ (routes))
+- src/Routes/ (routes)
 - src/Service/ (services)
 - src/Task/ (CLI tasks)
 
@@ -59,7 +59,7 @@ Docs:
 
 3) ORM
 - Models extend OModel.
-- Tables and fields are declared using PHP Attributes (#[OTable], #[OTableField], etc.)
+- Fields are declared using PHP Attributes (#[OField], #[OPK], etc.)
 - save() decides INSERT vs UPDATE based on PK / state tracking.
 
 Docs:
@@ -102,7 +102,7 @@ Docs:
 - Classes: PascalCase, files: PascalCase.php
 - Tables: snake_case, classes: CamelCase (e.g. product_photo -> ProductPhoto)
 
-## “How to ask” (for best answers)
+## "How to ask" (for best answers)
 When asking about Osumi Framework include:
 - Framework version (e.g. 9.8)
 - PHP version
