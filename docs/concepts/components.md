@@ -141,6 +141,27 @@ Templates access the component's public properties differently depending on the 
 
 A component can define an optional `run()` method. If present, it is executed automatically at the beginning of the `render()` process to prepare data before the template is processed.
 
+When the component is used as an action (a component rendered as a result of an activated route), the `run()` function can receive requests data:
+
+- If the `run()` function has a DTO, data from the request will be used to populate its fields.
+- Otherwise a generic `ORequest` object will be passed to it.
+
+`ORequest` class has methods to get data passed such as form values or parameters passed via the URL:
+
+- **`getParamString('name')`**: returns the value of the field 'name' passed to the route as a string (null if not present).
+- **`getParamInt('name')`**: returns the value of the field 'name' passed to the route as an integer (null if not present).
+- **`getParamFloat('name')`**: returns the value of the field 'name' passed to the route as a float (null if not present).
+- **`getParamBool('name')`**: returns the value of the field 'name' passed to the route as a boolean (null if not present).
+
+If a route has a filter defined, the `ORequest` class also provides ways to access the result of their execution:
+
+```php
+  public function run(ORequest $req): void {
+    $login_filter = $req->getFilter('login'); // Would access the returned result from the LoginFilter file
+    $filters = $req->getFilters(); // Would access the returned result of every applied filter as an associative array ['login' => [...]]
+  }
+```
+
 **Example:**
 
 ```php
@@ -153,6 +174,28 @@ class BooksComponent extends OComponent {
 }
 
 ```
+
+```php
+class GetBookComponent extends OComponent {
+  public ?Book $book = null;
+
+  public function run(ORequest $req): void {
+    $id_book = $req->getParamInt('id');
+    $this->book = Book::findOne(['id' => $id_book]);
+  }
+}
+
+```
+
+## Accessing global options
+
+Components have methods to access to global options such as application configuration, logs or session data:
+
+- **`getConfig()`**: Returns global `OConfig` to read paths or user defined values (secrets, email addresses...)
+    - Docs: docs/concepts/config.md
+- **`getLog()`**: Returns `OLog` instance for the component. User can log information using methods as `debug`, `info` or `error`.
+    - Docs: docs/concepts/log.md
+- **`getSession()`**: Returns `OSession` instance that can be used to access $\_SESSION params.
 
 ---
 

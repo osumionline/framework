@@ -4,6 +4,8 @@ Routing in Osumi Framework is managed by the `ORoute` class. It maps incoming HT
 
 Routes are typically defined in PHP files located within the `src/Routes/` directory. You can create multiple files in this folder to organize your routes logically (e.g., one file per module).
 
+When a user accesses a URL, `ORoute` locates the path, runs filters, then instantiates the component and calls `run()`, passing a user defined `DTO` or a generic `ORequest`.
+
 ---
 
 ## Defining Routes
@@ -32,6 +34,8 @@ ORoute::get('/', IndexComponent::class);
 ## Filters
 
 Filters are classes executed before the main component. They are commonly used for authentication (checking tokens), logging, or request validation.
+
+Docs: /docs/concepts/filters.md
 
 ```php
 use Osumi\OsumiFramework\App\Filter\LoginFilter;
@@ -93,6 +97,17 @@ If you need to serve a static file or a simple template without the logic of a f
 ORoute::view('/about-us', 'about-us.html');
 
 ```
+
+## Parameters on routes
+
+URLs can be defined to have parameters on them using the `:name` syntax.
+
+```php
+ORoute::get('/user/:id', UserComponent::class);
+ORoute::get('/location/:name', LocationComponent::class);
+```
+
+The method `run(ORequest $req)` of the component can then access that parameter using methods such as `getParamInt('id')` or `getParamString('name')`.
 
 ---
 

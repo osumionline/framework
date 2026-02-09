@@ -13,6 +13,8 @@ php of <option> [arguments]
 
 ```
 
+If the file is executed without any arguments, the list of available options are shown (both Framework options and user created ones).
+
 ### Core Commands
 
 The framework includes several built-in tasks:
@@ -96,6 +98,8 @@ php of addUser --name "John Doe"
 # $options = ["name" => "John Doe"]
 
 ```
+
+> **Note on `$options$`**: The `$options` parameter is always an array, DTOs can't be used on Tasks.
 
 ---
 

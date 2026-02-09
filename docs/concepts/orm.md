@@ -49,12 +49,12 @@ class User extends OModel {
 
 ## Core Attributes
 
-| Attribute       | Description                                                     |
-| --------------- | --------------------------------------------------------------- |
-| `#[OPK]`        | Primary Key. Can be used on multiple fields for composite keys. |
-| `#[OField]`     | Standard column. Supports `max`, `nullable`, and `ref`.         |
-| `#[OCreatedAt]` | Mandatory field for record creation tracking.                   |
-| `#[OUpdatedAt]` | Mandatory field for record update tracking.                     |
+| Attribute       | Description                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `#[OPK]`        | Primary Key. Can be used on multiple fields for composite keys. Defaults to auto-incremental, otherwise add `incr` value as `false`. |
+| `#[OField]`     | Standard column. Supports `max`, `nullable`, and `ref`.                                                                              |
+| `#[OCreatedAt]` | Mandatory field for record creation tracking.                                                                                        |
+| `#[OUpdatedAt]` | Mandatory field for record update tracking.                                                                                          |
 
 > **Note on `ref**`: The `ref`parameter (e.g.,`ref: 'user.id'`) is used to define foreign keys in the generated SQL (CREATE TABLE) but does not trigger automatic object loading.
 
@@ -84,6 +84,10 @@ The `save()` method automatically detects if a record is new or existing based o
 $user = new User();
 $user->name = 'New User';
 $user->save(); // Performs an INSERT
+
+$user = User::findOne(['id' => 1]);
+$user->name = 'New name';
+$user->save(); // Performs an UPDATE
 
 ```
 

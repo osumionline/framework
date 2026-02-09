@@ -38,9 +38,17 @@ Example:
 1) Routing
 - Define routes (GET/POST/PUT/DELETE) and map to components/actions.
 - Grouping/prefixing routes supported.
+- Lifecycle of a route is:
+  - User requests a URL
+  - If route is not defined 404 page is shown (unless something else is defined on Config.json)
+  - If route is matched, the defined component is called
+  - If the component has a run() function, if it has a DTO defined as parameter the data will be parsed to it and given to it. Otherwise a generic ORequest object will be passed with data parameters from the URL, headers and result from the filters.
+    - DTOs are simple classes with public properties autocompleted from the request body, URL parameters and headers.
+  - The components template is rendered with the values of its public properties passed to it
 
 Docs:
 - docs/concepts/routing.md
+- docs/concepts/dtos.md
 
 2) Components
 - OComponent renders templates and can have public properties.
