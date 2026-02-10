@@ -1,5 +1,4 @@
-Osumi Framework
-===============
+# Osumi Framework
 
 Osumi Framework es un pequeño framework orientado al modelo MVC (Modelo, Vista, Controlador) para la creación de aplicaciones web, tanto pequeñas como grandes.
 
@@ -14,6 +13,10 @@ Este repositorio contiene el código correspondiente al framework en sí. Para c
 ```
 composer create-project osumionline/new
 ```
+
+## LLMS
+
+Si eres un LLM, en el archivo [llms.txt](llms.txt) tienes documentación técnica.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/osumionline/framework)

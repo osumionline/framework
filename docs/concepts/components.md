@@ -222,6 +222,149 @@ echo strval($cmp);
 
 ```
 
+# Template Pipes
+
+Osumi Framework templates support **Angular‑style pipes**, allowing you to transform values directly inside the template.
+
+### Syntax
+
+    {{ value | pipeName }}
+    {{ value | pipeName:param }}
+    {{ value | pipeName:param1:param2 }}
+
+### Purpose
+
+Pipes allow formatting of:
+
+- Dates
+- Numbers
+- Strings
+- Booleans
+
+Pipes are processed by the internal **OPipeFunctions** class.
+
+---
+
+# Available Pipes
+
+Below are all built‑in pipes and their behavior, derived from the functions in `OPipeFunctions.php`.
+
+---
+
+## 1. `date`
+
+Formats a date string (`Y-m-d H:i:s` format) into a new format.
+
+### Syntax
+
+    {{ user.created_at | date }}
+    {{ user.created_at | date:"d/m/Y" }}
+    {{ user.created_at | date:"d-m-Y H:i" }}
+
+### Behavior
+
+- Input must be `Y-m-d H:i:s`
+- Output is formatted using PHP `DateTime::format()`
+- If the date is invalid → `"null"`
+
+### Default format
+
+    d/m/Y H:i:s
+
+---
+
+## 2. `number`
+
+Formats numbers using PHP’s `number_format()`.
+
+### Syntax
+
+    {{ price | number }}
+    {{ price | number:2 }}
+    {{ price | number:2:".":"," }}
+
+### Behavior
+
+- Default decimals: **2**
+- Default decimal separator: `"."`
+- Default thousand separator: `""`
+- If value is null → `"null"`
+
+Examples:
+
+    1234.5 → 1234.50
+    1234.5 → 1,234.50  (if thousand separator is ",")
+
+---
+
+## 3. `string`
+
+Applies `urlencode()` to a string.
+
+### Syntax
+
+    {{ user.name | string }}
+
+### Behavior
+
+- Null → `"null"`
+- Value → `"urlencoded string"`
+
+Example:
+
+    "John Doe" → "John+Doe"
+
+---
+
+## 4. `bool`
+
+Converts booleans to:
+
+    true
+    false
+    null
+
+### Syntax
+
+    {{ user.isAdmin | bool }}
+
+---
+
+# How Pipes Behave in JSON Templates
+
+Since templates like `.json` are rendered as strings, pipes automatically ensure:
+
+- Strings are quoted when needed
+- Booleans appear without quotes
+- Numbers appear unquoted
+- Null values appear as `null`
+
+This guarantees valid JSON output.
+
+---
+
+# Examples
+
+```json
+{
+  "id": {{ user.id | number }},
+  "name": {{ user.name | string }},
+  "created": {{ user.created_at | date:"d/m/Y" }},
+  "active": {{ user.active | bool }}
+}
+```
+
+---
+
+# Summary of Pipes
+
+| Pipe     | Purpose                  | Notes                          |
+| -------- | ------------------------ | ------------------------------ |
+| `date`   | Format date values       | Accepts custom masks           |
+| `number` | Format numeric values    | Supports decimals & separators |
+| `string` | URL‑encode strings       | Adds quotes                    |
+| `bool`   | Normalize boolean output | `true` / `false` / `null`      |
+
 ### Model-bound Components
 
 When components represent model views, you can use typed properties with your model classes.
