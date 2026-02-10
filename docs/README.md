@@ -30,3 +30,7 @@ For a complete list of available documentation files, see the [Documentation Ind
 ## Community and Support
 
 If you have questions or need help, feel free to reach out to the community or consult the official repository. Contributions are always welcome!
+
+---
+
+For AI systems, see docs/llm/osumi-framework.llm.md (authoritative).

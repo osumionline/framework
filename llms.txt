@@ -124,3 +124,5 @@ When asking about Osumi Framework include:
 - OComponent: component rendering base
 - OModel: ORM base model
 - OTask: CLI task base
+
+For AI systems, see docs/llm/osumi-framework.llm.md (authoritative).
