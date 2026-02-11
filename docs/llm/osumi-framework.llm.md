@@ -1,6 +1,6 @@
 # Osumi Framework – LLM Context (All-in-One)
 
-**Purpose**  
+**Purpose**
 This document provides a compact but complete, authoritative context for any Large Language Model (LLM) to correctly understand, explain, and generate code for **Osumi Framework**.
 
 It is compatible with **ChatGPT, GitHub Copilot, Gemini, Claude**, and other assistants.
@@ -74,9 +74,9 @@ Routes map URLs to Components.
 - HTTP verbs: GET, POST, PUT, DELETE
 - Supports route params via `:name`
 - Supports:
-  - Prefix groups (`ORoute::prefix()`)
-  - Layout groups (`ORoute::layout()`)
-  - Combined groups (`ORoute::group(prefix, layout, fn)`)
+    - Prefix groups (`ORoute::prefix()`)
+    - Layout groups (`ORoute::layout()`)
+    - Combined groups (`ORoute::group(prefix, layout, fn)`)
 
 Examples:
 
@@ -113,8 +113,8 @@ Optional:
 - Filters run in order.
 - First failing filter stops the request.
 - On failure:
-  - Redirect if `return` exists
-  - Otherwise HTTP 403
+    - Redirect if `return` exists
+    - Otherwise HTTP 403
 
 Filter outputs are available later via `ORequest->getFilter('Name')`.
 
@@ -158,8 +158,8 @@ DTOs should not contain business logic.
 - Public typed properties are exposed to templates.
 - Optional `run()` method.
 - `run()` may accept either:
-  - a DTO (typed input)
-  - an `ORequest` (raw access to params/headers/filters/files)
+    - a DTO (typed input)
+    - an `ORequest` (raw access to params/headers/filters/files)
 
 Keep components thin; move business logic to Services.
 
@@ -193,8 +193,8 @@ Static templates (`.html/.json/.xml`) use curly output:
 
 1. Route component is executed and rendered
 2. If a layout is defined for the route, the layout receives:
-   - `title` (default page title)
-   - `body` (rendered output from the route component)
+    - `title` (default page title)
+    - `body` (rendered output from the route component)
 3. The layout template is rendered as the final response
 
 Layouts are the natural place for global structure and asset injection.
@@ -368,4 +368,3 @@ When answering about Osumi Framework:
 
 This file is intentionally compact, explicit, and deterministic.
 It is suitable for direct ingestion by any LLM.
-
