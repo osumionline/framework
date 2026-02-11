@@ -47,15 +47,15 @@ Example:
   - The components template is rendered with the values of its public properties passed to it
 
 Docs:
-- docs/concepts/routing.md
-- docs/concepts/dtos.md
+- docs/en/concepts/routing.md
+- docs/en/concepts/dtos.md
 
 2) Components
 - OComponent renders templates and can have public properties.
 - A component may optionally implement run() to prepare data before render.
 
 Docs:
-- docs/concepts/components.md
+- docs/en/concepts/components.md
 
 3) ORM
 - Models extend OModel.
@@ -63,39 +63,39 @@ Docs:
 - save() decides INSERT vs UPDATE based on PK / state tracking.
 
 Docs:
-- docs/concepts/orm.md
-- docs/reference/attributes-orm.md
+- docs/en/concepts/orm.md
+- docs/en/reference/attributes-orm.md
 
 4) CLI
 - Tasks extend OTask.
 - CLI runner executes tasks by name.
 
 Docs:
-- docs/concepts/cli.md
-- docs/reference/cli-commands.md
+- docs/en/concepts/cli.md
+- docs/en/reference/cli-commands.md
 
 ## Quickstart examples
 - Hello route returning HTML:
-  See docs/quickstart.md
+  See docs/en/quickstart.md
 
 - Simple API endpoint (JSON):
-  See docs/recipes/common-tasks.md
+  See docs/en/recipes/common-tasks.md
 
 - ORM model example:
-  See docs/concepts/orm.md
+  See docs/en/concepts/orm.md
 
 ## Recipes (common questions)
 - How to define routes with prefix/group:
-  docs/concepts/routing.md
+  docs/en/concepts/routing.md
 
 - How to create a component + template:
-  docs/concepts/components.md
+  docs/en/concepts/components.md
 
 - How to create a model with Attributes:
-  docs/reference/attributes-orm.md
+  docs/en/reference/attributes-orm.md
 
 - How to write a CLI task:
-  docs/concepts/cli.md
+  docs/en/concepts/cli.md
 
 ## Conventions
 - Namespaces follow PSR-4.
@@ -111,7 +111,7 @@ When asking about Osumi Framework include:
 - Expected vs actual behavior
 
 ## Changelog / migrations
-- docs/migrations/9.7-to-9.8.md
+- docs/en/migrations/9.7-to-9.8.md
 
 ## Known pitfalls
 - Avoid accessing uninitialized typed properties
@@ -125,4 +125,4 @@ When asking about Osumi Framework include:
 - OModel: ORM base model
 - OTask: CLI task base
 
-For AI systems, see docs/llm/osumi-framework.llm.md (authoritative).
+For AI systems, see docs/en/llm/osumi-framework.llm.md (authoritative).

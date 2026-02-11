@@ -35,7 +35,7 @@ ORoute::get('/', IndexComponent::class);
 
 Filters are classes executed before the main component. They are commonly used for authentication (checking tokens), logging, or request validation.
 
-Docs: /docs/concepts/filters.md
+Docs: /docs/en/concepts/filters.md
 
 ```php
 use Osumi\OsumiFramework\App\Filter\LoginFilter;

@@ -14,7 +14,7 @@ DTOs are designed to:
 - Collect and type‑cast request data (URL params, JSON body, form fields, query strings, headers, filters).
 - Apply validation rules _before_ component logic executes.
 - Make parameter handling consistent across the entire framework.
-- Avoid manual calls to `$req->getParam…()` inside components.
+- Avoid manual calls to `$req->getParam...()` inside components.
 - Prevent unsafe or unexpected values from reaching the business logic.
 
 When a component defines:
@@ -23,7 +23,7 @@ When a component defines:
 public function run(MovieDTO $dto): void
 ```
 
-…the framework automatically:
+...the framework automatically:
 
 1.  Instantiates `MovieDTO`.
 2.  Loads request data into it.

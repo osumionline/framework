@@ -36,7 +36,7 @@ The filter checks an `Authorization` header, validates a token, and returns eith
 
 # 2. Example Filter
 
-Here is your actual `LoginFilter`:
+Here is an actual `LoginFilter`:
 
 ```php
 class LoginFilter {

@@ -145,7 +145,6 @@ Naming conventions:
 
 ```php
 class CinemaService extends OService {
-
   public function getCinemas(int $id_user): array {
     return Cinema::where(['id_user' => $id_user]);
   }

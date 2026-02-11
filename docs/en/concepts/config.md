@@ -25,7 +25,7 @@ Global parameters for the application's basic behavior.
 	"lang": "en",
 	"use-session": true,
 	"allow-cross-origin": true,
-	"base_url": "[https://example.com](https://example.com)"
+	"base_url": "https://example.com"
 }
 ```
 
@@ -147,7 +147,7 @@ When the application is loaded, a set of default paths are loaded on `OConfig`:
 | `app_utils`     | /src/Utils/                                        | Generic utils classes                                      |
 | `ofw`           | /ofw/                                              | Location of application generated files (logs, exports...) |
 | `ofw_cache`     | /ofw/cache/                                        | Path of application cache files                            |
-| `ofw_export`    | /ofw/export/                                       | Path of exported files as model.sql                        |
+| `ofw_export`    | /ofw/export/                                       | Path of exported files (as model.sql)                      |
 | `ofw_tmp`       | /ofw/tmp/                                          | Path of tmp files                                          |
 | `ofw_logs`      | /ofw/logs/                                         | Path of generated log files                                |
 | `ofw_base`      | /vendor/osumionline/framework/                     | Base path of framework                                     |
@@ -179,6 +179,6 @@ When the application is loaded, a set of default paths are loaded on `OConfig`:
 ## Best Practices
 
 - **Security**: Never commit sensitive information (passwords, API keys) in `Config.json`. Use environment-specific files that are excluded from version control.
-- **Environment Variable**: Ensure the `environment` key is set in your main `Config.json` to trigger the loading of secondary configuration files.
+- **Environment Variable**: Ensure the `env` key is set in your main `Config.json` to trigger the loading of secondary configuration files.
 - **Typed Extras**: Remember that `getExtra()` can return various types; validate them if necessary.
 - **Strict formating**: Configuration files must be strict compliant files with the JSON formatting. Any error, extra comma or similars would result in a application error as it won't be able to load them.

@@ -192,9 +192,9 @@ class GetBookComponent extends OComponent {
 Components have methods to access to global options such as application configuration, logs or session data:
 
 - **`getConfig()`**: Returns global `OConfig` to read paths or user defined values (secrets, email addresses...)
-    - Docs: docs/concepts/config.md
+    - Docs: docs/en/concepts/config.md
 - **`getLog()`**: Returns `OLog` instance for the component. User can log information using methods as `debug`, `info` or `error`.
-    - Docs: docs/concepts/log.md
+    - Docs: docs/en/concepts/log.md
 - **`getSession()`**: Returns `OSession` instance that can be used to access $\_SESSION params.
 
 ---

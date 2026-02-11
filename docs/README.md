@@ -14,7 +14,7 @@ Welcome to the documentation for the Osumi Framework! This framework is designed
 
 ## Getting Started
 
-To get started with the Osumi Framework, refer to the [Quickstart Guide](/docs/quickstart.md). This guide will walk you through the initial setup and help you create your first application.
+To get started with the Osumi Framework, refer to the [Quickstart Guide](/docs/en/quickstart.md). This guide will walk you through the initial setup and help you create your first application.
 
 ## Documentation Structure
 
@@ -25,7 +25,7 @@ The documentation is organized into several sections to help you find the inform
 - **Reference:** Detailed information about configuration options, CLI commands, and more.
 - **Migrations:** Guides for upgrading between framework versions.
 
-For a complete list of available documentation files, see the [Documentation Index](/docs/index.md).
+For a complete list of available documentation files, see the [Documentation Index](/docs/en/index.md).
 
 ## Community and Support
 
@@ -33,4 +33,4 @@ If you have questions or need help, feel free to reach out to the community or c
 
 ---
 
-For AI systems, see docs/llm/osumi-framework.llm.md (authoritative).
+For AI systems, see docs/en/llm/osumi-framework.llm.md (authoritative).
