@@ -1,81 +1,81 @@
-# Documentation Index
+# Dokumentazio Indizea
 
-This index provides an overview of all the documentation files available in the `docs` folder. Each entry includes the file path and a brief description of its content.
+Indize honek `docs` karpetan eskuragarri dauden dokumentazio fitxategi guztien ikuspegi orokorra eskaintzen du. Sarrera bakoitzak fitxategiaren bidea eta bere edukiaren deskribapen labur bat ditu.
 
-## List of Documentation Files
+## Dokumentazio Fitxategien Zerrenda
 
 ### `/docs/eu/index.md`
 
-The main index file listing all documentation files and their descriptions, this file.
+Dokumentazio fitxategi guztiak eta haien deskribapenak zerrendatzen dituen indize fitxategi nagusia, fitxategi hau.
 
 ### `/docs/eu/quickstart.md`
 
-A quick start guide to help you get started with the framework.
+Framework-arekin hasteko gida azkarra.
 
 ### `/docs/eu/README.md`
 
-General information about the documentation structure and purpose.
+Dokumentazio egiturari eta helburuari buruzko informazio orokorra.
 
 ### `/docs/eu/concepts/cli.md`
 
-Explains the CLI (Command Line Interface) concepts and how to use them effectively.
+CLI (Komando Lerroko Interfazea) kontzeptuak eta nola erabili modu eraginkorrean azaltzen ditu.
 
 ### `/docs/eu/concepts/components.md`
 
-Details the components used in the framework and their functionality.
+Framework-ean erabiltzen diren osagaiak eta haien funtzionaltasuna zehazten ditu.
 
 ### `/docs/eu/concepts/config.md`
 
-Describes the configuration system and how to manage application settings.
+Konfigurazio sistema eta aplikazioaren ezarpenak nola kudeatu deskribatzen ditu.
 
 ### `/docs/eu/concepts/dtos.md`
 
-Covers the Data Transfer Objects (DTOs) and their role in the framework.
+Data Transfer Objects (DTO) eta framework-ean duten eginkizuna azaltzen ditu.
 
 ### `/docs/eu/concepts/filters.md`
 
-Provides information about filters and their usage in the framework.
+Iragazkien eta framework-ean duten erabileraren inguruko informazioa ematen du.
 
 ### `/docs/eu/concepts/orm.md`
 
-Explains the Object-Relational Mapping (ORM) system and how to work with models.
+Objektu-erlazio mapaketa (ORM) sistema eta modeloekin nola lan egin azaltzen du.
 
 ### `/docs/eu/concepts/plugins.md`
 
-Describes the plugin system and how to extend the framework's functionality.
+Plugin sistema eta framework-aren funtzionaltasuna nola zabaldu deskribatzen ditu.
 
 ### `/docs/eu/concepts/routing.md`
 
-Covers the routing system and how to define application routes.
+Bideratze sistema eta aplikazioaren ibilbideak nola definitu azaltzen ditu.
 
 ### `/docs/eu/concepts/services.md`
 
-Describes the usage of services in the framework.
+Esparruan zerbitzuen erabilera deskribatzen du.
 
 ### `/docs/eu/migrations/`
 
-Files in this folder will explain feature changes from a version to another.
+Karpeta honetako fitxategiek bertsio batetik bestera funtzioen aldaketak azalduko dituzte.
 
 ### `/docs/eu/recipes/auth.md`
 
-Provides recipes and examples for implementing authentication in your application.
+Aplikazioan autentifikazioa ezartzeko errezetak eta adibideak eskaintzen ditu.
 
 ### `/docs/eu/recipes/common-tasks.md`
 
-A collection of common tasks and how to perform them using the framework.
+Ohiko zereginen bilduma bat eta esparrua erabiliz nola egin.
 
 ### `/docs/eu/recipes/uploads.md`
 
-Explains how to handle file uploads within the framework.
+Esparruan fitxategien igoerak nola kudeatu azaltzen du.
 
 ### `/docs/eu/reference/attributes-orm.md`
 
-A reference guide for ORM attributes and their usage.
+ORM atributuen eta haien erabileraren erreferentzia gida bat.
 
 ### `/docs/eu/reference/cli-commands.md`
 
-A detailed list of CLI commands available in the framework and their usage.
+Framework-ean eskuragarri dauden CLI komandoen zerrenda zehatza eta haien erabilera.
 
 ### `/docs/eu/reference/config-reference.md`
 
-A comprehensive reference for all configuration options in the framework.
+Framework-eko konfigurazio aukera guztien erreferentzia osoa.

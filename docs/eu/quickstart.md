@@ -1,40 +1,40 @@
-# Quickstart Guide
+# Hasiberrientzako Gida Azkarra
 
-This guide walks you through creating a fresh **Osumi Framework** project, installing the token plugin, generating actions and filters with the CLI, creating a model, defining routes, and modifying the component and template to build a working authenticated API endpoint.
+Gida honek **Osumi Framework** proiektu berri bat sortzen, token plugina instalatzen, CLIarekin ekintzak eta iragazkiak sortzen, eredu bat sortzen, ibilbideak definitzen eta osagaia eta txantiloia aldatzen lagunduko dizu, funtzionalki autentifikatutako API amaiera-puntua eraikitzeko.
 
-By the end of this guide you will have:
+Gida honen amaieran hau izango duzu:
 
-- A new Osumi Framework application
-- The OToken plugin installed
-- A working LoginFilter
-- A `User` model
-- An authenticated `/api/get-users` endpoint returning JSON
+- Osumi Framework aplikazio berri bat
+- OToken plugina instalatuta
+- Funtzionala den LoginFilter bat
+- `User` eredu bat
+- JSON itzultzen duen `/api/get-users` amaiera-puntua autentifikatuta
 
 ---
 
-# 1. Create a New Project
+# 1. Sortu Proiektu Berri Bat
 
-Run the following command to create a fresh Osumi Framework project:
+Exekutatu komando hau Osumi Framework proiektu berri bat sortzeko:
 
 ```bash
 composer create-project osumionline/new myapp
 ```
 
-This will generate a complete folder structure with example components, routes, models, etc.
+Honek karpeta-egitura oso bat sortuko du osagai, ibilbide, eredu eta abarren adibideekin.
 
 ---
 
-# 2. Install the OToken Plugin
+# 2. Instalatu OToken Plugina
 
-The OToken plugin allows you to generate and validate JWT‑like tokens.
+OToken pluginak JWT antzeko tokenak sortu eta balioztatzeko aukera ematen dizu.
 
-Install it via Composer:
+Instalatu Composer bidez:
 
 ```bash
 composer require osumionline/plugin-token
 ```
 
-After installation, your application can use:
+Instalazio ondoren, zure aplikazioak hau erabil dezake:
 
 ```php
 use Osumi\OsumiFramework\Plugins\OToken;
@@ -42,48 +42,48 @@ use Osumi\OsumiFramework\Plugins\OToken;
 
 ---
 
-# 3. Remove Example Data
+# 3. Kendu adibide datuak
 
-Every new project includes example modules, components, routes and models.
-You can clean all of them with:
+Proiektu berri guztiek adibide moduluak, osagaiak, ibilbideak eta modeloak dituzte.
+Guztiak garbitu ditzakezu honekin:
 
 ```bash
 php of reset
 ```
 
-This keeps the framework structure but removes all example functionality.
+Honek framework egitura mantentzen du baina adibide funtzionalitate guztiak kentzen ditu.
 
 ---
 
-# 4. Create a New Action (Component)
+# 4. Sortu ekintza berri bat (osagaia)
 
-Use the CLI to generate a new action component that will serve as an API endpoint.
+Erabili CLI API amaierako puntu gisa balioko duen ekintza osagai berri bat sortzeko.
 
 ```bash
 php of add --option action --name api/getUsers --url /api/get-users --type json
 ```
 
-This generates:
+Honek sortzen du:
 
 - `/src/App/Module/Api/GetUsers/GetUsersComponent.php`
 - `/src/App/Module/Api/GetUsers/GetUsersTemplate.json`
-- A route definition inside the routes folder (unless you disable auto‑route creation)
+- Ibilbidearen definizio bat routes karpetan (ibilbide automatikoak sortzea desgaitzen ez baduzu behintzat)
 
 ---
 
-# 5. Create a Login Filter
+# 5. Sortu Saioa Hasteko Iragazki bat
 
-Now generate a filter using the CLI:
+Orain sortu iragazki bat CLI erabiliz:
 
 ```bash
 php of add --option filter --name login
 ```
 
-This creates:
+Honek sortzen du:
 
 - `/src/App/Filter/LoginFilter.php`
 
-You must now replace the generated file with _your real LoginFilter_ implementation:
+Sortutako fitxategia _zure benetako LoginFilter_ inplementazioarekin ordezkatu behar duzu orain:
 
 ```php
 <?php declare(strict_types=1);
@@ -94,7 +94,7 @@ use Osumi\OsumiFramework\Plugins\OToken;
 
 class LoginFilter {
   /**
-   * Security filter for users
+   * Segurtasun iragazkia erabiltzaileentzat
    */
   public static function handle(array $params, array $headers): array {
     global $core;
@@ -111,19 +111,20 @@ class LoginFilter {
 }
 ```
 
-This filter:
+Iragazki honek:
 
-- Reads the `Authorization` header
-- Validates the token using the configured secret
-- Returns `"status" => "ok"` only when the token is valid
-- Injects `id` so components know which user is authenticated
+- `Authorization` goiburua irakurtzen du
+- Tokena baliozkotzen du konfiguratutako sekretua erabiliz
+- `"status" => "ok"` itzultzen du tokena baliozkoa denean bakarrik
+- `id` txertatzen du osagaiek zein erabiltzaile den autentifikatuta jakin dezaten
 
 ---
 
-# 6. Create the `User` Model
+# 6. Sortu `Erabiltzaile` Eredua
 
-Models are created manually.
-Inside `src/App/Model/User.php` create something like:
+Ereduak eskuz sortzen dira.
+
+`src/App/Model/User.php` barruan honelako zerbait sortu:
 
 ```php
 <?php declare(strict_types=1);
@@ -138,47 +139,47 @@ use Osumi\OsumiFramework\ORM\OUpdatedAt;
 
 class User extends OModel {
   #[OPK(
-	comment: "Unique id for a user"
+    comment: "Erabiltzaile baten ID bakarra"
   )]
   public ?int $id = null;
 
   #[OField(
-    comment: "User's name",
+    comment: "Erabiltzailearen izena",
     max: 100,
     nullable: false
   )]
   public ?string $name = null;
 
   #[OField(
-    comment: "User's email address",
+    comment: "Erabiltzailearen helbide elektronikoa",
     max: 100,
     nullable: false
   )]
   public ?string $email = null;
 
   #[OCreatedAt(
-    comment: "Record creation date"
+    comment: "Erregistroaren sorrera data"
   )]
   public ?string $created_at = null;
 
   #[OUpdatedAt(
-    comment: "Record's last update date"
+    comment: "Erregistroaren azken eguneratze data"
   )]
   public ?string $updated_at = null;
 }
 ```
 
-You can adjust the fields based on your needs.
+Eremuak zure beharren arabera doi ditzakezu.
 
 ---
 
-# 7. Create the API Route
+# 7. API Ibilbidea Sortu
 
-Create the file (if not created automatically):
+Sortu fitxategia (automatikoki sortu ez bada):
 
     /src/Routes/Api.php
 
-Add a prefix for clean grouping of future endpoints and apply the LoginFilter to protect the API route:
+Gehitu aurrizki bat etorkizuneko amaierako puntuak garbi taldekatzeko eta aplikatu LoginFilter API ibilbidea babesteko:
 
 ```php
 <?php declare(strict_types=1);
@@ -192,26 +193,26 @@ ORoute::prefix('/api', function() {
 });
 ```
 
-Now any call to `/api/get-users` must include a valid `Authorization` token.
+Orain `/api/get-users`-erako edozein deik `Authorization` token baliodun bat izan behar du.
 
-# 8. Create a Model Component
+# 8. Sortu Eredu Osagai bat
 
-Model components are components that represent a user model in a JSON way. Generate a Model Component for the User Model class:
+Eredu osagaiak erabiltzaile eredu bat JSON eran irudikatzen duten osagaiak dira. Sortu Eredu Osagai bat Erabiltzaile Eredu klasearentzat:
 
 ```bash
-php of add --option modelComponent --name User
+php of add --option modelComponent --name se
 ```
 
-When a Model Component is created 2 components are generated:
+Eredu Osagai bat sortzen denean, 2 osagai sortzen dira:
 
     /src/App/Component/Model/User/UserComponent.php
     /src/App/Component/Model/User/UserTemplate.php
     /src/App/Component/Model/UserList/UserListComponent.php
     /src/App/Component/Model/UserList/UserListTemplate.php
 
-Using this components you can query the database for a single user or a set of users and display their data easily.
+Osagai hauek erabiliz, datu-basea erabiltzaile bakar bat edo erabiltzaile multzo bat kontsultatu dezakezu eta haien datuak erraz bistara ditzakezu.
 
-Edit the `UserTemplate.php` file to add or remove whatever you nedd, for example remove the create/update dates:
+Editatu `UserTemplate.php` fitxategia behar duzuna gehitzeko edo kentzeko, adibidez, sortzeko/eguneratzeko datak kendu:
 
 ```php
 <?php if (is_null($user)): ?>
@@ -220,7 +221,7 @@ null
 {
 	"id": {{ user.id }},
 	"name": {{ user.name | string }},
-    "email": {{ email.name | string }}
+  "email": {{ email.name | string }}
 }
 <?php endif ?>
 
@@ -228,20 +229,20 @@ null
 
 ---
 
-# 9. Modify the Generated Component
+# 9. Sortutako osagaia aldatu
 
-Open:
+Ireki:
 
     /src/App/Module/Api/GetUsers/GetUsersComponent.php
 
-Modify it so it:
+Aldatu honela:
 
-1.  Reads the LoginFilter output
-2.  Uses the authenticated user ID
-3.  Queries the users table
-4.  Passes them to the JSON template
+1. LoginFilter irteera irakurtzen du
+2. Autentifikatutako erabiltzaile IDa erabiltzen du
+3. Erabiltzaileen taula kontsultatzen du
+4. JSON txantiloira pasatzen ditu
 
-Example:
+Adibidea:
 
 ```php
 <?php declare(strict_types=1);
@@ -267,7 +268,7 @@ class GetUsersComponent extends OComponent {
       return;
     }
 
-    // Example: get all users (or filter by authenticated user ID if needed)
+    // Adibidea: erabiltzaile guztiak lortu (edo behar izanez gero, autentifikatutako erabiltzaile IDaren arabera iragazi)
     $this->list->list = User::where([]);
   }
 }
@@ -275,13 +276,13 @@ class GetUsersComponent extends OComponent {
 
 ---
 
-# 9. Modify the JSON Template
+# 9. JSON txantiloia aldatu
 
-Open:
+Ireki:
 
     /src/App/Module/Api/GetUsers/GetUsersTemplate.json
 
-Replace contents with:
+Edukia honekin ordezkatu:
 
 ```json
 {
@@ -292,28 +293,28 @@ Replace contents with:
 }
 ```
 
-The template:
+Txantiloia:
 
-- Outputs `"status"`
-- Loops through user data
-- Using sub-components displays their data
-- Builds a JSON array
+- `"egoera"` irteeratzen du
+- Erabiltzaileen datuetan zehar begiztatzen du
+- Azpi-osagaiak erabiliz haien datuak bistaratzen ditu
+- JSON array bat eraikitzen du
 
 ---
 
-# 10. Testing the Endpoint
+# 10. Amaiera-puntua probatzen
 
-To call your API:
+Zure APIa deitzeko:
 
-1.  Generate a valid token (using your own login endpoint or manual OToken creation)
-2.  Send a request:
+1. Sortu token baliozko bat (zure saioa hasteko amaiera-puntua erabiliz edo eskuzko OToken sorrera erabiliz)
+2. Bidali eskaera bat:
 
 ```bash
 curl -X GET http://localhost:8000/api/get-users \
-  -H "Authorization: YOUR_TOKEN_HERE"
+-H "Authorization: ZURE_TOKENA_HEMEN"
 ```
 
-If the token is valid, you will receive:
+Tokena baliozkoa bada, hau jasoko duzu:
 
 ```json
 {
@@ -325,7 +326,7 @@ If the token is valid, you will receive:
 }
 ```
 
-If the token is invalid or missing:
+Baldin eta Tokena baliogabea da edo falta da:
 
 ```json
 {
@@ -336,18 +337,18 @@ If the token is invalid or missing:
 
 ---
 
-# 11. Summary
+# 11. Laburpena
 
-This quickstart covered:
+Hasierako gida honek honako hauek jorratu ditu:
 
-- Creating a new Osumi project
-- Installing OToken
-- Removing demo data
-- Generating a new API action
-- Creating a LoginFilter
-- Writing a User model
-- Adding an authenticated route
-- Creating a Model Component
-- Modifying the component and template
+- Osumi proiektu berri bat sortzea
+- OToken instalatzea
+- Demo datuak kentzea
+- API ekintza berri bat sortzea
+- LoginFilter bat sortzea
+- Erabiltzaile eredu bat idaztea
+- Autentifikatutako ibilbide bat gehitzea
+- Eredu osagai bat sortzea
+- Osagaia eta txantiloia aldatzea
 
-You now have a working foundation for building APIs with authentication support in Osumi Framework.
+Orain oinarri bat duzu Osumi Framework-en autentifikazio laguntza duten APIak eraikitzeko.

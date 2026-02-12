@@ -1,58 +1,58 @@
-# Osumi Framework CLI Commands
+# Osumi Framework CLI Komandoak
 
-Osumi Framework includes a set of CLI tasks that allow you to perform various operations related to the development and maintenance of applications. Below is a description of the available commands:
+Osumi Framework-ek aplikazioen garapenarekin eta mantentzearekin lotutako hainbat eragiketa egiteko aukera ematen duten CLI ataza multzo bat dauka. Jarraian, eskuragarri dauden komandoen deskribapena dago:
 
-## Available Commands
+## Eskuragarri dauden komandoak
 
 ### `add`
 
-**Description:** Allows you to create new actions, services, tasks, model components, components, or filters.
+**Deskribapena:** Ekintza, zerbitzu, ataza, modelo osagai, osagai edo iragazki berriak sortzeko aukera ematen du.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
-php of add [type] [name]
+php of add [mota] [izena]
 ```
 
-- **type:** Type of element to create (`action`, `service`, `task`, `modelComponent`, `component`, `filter`).
-- **name:** Name of the element to create.
+- **mota:** Sortuko den elementu mota (`action`, `service`, `task`, `modelComponent`, `component`, `filter`).
+- **izena:** Sortuko den elementuaren izena.
 
-**Example:**
+**Adibidea:**
 
 ```bash
-php of add action MyAction
+php of add --option action --name MyAction
 ```
 
 ---
 
 ### `backupAll`
 
-**Description:** Generates a complete backup file of the application, including the database and code.
+**Deskribapena:** Aplikazioaren babeskopia fitxategi oso bat sortzen du, datu-basea eta kodea barne.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of backupAll
 ```
 
-**Notes:** This command internally calls the `backupDB` and `extractor` tasks.
+**Oharrak:** Komando honek barne-deiak egiten ditu `backupDB` eta `extractor` atazei.
 
 ---
 
 ### `backupDB`
 
-**Description:** Creates a database backup using the `mysqldump` tool.
+**Deskribapena:** Datu-basearen babeskopia bat sortzen du `mysqldump` tresna erabiliz.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
-php of backupDB [options]
+php of backupDB [aukerak]
 ```
 
-- **options:**
-    - `silent`: If included, the command will not display messages in the console.
+- **aukerak:**
+- `silent`: Sartuta badago, komandoak ez ditu mezuak bistaratuko kontsolan.
 
-**Example:**
+**Adibidea:**
 
 ```bash
 php of backupDB silent
@@ -62,45 +62,45 @@ php of backupDB silent
 
 ### `extractor`
 
-**Description:** Exports the entire application to a single self-extracting PHP file.
+**Deskribapena:** Aplikazio osoa PHP fitxategi auto-ateragarri bakar batera esportatzen du.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of extractor
 ```
 
-**Notes:** Exports the entire application to a single self-extracting PHP file.
+**Oharrak:** Aplikazio osoa PHP fitxategi auto-ateragarri bakar batera esportatzen du.
 
 ---
 
 ### `generateModel`
 
-**Description:** Generates an SQL file to create all database tables based on the user-defined models.
+**Deskribapena:** Erabiltzaileak definitutako ereduetan oinarritutako datu-baseko taula guztiak sortzeko SQL fitxategi bat sortzen du.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of generateModel
 ```
 
-**Notes:** The SQL file is generated in the export directory.
+**Oharrak:** SQL fitxategia esportazio direktorioan sortzen da.
 
 ---
 
 ### `generateModelFrom`
 
-**Description:** Generates all models from a provided JSON file.
+**Deskribapena:** Emandako JSON fitxategi batetik sortzen ditu modelo guztiak.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
-php of generateModelFrom [file]
+php of generateModelFrom [fitxategia]
 ```
 
-- **file:** Path to the JSON file containing the model definitions.
+- **fitxategia:** Modeloen definizioak dituen JSON fitxategirako bidea.
 
-**Example:**
+**Adibidea:**
 
 ```bash
 php of generateModelFrom models.json
@@ -110,47 +110,47 @@ php of generateModelFrom models.json
 
 ### `generateModelFromDB`
 
-**Description:** Generates all models from an existing database connection.
+**Deskribapena:** Dagoeneko definitutako datu-baseko konexio batetik sortzen ditu modelo guztiak.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of generateModelFromDB
 ```
 
-**Notes:** Connects to the configured database and generates the corresponding models.
+**Oharrak:** Konfiguratutako datu-basera konektatzen da eta dagokien modeloak sortzen ditu.
 
 ---
 
 ### `reset`
 
-**Description:** Cleans all non-framework data, useful for new installations.
+**Deskribapena:** Framework-ekoak ez diren datu guztiak garbitzen ditu, instalazio berrietarako erabilgarria.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of reset
 ```
 
-**Notes:** Deletes user-generated folders and files and restores the default configuration and structure.
+**Oharrak:** Erabiltzaileak sortutako karpetak eta fitxategiak ezabatzen ditu eta konfigurazio eta egitura lehenetsiak leheneratzen ditu.
 
 ---
 
 ### `version`
 
-**Description:** Displays information about the current version of the framework.
+**Deskribapena:** Framework-aren uneko bertsioari buruzko informazioa erakusten du.
 
-**Usage:**
+**Erabilera:**
 
 ```bash
 php of version
 ```
 
-**Notes:** Includes links to the official repository and the project's X (formerly Twitter) account.
+**Oharrak:** Biltegi ofizialerako eta proiektuaren X (lehen Twitter) konturako estekak barne hartzen ditu.
 
 ---
 
-## Additional Notes
+## Ohar gehigarriak
 
-- All commands must be executed from the root of the project.
-- Ensure that the necessary configurations are defined in the `Config.json` file before running commands related to the database or exports.
+- Komando guztiak proiektuaren errotik exekutatu behar dira.
+- Ziurtatu beharrezko konfigurazioak `Config.json` fitxategian definituta daudela datu-baseari edo esportazioei lotutako komandoak exekutatu aurretik.

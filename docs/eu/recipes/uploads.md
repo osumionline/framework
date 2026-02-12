@@ -1,32 +1,32 @@
-# File Uploads
+# Fitxategien igoerak
 
-Handling file uploads in **Osumi Framework** follows the same design principles as the rest of the system:
+**Osumi Framework**-en fitxategien igoerak kudeatzeak sistemaren gainerako diseinu-printzipio berdinak jarraitzen ditu:
 
-- **DTOs** handle and validate incoming data
-- **Components** orchestrate the operation
-- The uploaded file is available through **`ORequest`**
-- You decide where and how files should be stored
+- **DTOek** sarrerako datuak kudeatu eta balioztatzen dituzte
+- **Osagaiek** eragiketa antolatzen dute
+- Kargatutako fitxategia **`ORequest`** bidez eskuragarri dago
+- Zuk erabakitzen duzu non eta nola gorde behar diren fitxategiak
 
-This recipe shows how to accept an uploaded file (e.g. from an HTML `<input type="file" name="photo">`), process it in a component, and store it properly.
+Errezeta honek erakusten du nola onartu kargatutako fitxategi bat (adibidez, HTML `<input type="file" name="photo">` batetik), nola prozesatu osagai batean eta nola gorde behar den behar bezala.
 
 ---
 
-# 1. Overview of How Uploads Work
+# 1. Kargatzeen funtzionamenduaren ikuspegi orokorra
 
-When a user submits a form with a file, PHP places the uploaded file information inside `$_FILES`.
+Erabiltzaile batek fitxategi batekin formulario bat bidaltzen duenean, PHP-k kargatutako fitxategiaren informazioa `$_FILES` barruan jartzen du.
 
-Osumi Framework merges request data (params, headers, filters, files) into an **`ORequest`** instance.\
-From inside your component’s `run()` method, you can access:
+Osumi Framework-ek eskaera-datuak (parametroak, goiburuak, iragazkiak, fitxategiak) **`ORequest`** instantzia batean batzen ditu.\
+Zure osagaiaren `run()` metodoaren barrutik, hauetara sar zaitezke:
 
 ```php
 $req->getFile("photo");
 ```
 
-This returns the standard PHP upload array:
+Honek PHP igoera array estandarra itzultzen du:
 
 ```php
 [
-  'name'     => 'example.png',
+  'name'     => 'adibidea.png',
   'type'     => 'image/png',
   'tmp_name' => '/tmp/phpXYZ123',
   'error'    => 0,
@@ -34,16 +34,16 @@ This returns the standard PHP upload array:
 ]
 ```
 
-To preserve consistency with the rest of the framework, you usually wrap this access inside a **DTO**, so validation and structure stay clean.
+Framework-aren gainerakoarekin koherentzia mantentzeko, normalean sarbide hau **DTO** baten barruan biltzen duzu, balidazioa eta egitura garbi mantentzeko.
 
 ---
 
-# 2. Creating a DTO for File Uploads
+# 2. Fitxategien igoeretarako DTO bat sortzea
 
-DTOs can accept any request parameter, including files.
-Since uploaded files do not come from headers or filters, you read them directly from `ORequest` inside the DTO constructor.
+DTOek edozein eskaera parametro onar dezakete, fitxategiak barne.
+Igotako fitxategiak ez direnez goiburuetatik edo iragazkietatik datoz, zuzenean irakurtzen dituzu DTO eraikitzailearen barruko `ORequest`-etik.
 
-Example DTO:
+DTO adibidea:
 
 ```php
 <?php declare(strict_types=1);
@@ -61,10 +61,10 @@ class PhotoUploadDTO extends ODTO {
   public function __construct(ORequest $req) {
     parent::__construct($req);
 
-    // Load the uploaded file
+    // Kargatu igotako fitxategia
     $this->photo = $req->getFile('photo');
 
-    // Validate file presence
+    // Balioztatu fitxategiaren presentzia
     if ($this->photo === null || $this->photo['error'] !== 0) {
       $this->validation_errors[] = "A valid file is required.";
     }
@@ -72,17 +72,17 @@ class PhotoUploadDTO extends ODTO {
 }
 ```
 
-### Notes:
+### Oharrak:
 
-- `required: true` ensures the DTO will be invalid if the file is missing
-- `getFile('photo')` retrieves the upload
-- You can extend validation (file size, mime type, etc.)
+- `required: true`-k DTO baliogabea izango dela ziurtatzen du fitxategia falta bada
+- `getFile('photo')`-k igoera berreskuratzen du
+- Balidazioa luzatu dezakezu (fitxategiaren tamaina, mime mota, etab.)
 
 ---
 
-# 3. Creating the Upload Component
+# 3. Igoera Osagaia Sortzea
 
-The component receives the DTO and processes the uploaded file.
+Osagaiak DTO jasotzen du eta igotako fitxategia prozesatzen du.
 
 ```php
 <?php declare(strict_types=1);
@@ -104,50 +104,50 @@ class UploadPhotoComponent extends OComponent {
       return;
     }
 
-    // Access uploaded file data
+    // Igotako fitxategiaren datuak atzitu
     $file = $dto->photo;
 
-    // Generate a destination file path
+    // Helmugako fitxategiaren bide bat sortu
     $new_name = uniqid("photo_") . "_" . basename($file['name']);
     $upload_dir = $this->getConfig()->getDir('uploads');
     $dest = $upload_dir . $new_name;
 
-    // Move the uploaded file
+    // Igotako fitxategia mugitu
     if (!move_uploaded_file($file['tmp_name'], $dest)) {
       $this->status = 'error';
-      $this->message = 'Failed to store file.';
+      $this->message = 'Fitxategia gordetzea huts egin du.';
       return;
     }
 
     $this->filename = $new_name;
-    $this->message = 'File uploaded successfully.';
+    $this->message = 'Fitxategia arrakastaz igo da.';
   }
 }
 ```
 
-### Key points:
+### Puntu garrantzitsuak:
 
-- `run()` receives a `PhotoUploadDTO`
-- The DTO ensures validity
-- `move_uploaded_file()` stores the file safely
-- You should store uploads in a configured directory (`uploads` or similar)
-- Components remain clean and readable
-
----
-
-# 4. HTML Form Example
-
-When consuming this endpoint from a web page:
-
-### Important:
-
-`enctype="multipart/form-data"` is required for PHP to populate `$_FILES`.
+- `run()`-k `PhotoUploadDTO` bat jasotzen du
+- DTO-k baliozkotasuna bermatzen du
+- `move_uploaded_file()`-k fitxategia segurtasunez gordetzen du
+- Igoerak konfiguratutako direktorio batean gorde behar dituzu (`uploads` edo antzekoa)
+- Osagaiak garbi eta irakurgarri mantentzen dira
 
 ---
 
-# 5. Defining the Route
+# 4. HTML formularioaren adibidea
 
-Add a route that receives a POST request and maps to your upload component:
+Web orrialde batetik amaierako puntu hau kontsumitzean:
+
+### Garrantzitsua:
+
+`enctype="multipart/form-data"` beharrezkoa da PHP-k `$_FILES` betetzeko.
+
+---
+
+# 5. Ibilbidea definitzea
+
+Gehitu POST eskaera bat jasotzen duen eta zure igoera osagaiarekin mapatzen duen ibilbide bat:
 
 ```php
 use Osumi\OsumiFramework\Routing\ORoute;
@@ -156,7 +156,7 @@ use Osumi\OsumiFramework\App\Module\Api\UploadPhoto\UploadPhotoComponent;
 ORoute::post('/api/upload-photo', UploadPhotoComponent::class);
 ```
 
-If the upload requires authentication, simply add your filter:
+Kargatzeak autentifikazioa behar badu, gehitu zure iragazkia:
 
 ```php
 ORoute::post('/api/upload-photo', UploadPhotoComponent::class, [LoginFilter::class]);
@@ -164,9 +164,9 @@ ORoute::post('/api/upload-photo', UploadPhotoComponent::class, [LoginFilter::cla
 
 ---
 
-# 6. Example JSON Response Template
+# 6. JSON Erantzun Txantiloiaren Adibidea
 
-If your component uses a `.json` template, the output might be:
+Zure osagaiak `.json` txantiloi bat erabiltzen badu, irteera hau izan daiteke:
 
 ```json
 {
@@ -178,75 +178,75 @@ If your component uses a `.json` template, the output might be:
 
 ---
 
-# 7. Extending Validation
+# 7. Baliozkotzea Hedatzea
 
-Common validation patterns include:
+Baliozkotze eredu ohikoenak hauek dira:
 
-### Allowed extensions:
+### Onartutako luzapenak:
 
 ```php
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 if (!in_array($ext, ['png','jpg','jpeg'])) {
-  $this->validation_errors[] = "Invalid file extension.";
+  $this->validation_errors[] = "Fitxategi-luzapen baliogabea.";
 }
 ```
 
-### Max file size:
+### Fitxategiaren gehienezko tamaina:
 
 ```php
 if ($file['size'] > 2 * 1024 * 1024) { // 2MB
-  $this->validation_errors[] = "File is too large.";
+$this->validation_errors[] = "Fitxategia handiegia da.";
 }
 ```
 
-### Valid MIME types:
+### MIME mota baliodunak:
 
 ```php
 $allowed = ['image/png','image/jpeg'];
 if (!in_array($file['type'], $allowed)) {
-  $this->validation_errors[] = "Invalid file type.";
+  $this->validation_errors[] = "Fitxategi mota baliogabea.";
 }
 ```
 
-You can store these rules inside a dedicated service to keep DTOs clean.
+Arauak zerbitzu dedikatu batean gorde ditzakezu DTOak garbi mantentzeko.
 
 ---
 
-# 8. Storing File Metadata in Models
+# 8. Fitxategien metadatuak modeloetan gordetzea
 
-If you want to store upload info in a database:
+Kargatzeko informazioa datu-base batean gorde nahi baduzu:
 
 ```php
 $photo = new Photo();
 $photo->filename = $new_name;
-$photo->user_id = $userId; // if using LoginFilter
+$photo->user_id = $userId; // LoginFilter erabiltzen bada
 $photo->save();
 ```
 
-This is usually done inside a service rather than directly in a component.
+Hau normalean zerbitzu baten barruan egiten da, osagai batean zuzenean baino.
 
 ---
 
-# 9. Best Practices
+# 9. Praktika Onenak
 
-- **Use DTOs** to validate uploaded files
-- **Use services** for file‑related logic if it grows (resizing images, generating thumbnails, etc.)
-- **Never trust client‑provided metadata** (always inspect MIME type, extension, size)
-- **Keep upload directories outside of public access** unless files need to be exposed
-- **Name files uniquely** to avoid overwriting user files
-- **Use filters** if only authenticated users may upload files
+- **Erabili DTOak** igotako fitxategiak balioztatzeko
+- **Erabili zerbitzuak** fitxategiekin lotutako logikarentzat hazten bada (irudien tamaina aldatzea, miniaturak sortzea, etab.)
+- **Ez fidatu inoiz bezeroak emandako metadatuetan** (beti ikuskatu MIME mota, luzapena, tamaina)
+- **Mantendu igotzeko direktorioak sarbide publikotik kanpo** fitxategiak agerian egon behar ez badira
+- **Eman izena fitxategiei modu bakarrean** erabiltzaileen fitxategiak gainidatzi ez daitezen
+- **Erabili iragazkiak** autentifikatutako erabiltzaileek soilik fitxategiak igo ditzakete
 
 ---
 
-# 10. Summary
+# 10. Laburpena
 
-To implement uploads in Osumi Framework:
+Igoerak Osumi Framework-en inplementatzeko:
 
-1.  Create a **DTO** to receive and validate the file
-2.  Create a **component** to process and store it
-3.  Add a **route** pointing to the component
-4.  Use `ORequest->getFile(name)` to access uploaded files
-5.  Store them using `move_uploaded_file()`
-6.  Add authentication filters if necessary
+1. Sortu **DTO** bat fitxategia jasotzeko eta balioztatzeko
+2. Sortu **osagai** bat prozesatu eta gordetzeko
+3. Gehitu **ibilbide** bat osagaira seinalatzen duena
+4. Erabili `ORequest->getFile(izena)` igotako fitxategietara sartzeko
+5. Gorde itzazu `move_uploaded_file()` erabiliz
+6. Gehitu autentifikazio iragazkiak beharrezkoa bada
 
-This approach keeps your upload logic consistent with the framework’s design: clean, modular, and predictable.
+Ikuspegi honek zure igotzeko logika framework-aren diseinuarekin koherentea mantentzen du: garbia, modularra eta aurreikusgarria.

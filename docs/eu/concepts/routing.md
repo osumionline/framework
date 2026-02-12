@@ -1,6 +1,6 @@
 # Bideratzea
 
-Osumi Framework-en bideratzea `ORoute` klaseak kudeatzen du. Sarrerako HTTP eskaerak (URLak) ekintza gisa jokatzen duten osagai espezifikoetara mapatzen ditu.
+**Osumi Framework**-en bideratzea `ORoute` klaseak kudeatzen du. Sarrerako HTTP eskaerak (URLak) ekintza gisa jokatzen duten osagai espezifikoetara mapatzen ditu.
 
 Ibilbideak normalean `src/Routes/` direktorioan dauden PHP fitxategietan definitzen dira. Karpeta honetan hainbat fitxategi sor ditzakezu zure ibilbideak logikoki antolatzeko (adibidez, fitxategi bat modulu bakoitzeko).
 

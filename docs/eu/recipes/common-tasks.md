@@ -1,24 +1,24 @@
-# Common Tasks
+# Zeregin Arruntak
 
-This document describes **common, real-world tasks** in Osumi Framework and the **recommended (canonical) way** to solve them.
+Dokumentu honek Osumi Framework-eko **ohiko zeregin errealak** eta horiek konpontzeko **gomendatutako (kanonikoa)** modua deskribatzen ditu.
 
-If multiple approaches are possible, only the idiomatic Osumi Framework solution is shown.
+Hainbat ikuspegi posible badira, Osumi Framework-eko irtenbide idiomatikoa bakarrik erakusten da.
 
-All examples assume:
+Adibide guztiek honako hau suposatzen dute:
 
 - PHP 8.3+
 - `declare(strict_types=1);`
-- Proper namespaces
+- Izen-espazio egokiak
 
 ---
 
-# 1. Create a Simple JSON Endpoint
+# 1. JSON amaiera-puntu sinple bat sortu
 
-## Goal
+## Helburua
 
-Return JSON from `/api/ping`.
+JSON `/api/ping`-tik itzuli.
 
-### Route
+### Ibilbidea
 
 ```php
 use Osumi\OsumiFramework\Routing\ORoute;
@@ -27,7 +27,7 @@ use Osumi\OsumiFramework\App\Module\Api\Ping\PingComponent;
 ORoute::get('/api/ping', PingComponent::class);
 ```
 
-### Component
+### Osagaia
 
 ```php
 class PingComponent extends OComponent {
@@ -35,7 +35,7 @@ class PingComponent extends OComponent {
 }
 ```
 
-### Template (`PingTemplate.json`)
+### Txantiloia (`PingTemplate.json`)
 
 ```json
 {
@@ -45,11 +45,11 @@ class PingComponent extends OComponent {
 
 ---
 
-# 2. Receive Input Using a DTO
+# 2. Jaso Sarrera DTO bat Erabiliz
 
-## Goal
+## Helburua
 
-Create a user using validated input.
+Sortu erabiltzaile bat balioztatutako sarrera erabiliz.
 
 ### DTO
 
@@ -63,7 +63,7 @@ class CreateUserDTO extends ODTO {
 }
 ```
 
-### Component
+### Osagaia
 
 ```php
 class CreateUserComponent extends OComponent {
@@ -85,19 +85,19 @@ class CreateUserComponent extends OComponent {
 
 ---
 
-# 3. Protect an Endpoint with Authentication
+# 3. Babestu amaiera-puntua autentifikazioarekin
 
-## Goal
+## Helburua
 
-Only authenticated users may access `/api/profile`.
+Autentifikatutako erabiltzaileek bakarrik sar daitezke `/api/profile`-ra.
 
-### Route
+### Ibilbidea
 
 ```php
 ORoute::get('/api/profile', ProfileComponent::class, [LoginFilter::class]);
 ```
 
-### Access Filter Data
+### Sarbide Iragazki Datuak
 
 ```php
 public function run(ORequest $req): void {
@@ -108,19 +108,19 @@ public function run(ORequest $req): void {
 
 ---
 
-# 4. Read a URL Parameter
+# 4. URL Parametro bat Irakurri
 
-## Goal
+## Helburua
 
-Access `/user/:id`.
+Sarbide `/user/:id`.
 
-### Route
+### Ibilbidea
 
 ```php
 ORoute::get('/user/:id', UserComponent::class);
 ```
 
-### Component
+### Osagaia
 
 ```php
 public function run(ORequest $req): void {
@@ -131,13 +131,13 @@ public function run(ORequest $req): void {
 
 ---
 
-# 5. Use a Service Inside a Component
+# 5. Zerbitzu bat Erabili Osagai Baten Barruan
 
-## Goal
+## Helburua
 
-Move business logic out of the component.
+Negozio logika osagaitik kanpora eraman.
 
-### Service
+### Zerbitzua
 
 ```php
 class UserService extends OService {
@@ -147,7 +147,7 @@ class UserService extends OService {
 }
 ```
 
-### Component
+### Osagaia
 
 ```php
 class UsersComponent extends OComponent {
@@ -167,32 +167,32 @@ class UsersComponent extends OComponent {
 
 ---
 
-# 6. Save or Update a Model
+# 6. Eredu bat gorde edo eguneratu
 
-## Goal
+## Helburua
 
-Insert or update automatically using `save()`.
+Txertatu edo eguneratu automatikoki `save()` erabiliz.
 
 ```php
 $user = new User();
 $user->name = 'Alice';
 $user->email = 'alice@mail.com';
-$user->save(); // INSERT
+$user->save(); // TXERTATU
 
 $user = User::findOne(['id' => 1]);
-$user->name = 'Updated Name';
-$user->save(); // UPDATE
+$user->izena = 'Eguneratutako izena';
+$user->save(); // EGUNERATU
 ```
 
 ---
 
-# 7. Return a List of Models (JSON)
+# 7. Itzuli Modeloen Zerrenda bat (JSON)
 
-## Goal
+## Helburua
 
-Return users using a Model Component.
+Erabiltzaileak Modelo Osagai bat erabiliz itzuli.
 
-### Inside Component
+### Osagaiaren Barruan
 
 ```php
 public ?UserListComponent $list = null;
@@ -203,7 +203,7 @@ public function run(): void {
 }
 ```
 
-### Template
+### Txantiloia
 
 ```json
 {
@@ -215,11 +215,11 @@ public function run(): void {
 
 ---
 
-# 8. Handle File Upload
+# 8. Fitxategien Igoera Kudeatu
 
-## Goal
+## Helburua
 
-Upload a file securely.
+Fitxategi bat modu seguruan igo.
 
 ### DTO
 
@@ -235,7 +235,7 @@ class UploadDTO extends ODTO {
 }
 ```
 
-### Component
+### Osagaia
 
 ```php
 public function run(UploadDTO $dto): void {
@@ -249,11 +249,11 @@ public function run(UploadDTO $dto): void {
 
 ---
 
-# 9. Use a Custom Layout
+# 9. Erabili diseinu pertsonalizatua
 
-## Goal
+## Helburua
 
-Apply a layout to a group of routes.
+Ibilbide talde bati diseinu bat aplikatu.
 
 ```php
 ORoute::layout(MainLayoutComponent::class, function() {
@@ -261,7 +261,7 @@ ORoute::layout(MainLayoutComponent::class, function() {
 });
 ```
 
-Or combine prefix + layout:
+Edo konbinatu aurrizkia + diseinua:
 
 ```php
 ORoute::group('/admin', AdminLayoutComponent::class, function() {
@@ -269,16 +269,16 @@ ORoute::group('/admin', AdminLayoutComponent::class, function() {
 });
 ```
 
-Layouts wrap the rendered component output and receive:
+Diseinuek errendatutako osagaiaren irteera biltzen dute eta hau jasotzen dute:
 
 - `title`
 - `body`
 
 ---
 
-# 10. Handle Validation Errors Properly
+# 10. Balidazio erroreak behar bezala kudeatu
 
-## DTO Validation
+## DTO balidazioa
 
 ```php
 if (!$dto->isValid()) {
@@ -288,7 +288,7 @@ if (!$dto->isValid()) {
 }
 ```
 
-## Model Not Found
+## Modeloa Ez Da Aurkitu
 
 ```php
 $user = User::findOne(['id' => $id]);
@@ -300,15 +300,15 @@ if (is_null($user)) {
 
 ---
 
-# Summary
+# Laburpena
 
-These recipes show the **canonical way** to perform common tasks in Osumi Framework:
+Errezeta hauek Osumi Framework-en ohiko zereginak egiteko **modu kanonikoa** erakusten dute:
 
-- Use DTOs for input validation
-- Use Filters for authentication
-- Use Services for business logic
-- Keep Components thin
-- Use Model Components for JSON representation
-- Apply Layouts via routing
+- Erabili DTOak sarrera baliozkotzeko
+- Erabili Iragazkiak autentifikaziorako
+- Erabili Zerbitzuak negozio logikarako
+- Mantendu Osagaiak meheak
+- Erabili Modelo Osagaiak JSON irudikapenerako
+- Aplikatu Diseinuak bideratze bidez
 
-Follow these patterns for consistent, predictable applications.
+Jarraitu eredu hauek aplikazio koherente eta aurreikusgarriak lortzeko.

@@ -1,78 +1,78 @@
-# ORM Attributes Reference
+# ORM Atributuen Erreferentzia
 
-In Osumi Framework, database mappings are defined using PHP Attributes on model class properties. This document details all available attributes, their parameters, and expected behaviors.
+Osumi Framework-en, datu-baseen mapaketak PHP Atributuak erabiliz definitzen dira modelo klaseko propietateetan. Dokumentu honek eskuragarri dauden atributu guztiak, haien parametroak eta espero diren portaerak zehazten ditu.
 
 ---
 
 ## `#[OPK]`
 
-Defines a Primary Key field. Every model must have at least one.
+Lehen Mailako Gako eremu bat definitzen du. Modelo guztiek gutxienez bat izan behar dute.
 
-| Parameter  | Type     | Default          | Description                                      |
-| :--------- | :------- | :--------------- | :----------------------------------------------- |
-| `type`     | `string` | `OField::NUMBER` | Data type (see Types below).                     |
-| `incr`     | `bool`   | `true`           | Whether the field is auto-incremental.           |
-| `comment`  | `string` | `''`             | Comment for the database column.                 |
-| `ref`      | `string` | `''`             | Foreign key reference (format: `'table.field'`). |
-| `nullable` | `bool`   | `true`           | Whether the field can store `null` values.       |
-| `default`  | `mixed`  | `null`           | Default value for the column.                    |
+| Parametroa | Mota     | Lehenetsia       | Deskribapena                                              |
+| :--------- | :------- | :--------------- | --------------------------------------------------------- |
+| `type`     | `string` | `OField::NUMBER` | Datu mota (ikus beheko Motak).                            |
+| `incr`     | `bool`   | `true`           | Eremua auto-inkrementala den ala ez.                      |
+| `comment`  | `string` | `''`             | Datu-baseko zutabearen iruzkina.                          |
+| `ref`      | `string` | `''`             | Atzerriko gako erreferentzia (formatua: `'table.field'`). |
+| `nullable` | `bool`   | `true`           | Eremuak `null` balioak gorde ditzakeen ala ez.            |
+| `default`  | `mixed`  | `null`           | Zutabearen balio lehenetsia.                              |
 
 ---
 
 ## `#[OField]`
 
-Defines a standard database column.
+Datu-baseko zutabe estandar bat definitzen du.
 
-| Parameter  | Type     | Default | Description                                               |
-| :--------- | :------- | :------ | :-------------------------------------------------------- |
-| `type`     | `string` | `null`  | Data type (Mandatory).                                    |
-| `nullable` | `bool`   | `true`  | Whether the field can store `null` values.                |
-| `default`  | `mixed`  | `null`  | Default value for the column.                             |
-| `max`      | `int`    | `50`    | Maximum size/length for the field.                        |
-| `comment`  | `string` | `''`    | Comment for the database column.                          |
-| `visible`  | `bool`   | `true`  | Whether the field is included when serializing the model. |
-| `ref`      | `string` | `''`    | Foreign key reference (format: `'table.field'`).          |
+| Parametroa | Mota     | Lehenetsia | Deskribapena                                              |
+| :--------- | :------- | :--------- | --------------------------------------------------------- |
+| `type`     | `string` | `null`     | Datu mota (Derrigorrezkoa).                               |
+| `nullable` | `bool`   | `true`     | Eremuak `null` balioak gorde ditzakeen ala ez.            |
+| `default`  | `mixed`  | `null`     | Zutabearen balio lehenetsia.                              |
+| `max`      | `int`    | `50`       | Eremuaren gehienezko tamaina/luzera.                      |
+| `comment`  | `string` | `''`       | Datu-baseko zutabearen iruzkina.                          |
+| `visible`  | `bool`   | `true`     | Eremua eredua serializatzean sartzen den ala ez.          |
+| `ref`      | `string` | `''`       | Atzerriko gako erreferentzia (formatua: `'table.field'`). |
 
 ---
 
-## Temporal Attributes
+## Denborazko Atributuak
 
-These attributes handle automatic timestamping. Each model **must** have exactly one `#[OCreatedAt]` and one `#[OUpdatedAt]`.
+Atributu hauek denbora-zigilu automatikoa kudeatzen dute. Eredu bakoitzak `#[OCreatedAt]` bat eta `#[OUpdatedAt]` bat izan behar ditu.
 
 ### `#[OCreatedAt]`
 
-Automatically set when a record is first created (INSERT).
+Erregistro bat lehen aldiz sortzen denean automatikoki ezartzen da (INSERT).
 
-- **Parameter**: `comment` (string) - Column comment.
+- **Parametroa**: `comment` (string) - Zutabearen iruzkina.
 
 ### `#[OUpdatedAt]`
 
-Automatically updated whenever the record is modified (UPDATE).
+Erregistroa aldatzen den bakoitzean automatikoki eguneratzen da (UPDATE).
 
-- **Parameter**: `comment` (string) - Column comment.
+- **Parametroa**: `comment` (string) - Zutabearen iruzkina.
 
 ### `#[ODeletedAt]`
 
-Used for soft-delete functionality (tracking when a record was "removed").
+Ezabatze leunaren funtzionalitaterako erabiltzen da (erregistro bat noiz "kendu" den jarraipena egitea).
 
-- **Parameter**: `comment` (string) - Column comment.
-
----
-
-## Data Types (`OField` Constants)
-
-When defining `type` in `#[OPK]` or `#[OField]`, use these constants from the `Osumi\OsumiFramework\ORM\OField` class:
-
-- `OField::NUMBER`: Integer values.
-- `OField::TEXT`: Short strings (usually mapped to `VARCHAR`).
-- `OField::LONGTEXT`: Large text blocks (usually mapped to `LONGTEXT`).
-- `OField::FLOAT`: Floating-point numbers.
-- `OField::BOOL`: Boolean values.
-- `OField::DATE`: Date/Time strings.
+- **Parametroa**: `comment` (katea) - Zutabearen iruzkina.
 
 ---
 
-## Usage Example
+## Datu Motak (`OField` Konstanteak)
+
+`#[OPK]` edo `#[OField]`-n `type` definitzerakoan, erabili `Osumi\OsumiFramework\ORM\OField` klaseko konstante hauek:
+
+- `OField::NUMBER`: Balio osoak.
+- `OField::TEXT`: Kate laburrak (normalean `VARCHAR`-era mapatzen dira).
+- `OField::LONGTEXT`: Testu bloke handiak (normalean `LONGTEXT`-era mapatzen dira).
+- `OField::FLOAT`: Koma mugikorreko zenbakiak.
+- `OField::BOOL`: Balio boolearrak.
+- `OField::DATE`: Data/Ordu kateak.
+
+---
+
+## Erabilera Adibidea
 
 ```php
 use Osumi\OsumiFramework\ORM\OModel;
@@ -82,19 +82,19 @@ use Osumi\OsumiFramework\ORM\OCreatedAt;
 use Osumi\OsumiFramework\ORM\OUpdatedAt;
 
 class Product extends OModel {
-    #[OPK(comment: 'Unique product ID')]
+    #[OPK(comment: 'Produktuaren ID bakarra')]
     public ?int $id = null;
 
-    #[OField(type: OField::TEXT, max: 150, nullable: false, comment: 'Product name')]
+    #[OField(type: OField::TEXT, max: 150, nullable: false, comment: 'Produktuaren izena')]
     public ?string $name = null;
 
-    #[OField(type: OField::NUMBER, ref: 'category.id', comment: 'Link to category')]
+    #[OField(type: OField::NUMBER, ref: 'category.id', comment: 'Kategoriara esteka')]
     public ?int $id_category = null;
 
-    #[OCreatedAt(comment: 'Creation timestamp')]
+    #[OCreatedAt(comment: 'Sorkuntzaren denbora-zigilua')]
     public ?string $created_at = null;
 
-    #[OUpdatedAt(comment: 'Last update timestamp')]
+    #[OUpdatedAt(comment: 'Azken eguneratzearen denbora-zigilua')]
     public ?string $updated_at = null;
 }
 
@@ -102,10 +102,10 @@ class Product extends OModel {
 
 ---
 
-## Validation Logic
+## Balidazio Logika
 
-The `OModel` base class uses these attributes during the `save()` process:
+`OModel` oinarrizko klaseak atributu hauek erabiltzen ditu `save()` prozesuan:
 
-1. **Length Check**: If a property string exceeds the `max` value, an exception is thrown.
-2. **Nullability**: If a property is `null` but `nullable` is set to `false`, an exception is thrown.
-3. **Primary Key**: Ensures at least one `#[OPK]` is defined before proceeding.
+1. **Luzeraren egiaztapena**: Propietate-kate batek `max` balioa gainditzen badu, salbuespen bat botatzen da.
+2. **Nullability**: Propietate bat `null` bada baina `nullable` `false` baliora ezartzen bada, salbuespen bat botatzen da.
+3. **Lehen mailako giltza**: Gutxienez `#[OPK]` bat definituta dagoela ziurtatzen du jarraitu aurretik.

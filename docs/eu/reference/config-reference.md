@@ -1,36 +1,36 @@
-# Configuration Reference
+# Konfigurazio Erreferentzia
 
-This document provides a comprehensive list of all configuration options available in the framework. Each option is described with its default value and a brief explanation.
+Dokumentu honek esparruan eskuragarri dauden konfigurazio aukera guztien zerrenda osoa eskaintzen du. Aukera bakoitza bere balio lehenetsiarekin eta azalpen labur batekin deskribatzen da.
 
-| Option Name          | Default Value        | Description                                                 |
-| -------------------- | -------------------- | ----------------------------------------------------------- |
-| `name`               | `Osumi`              | The name of the application.                                |
-| `environment`        | (empty string)       | The environment name (e.g., `development`, `production`).   |
-| `log.level`          | `DEBUG`              | The logging level (e.g., `DEBUG`, `INFO`, `WARN`, `ERROR`). |
-| `log.max_file_size`  | `50`                 | Maximum size (in MB) for log files.                         |
-| `log.max_num_files`  | `3`                  | Maximum number of log files to keep.                        |
-| `use_session`        | `false`              | Whether to use sessions.                                    |
-| `allow_cross_origin` | `true`               | Whether to allow Cross-Origin Resource Sharing (CORS).      |
-| `db.driver`          | `mysql`              | The database driver (e.g., `mysql`, `pgsql`).               |
-| `db.user`            | (empty string)       | The database username.                                      |
-| `db.pass`            | (empty string)       | The database password.                                      |
-| `db.host`            | (empty string)       | The database host.                                          |
-| `db.name`            | (empty string)       | The database name.                                          |
-| `db.charset`         | `utf8mb4`            | The database character set.                                 |
-| `db.collate`         | `utf8mb4_unicode_ci` | The database collation.                                     |
-| `urls.base`          | (empty string)       | The base URL of the application.                            |
-| `cookie_prefix`      | (empty string)       | Prefix for cookies.                                         |
-| `cookie_url`         | (empty string)       | URL for cookies.                                            |
-| `error_pages.403`    | `null`               | URL for the 403 error page.                                 |
-| `error_pages.404`    | `null`               | URL for the 404 error page.                                 |
-| `error_pages.500`    | `null`               | URL for the 500 error page.                                 |
-| `default_title`      | (empty string)       | Default title for the application.                          |
-| `admin_email`        | (empty string)       | Administrator email address.                                |
-| `mailing_from`       | (empty string)       | Email address used for sending emails.                      |
-| `lang`               | `es`                 | Default language for the application.                       |
-| `css_list`           | `[]`                 | List of CSS files to include.                               |
-| `ext_css_list`       | `[]`                 | List of external CSS files to include.                      |
-| `js_list`            | `[]`                 | List of JavaScript files to include.                        |
-| `ext_js_list`        | `[]`                 | List of external JavaScript files to include.               |
-| `libs`               | `[]`                 | List of libraries to include.                               |
-| `extras`             | `[]`                 | Additional configuration options.                           |
+| Aukeraren Izena      | Balio Lehenetsia     | Deskribapena                                                     |
+| -------------------- | -------------------- | ---------------------------------------------------------------- |
+| `name`               | `Osumi`              | Aplikazioaren izena.                                             |
+| `environment`        | (kate hutsa)         | Ingurunearen izena (adibidez, `development`, `production`).      |
+| `log.level`          | `DEBUG`              | Erregistro maila (adibidez, `DEBUG`, `INFO`, `WARN`, `ERROR`).   |
+| `log.max_file_size`  | `50`                 | Erregistro fitxategien gehienezko tamaina (MB-tan).              |
+| `log.max_num_files`  | `3`                  | Gorde beharreko erregistro fitxategi kopuru maximoa.             |
+| `use_session`        | `false`              | Saioak erabili ala ez.                                           |
+| `allow_cross_origin` | `true`               | Jatorri Anitzeko Baliabideen Partekatzea (CORS) baimendu ala ez. |
+| `db.driver`          | `mysql`              | Datu-basearen kontrolatzailea (adibidez, `mysql`, `pgsql`).      |
+| `db.user`            | (kate hutsa)         | Datu-basearen erabiltzaile-izena.                                |
+| `db.pass`            | (kate hutsa)         | Datu-basearen pasahitza.                                         |
+| `db.host`            | (kate hutsa)         | Datu-basearen ostalaria.                                         |
+| `db.name`            | (kate hutsa)         | Datu-basearen izena.                                             |
+| `db.charset`         | `utf8mb4`            | Datu-basearen karaktere-multzoa.                                 |
+| `db.collate`         | `utf8mb4_unicode_ci` | Datu-basearen ordenazioa.                                        |
+| `urls.base`          | (kate hutsa)         | Aplikazioaren oinarrizko URLa.                                   |
+| `cookie_prefix`      | (kate hutsa)         | Cookien aurrizkia.                                               |
+| `cookie_url`         | (kate hutsa)         | Cookien URLa.                                                    |
+| `error_pages.403`    | `null`               | 403 errore orriaren URLa.                                        |
+| `error_pages.404`    | `null`               | 404 errore orriaren URLa.                                        |
+| `error_pages.500`    | `null`               | 500 errore orriaren URLa.                                        |
+| `default_title`      | (kate hutsa)         | Aplikazioaren izenburu lehenetsia.                               |
+| `admin_email`        | (kate hutsa)         | Administratzailearen helbide elektronikoa.                       |
+| `mailing_from`       | (kate hutsa)         | Mezu elektronikoak bidaltzeko erabilitako helbide elektronikoa.  |
+| `lang`               | `es`                 | Aplikazioaren hizkuntza lehenetsia.                              |
+| `css_list`           | `[]`                 | Sartu beharreko CSS fitxategien zerrenda.                        |
+| `ext_css_list`       | `[]`                 | Sartu beharreko kanpoko CSS fitxategien zerrenda.                |
+| `js_list`            | `[]`                 | Sartu beharreko JavaScript fitxategien zerrenda.                 |
+| `ext_js_list`        | `[]`                 | Sartu beharreko kanpoko JavaScript fitxategien zerrenda.         |
+| `libs`               | `[]`                 | Sartu beharreko liburutegien zerrenda.                           |
+| `extras`             | `[]`                 | Konfigurazio aukera gehigarriak.                                 |

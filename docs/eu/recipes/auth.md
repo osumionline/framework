@@ -1,40 +1,40 @@
-# Authentication (Auth) — Recipes & Best Practices
+# Autentifikazioa (Auth) — Errezetak eta Praktika Onenak
 
-Authentication in **Osumi Framework** is typically implemented using:
+**Osumi Framework**-en autentifikazioa normalean honako hauek erabiliz ezartzen da:
 
-- **A login endpoint** that validates user credentials and issues a **token**
-- **A filter** (e.g., `LoginFilter`) that validates the token on every protected route
-- **DTOs** to safely process incoming authentication data
-- **Services** to keep authentication logic reusable and clean
-- **Routes** configured to apply authentication filters before running components
+- Erabiltzailearen kredentzialak balioztatzen dituen eta **token** bat jaulkitzen duen **Saioa hasteko amaiera-puntu bat**
+- Babestutako ibilbide guztietan tokena balioztatzen duen **iragazki bat** (adibidez, `LoginFilter`)
+- Sarrerako autentifikazio-datuak modu seguruan prozesatzeko **DTOak**
+- Autentifikazio-logika berrerabilgarria eta garbia mantentzeko **Zerbitzuak**
+- Osagaiak exekutatu aurretik autentifikazio-iragazkiak aplikatzeko konfiguratutako **Ibilbideak**
 
-This document provides practical recipes for implementing a complete authentication workflow.
+Dokumentu honek autentifikazio-fluxu oso bat ezartzeko errezeta praktikoak eskaintzen ditu.
 
 ---
 
-# 1. Protecting Routes Using Filters
+# 1. Ibilbideak Iragazkiak Erabiliz Babestea
 
-The most common method of securing endpoints is adding a filter to the route definition.
+Amaiera-puntuak babesteko metodo ohikoena ibilbidearen definizioari iragazki bat gehitzea da.
 
-According to your routing system, filters can be specified like this:
+Zure bideratze-sistemaren arabera, iragazkiak honela zehaztu daitezke:
 
 ```php
 ORoute::post('/profile', ProfileComponent::class, [LoginFilter::class]);
 ```
 
-When the route is accessed:
+Ibilbidea atzitzen denean:
 
-1.  The router identifies the endpoint
-2.  Before running the component, the filter chain is executed
-3.  If any filter returns `"status" !== "ok"`, the request **never reaches the component**, returning **403 Forbidden** or redirecting if `"return"` is set
+1. Bideratzaileak amaiera-puntua identifikatzen du
+2. Osagaia exekutatu aurretik, iragazki-katea exekutatzen da
+3. Iragazkiren batek `"status" !== "ok"` itzultzen badu, eskaerak **ez du inoiz osagaira iristen**, **403 Debekatuta** itzuliz edo `"return"` ezarrita badago birbideratuz
 
-This ensures only authenticated users reach protected logic.
+Horrek ziurtatzen du autentifikatutako erabiltzaileek bakarrik iristen direla babestutako logikara.
 
 ---
 
-# 2. Creating the Login Filter
+# 2. Saioa Hasteko Iragazkia Sortzea
 
-A filter looks like this:
+Iragazki batek honelako itxura du:
 
 ```php
 class LoginFilter {
@@ -54,28 +54,28 @@ class LoginFilter {
 }
 ```
 
-This filter:
+Iragazki honek:
 
-- Reads the `Authorization` header
-- Validates a token
-- If valid → returns `"status" => "ok"` and the authenticated user ID
-- If invalid → returns `"error"` and stops the request
+- `Authorization` goiburua irakurtzen du
+- Token bat balioztatzen du
+- Baliozkoa bada → `"status" => "ok"` eta autentifikatutako erabiltzaile IDa itzultzen ditu
+- Baliogabezkoa bada → `"error"` itzultzen du eta eskaera gelditzen du
 
-Token‑derived values (like `id`) can later be consumed by components or DTOs.
+Tokenetik eratorritako balioak (`id` bezala) geroago osagaiek edo DTOek kontsumi ditzakete.
 
 ---
 
-# 3. Creating the Login Endpoint (Issuing Tokens):
+# 3. Saioa Hasteko Amaierako Puntua Sortzea (Tokenak Jaulkitzea):
 
-1.  Receives credentials via a DTO
-2.  Validates them using a service
-3.  Generates a token
-4.  Returns the token to the client
-5.  Client stores token and uses it in the `Authorization` header
+1. Kredentzialak DTO baten bidez jasotzen ditu
+2. Zerbitzu bat erabiliz baliozkotzen ditu
+3. Token bat sortzen du
+4. Tokena bezeroari itzultzen dio
+5. Bezeroak tokena gordetzen du eta `Authorization` goiburuan erabiltzen du
 
-### Example Structure
+### Egitura Adibidea
 
-**DTO for login:**
+**Saioa Hasteko DTO:**
 
 ```php
 class LoginDTO extends ODTO {
@@ -87,7 +87,7 @@ class LoginDTO extends ODTO {
 }
 ```
 
-**AuthService handling the logic:**
+**AuthService logika kudeatzen du:**
 
 ```php
 class AuthService extends OService {
@@ -131,62 +131,60 @@ class LoginComponent extends OComponent {
 }
 ```
 
-The client now includes the token in all subsequent requests:
+Bezeroak orain tokena sartzen du ondorengo eskaera guztietan:
 
-    Authorization: <token>
+    Baimena: <token>
 
 ---
 
-# 4. Using Filter Output in Components
+# 4. Iragazki Irteera Erabiltzea Osagaienetan
 
-Once filters pass, the request object contains filter results:
+Iragazkiak gainditu ondoren, eskaera objektuak iragazki emaitzak ditu:
 
-````php
+```php
 $filter = $req->getFilter('Login');
 ```
 
-Typically you’d do:
+Normalean hau egingo zenuke:
 
 ```php
-$userId = $filter['id']; // authenticated user
-````
+$userId = $filter['id']; // autentifikatutako erabiltzailea
+```
 
-You can then pass the ID to services, load models, and perform business logic securely.
+Ondoren, IDa zerbitzuei pasa diezaiekezu, ereduak kargatu eta negozio logika modu seguruan egin.
 
 ---
 
-# 5. Using Filter Data Inside DTOs
+# 5. Iragazki Datuak Erabiltzea DTOen Barruan
 
-DTOs can automatically receive values from filters:
+DTOek automatikoki jaso ditzakete balioak iragazkietatik:
 
 ```php
 #[ODTOField(filter: 'Login', filterProperty: 'id')]
 public ?int $idUser = null;
 ```
 
-This means:
+Horrek esan nahi du:
 
-- Users cannot spoof their identity
-- DTOs receive the authenticated user ID securely
-- Components do not need to read filter data manually
+- Erabiltzaileek ezin dute beren identitatea faltsutu
+- DTOek autentifikatutako erabiltzaile IDa modu seguruan jasotzen dute
+- Osagaiek ez dute iragazki datuak eskuz irakurri beharrik
 
-citeturn13search2
-
-This greatly simplifies authentication‑dependent endpoints.
+Honek asko errazten ditu autentifikazioaren menpeko amaiera-puntuak.
 
 ---
 
-# 6. Recipe: Creating a Protected Endpoint
+# 6. Errezeta: Babestutako amaiera-puntu bat sortzea
 
-Example: “Get My Cinemas”
+Adibidea: “Lortu nire zinemak”
 
-### Route
+### Ibilbidea
 
 ```php
-ORoute::get('/my-cinemas', GetCinemasComponent::class, [LoginFilter::class]);
+ORoute::get('/nire-zinemak', GetCinemasComponent::class, [LoginFilter::class]);
 ```
 
-### Component
+### Osagaia
 
 ```php
 class GetCinemasComponent extends OComponent {
@@ -215,15 +213,15 @@ class GetCinemasComponent extends OComponent {
 
 ---
 
-# 7. Recipe: Enforcing Permissions
+# 7. Errezeta: Baimenak Betearaztea
 
-You can extend your filter to include role/permission information from the token:
+Zure iragazkia zabaldu dezakezu tokenetik rol/baimen informazioa sartzeko:
 
 ```php
 $ret['role'] = $tk->getParam('role');
 ```
 
-Then in components:
+Ondoren, osagaietan:
 
 ```php
 $filter = $req->getFilter('Login');
@@ -235,46 +233,46 @@ if ($filter['role'] !== 'admin') {
 
 ---
 
-# 8. Recipe: Logging Out
+# 8. Errezeta: Saioa ixtea
 
-Since your auth system is token‑based and stateless:
+Zure autentifikazio sistema tokenetan oinarrituta eta egoerarik gabekoa denez:
 
-- "Logout" is simply deleting the token client‑side
-- Optionally, you may implement a **token blacklist** using cache:
-    - Mark token as invalid in `getCacheContainer()`
-    - Filter checks for blacklisted tokens
-
----
-
-# 9. Best Practices
-
-- **Use DTOs** for login requests
-- **Never trust client‑provided user IDs** — always derive IDs from filters
-- **Keep filters small** (validation only)
-- **Put business logic in services**
-- **Use strong secrets** for tokens (store in config)
-- **Divide logic cleanly**:
-    - Filters → authentication / verification
-    - DTOs → input validation
-    - Services → logic
-    - Components → orchestration and response
+- "Saioa ixtea" bezero aldeko tokena ezabatzea besterik ez da
+- Aukeran, **token zerrenda beltza** inplementa dezakezu cachea erabiliz:
+    - Markatu tokena baliogabetzat `getCacheContainer()`-n
+    - Iragazki bidez egiaztatu zerrenda beltzean dauden tokenak
 
 ---
 
-# 10. Summary
+# 9. Praktika onenak
 
-A full authentication workflow in Osumi Framework usually includes:
+- **Erabili DTOak** saioa hasteko eskaeretarako
+- **Ez fidatu inoiz bezeroak emandako erabiltzaile IDetan** — lortu beti IDak iragazkietatik
+- **Mantendu iragazkiak txikiak** (balioztatzeko soilik)
+- **Jarri negozio logika zerbitzuetan**
+- **Erabili sekretu sendoak** tokenetarako (gorde konfigurazioan)
+- **Zatitu logika garbi**:
+    - Iragazkiak → autentifikazioa / egiaztapena
+    - DTOak → sarreraren balidazioa
+    - Zerbitzuak → logika
+    - Osagaiak → orkestrazioa eta erantzuna
 
-1.  **Login endpoint** issuing tokens
-2.  **LoginFilter** validating tokens for protected routes
-3.  **DTOs** capturing and validating input
-4.  **Services** performing authentication logic
-5.  **Routing** applying filters before components
-6.  **Secure propagation** of authenticated user information via filters and DTOs
+---
 
-This architecture ensures:
+# 10. Laburpena
 
-- Clean separation of responsibilities
-- Easy reuse across endpoints
-- Strong security guarantees
-- Simple and predictable request pipeline
+Osumi Framework-en autentifikazio lan-fluxu oso bat normalean Honako hauek barne hartzen ditu:
+
+1. **Saioa hasteko amaierako puntua** tokenak jaulkitzea
+2. **LoginFilter** tokenak balioztatzea bide babestuetarako
+3. **DTOak** sarrera jasotzea eta balioztatzea
+4. **Zerbitzuak** autentifikazio logika burutzea
+5. **Bideratzea** iragazkiak osagaien aurretik aplikatzea
+6. **Autentifikatutako erabiltzaileen informazioaren hedapen segurua** iragazkien eta DTOen bidez
+
+Arkitektura honek honako hau bermatzen du:
+
+- Ardurak garbi bereiztea
+- Amaiera-puntuen artean berrerabiltzea erraza
+- Segurtasun berme sendoak
+- Eskaera-hodi sinple eta aurreikusgarria
