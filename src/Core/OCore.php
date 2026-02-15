@@ -11,10 +11,11 @@ use Osumi\OsumiFramework\Web\ORequest;
 use Osumi\OsumiFramework\Routing\OUrl;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Log\OLog;
-use \PDO;
-use \ReflectionParameter;
-use \ReflectionClass;
-use \Exception;
+use PDO;
+use ReflectionParameter;
+use ReflectionClass;
+use Exception;
+use Throwable;
 
 /**
  * OCore - Base class for the framework with methods to load required files and start the application
@@ -328,19 +329,10 @@ class OCore {
 	 */
 	private function renderExternal(): string {
 		$ret = '';
-		// Add global external CSS files
-		if (count($this->config->getExtCssList())) {
-			foreach ($this->config->getExtCssList() as $css) {
-				$this->includes['css'][] = $css;
-			}
+		// Add head elements defined in config
+		if (count($this->config->getHeadElements())) {
+			$ret .= $this->buildHeadElements($this->config->getHeadElements());
 		}
-		// Add global external JS files
-		if (count($this->config->getExtJsList())) {
-			foreach ($this->config->getExtJsList() as $js) {
-				$this->includes['js'][] = $js;
-			}
-		}
-
 		// Process CSS files
 		if (count($this->includes['css']) > 0) {
 			foreach ($this->includes['css'] as $css) {
@@ -355,6 +347,51 @@ class OCore {
 		}
 
 		return $ret;
+	}
+
+	/**
+	 * Build HTML elements for the <head> from an array of definitions.
+	 *
+	 * Each element of the array must be another array with the keys:
+	 * - 'item' => tag name (e.g. 'meta', 'link', 'script')
+	 * - 'attributes' => associative array of attributes (e.g. ['rel'=>'icon','href'=>'...'])
+	 *
+	 * For 'script' tags a full opening and closing tag will be generated
+	 * (<script ...></script>), while other tags will be self-closed (<meta ... />).
+	 *
+	 * @param array $items Array of element definitions
+	 *
+	 * @return string Concatenated elements separated by "\n"
+	 */
+	public function buildHeadElements(array $items): string {
+		$ret = [];
+		foreach ($items as $item) {
+			if (!is_array($item)) {
+				continue;
+			}
+			$tag = isset($item['item']) ? strtolower((string)$item['item']) : '';
+			if ($tag === '') {
+				continue;
+			}
+			$attrs = isset($item['attributes']) && is_array($item['attributes']) ? $item['attributes'] : [];
+			$parts = [];
+			foreach ($attrs as $k => $v) {
+				if ($v === true) {
+					$parts[] = $k;
+				} elseif ($v === false || is_null($v)) {
+					continue;
+				} else {
+					$parts[] = $k . '="' . htmlspecialchars((string)$v, ENT_QUOTES) . '"';
+				}
+			}
+			$attr_str = count($parts) ? ' ' . implode(' ', $parts) : '';
+			if ($tag === 'script') {
+				$ret[] = "<script" . $attr_str . "></script>";
+			} else {
+				$ret[] = "<" . $tag . $attr_str . " />";
+			}
+		}
+		return implode("\n", $ret);
 	}
 
 	/**
@@ -410,7 +447,7 @@ class OCore {
 	 *
 	 * @return void
 	 */
-	public function errorHandler(\Throwable $ex): void {
+	public function errorHandler(Throwable $ex): void {
 		$log = new OLog(get_class($this));
 		$params = ['message' => OTools::getMessage('ERROR_500_LABEL')];
 		$params['message'] = "<strong>Error:</strong> \"" . $ex->getMessage() . "\"\n<strong>File:</strong> \"" . $ex->getFile() . "\" (Line: " . $ex->getLine() . ")\n\n<strong>Trace:</strong> \n";

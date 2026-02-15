@@ -25,7 +25,10 @@ Aplikazioaren oinarrizko portaeraren parametro globalak.
 	"lang": "eu",
 	"use-session": true,
 	"allow-cross-origin": true,
-	"base_url": "https://adibidea.com"
+	"base_url": "https://adibidea.com",
+	"css_list": [],
+	"js_list": [],
+	"head_elements": []
 }
 ```
 
@@ -89,6 +92,58 @@ Zure aplikazioak behar dituen datu pertsonalizatuentzako gako-balio biltegi bat 
 ```
 
 ---
+
+### Fitxategiak eta `head` elementuak
+
+`css_list` eta `js_list` izenekoak string multzoak dira. Multzo bakoitzeko string-a aplikazioaren `public` direktorioan egon behar duen fitxategi izena bezala interpretatzen da.
+
+- `css_list`-erako: balioa `"name"` bada, `/public/css/name.css` fitxategira mapatuko da eta honela renderezatuko da:
+
+    `<link rel="stylesheet" type="text/css" href="css/name.css">`
+
+    Adibidez: `"css_list": ["main", "lib"]` honek barne hartzen ditu:
+    - `/public/css/main.css` → `<link rel="stylesheet" type="text/css" href="css/main.css">`
+    - `/public/css/lib.css` → `<link rel="stylesheet" type="text/css" href="css/lib.css">`
+
+- `js_list`-erako: balioa `"name"` bada, `/public/js/name.js` fitxategira mapatuko da eta honela renderezatuko da:
+
+    `<script src="js/name.js"></script>`
+
+    Adibidez: `"js_list": ["app"]` honek barne hartzen du:
+    - `/public/js/app.js` → `<script src="js/app.js"></script>`
+
+`head_elements` aukera objektu multzo bat jasotzen du, eta `<head>`-ean elementu arbitrarioak inprimatzeko erabiltzen da egitura erraz baten bidez.
+
+Adibidea:
+
+```json
+{
+	"head_elements": [
+		{
+			"item": "meta",
+			"attributes": { "name": "theme-color", "content": "#000" }
+		},
+		{
+			"item": "link",
+			"attributes": {
+				"rel": "icon",
+				"href": "/fav.svg",
+				"type": "image/svg+xml"
+			}
+		},
+		{
+			"item": "script",
+			"attributes": {
+				"src": "https://cdn.example.com/lib.js",
+				"async": true
+			}
+		}
+	]
+}
+```
+
+`css_list` eta `js_list` erabiliz proiektu-mailako CSS eta JS fitxategiak gehitu ditzakezu (ruta edo URL multzoak). Gainera, `head_elements` erabilita elementuak inprimatu ditzakezu dokumentuaren `<head>`-ean egitura sinple batekin.
+`head_elements`-eko sarrera bakoitza `item` (etiketa-izena) eta `attributes` (gako-balio objektua) dituen objektua izan behar da. `script`-ek itxi beharreko etiketa izango dute (`<script></script>`), besteak auto-itxikoak izango dira.
 
 ## Kodean Konfiguraziora Sartzea
 
@@ -163,16 +218,19 @@ Aplikazioa kargatzen denean, bide lehenetsi multzo bat kargatzen da `OConfig`-en
 
 ## Konfigurazio-giltzen laburpena
 
-| Giltza        | Mota      | Deskribapena                                         |
-| ------------- | --------- | ---------------------------------------------------- |
-| `name`        | Katea     | Aplikazioaren izena.                                 |
-| `lang`        | Katea     | Hizkuntza lehenetsia (adibidez, "en", "es").         |
-| `use-session` | Boolearra | PHP saioak gaitu ala ez.                             |
-| `db`          | Objektua  | Datu-basearen konexioaren xehetasunak.               |
-| `dir`         | Objektua  | Direktorio pertsonalizatuen definizioak.             |
-| `extra`       | Objektua  | Giltza-balio bikote pertsonalizatuak.                |
-| `error_pages` | Objektua  | 403, 404 edo 500 erroreetarako URL pertsonalizatuak. |
-| `libs`        | Matrizea  | Kargatzeko hirugarrenen liburutegien zerrenda.       |
+| Giltza          | Mota      | Deskribapena                                                                         |
+| --------------- | --------- | ------------------------------------------------------------------------------------ |
+| `name`          | Katea     | Aplikazioaren izena.                                                                 |
+| `lang`          | Katea     | Hizkuntza lehenetsia (adibidez, "en", "es").                                         |
+| `use-session`   | Boolearra | PHP saioak gaitu ala ez.                                                             |
+| `db`            | Objektua  | Datu-basearen konexioaren xehetasunak.                                               |
+| `dir`           | Objektua  | Direktorio pertsonalizatuen definizioak.                                             |
+| `extra`         | Objektua  | Giltza-balio bikote pertsonalizatuak.                                                |
+| `error_pages`   | Objektua  | 403, 404 edo 500 erroreetarako URL pertsonalizatuak.                                 |
+| `css_list`      | Matrizea  | Sartu beharreko CSS fitxategien zerrenda.                                            |
+| `js_list`       | Matrizea  | Sartu beharreko JavaScript fitxategien zerrenda.                                     |
+| `head_elements` | Matrizea  | HTML elementuen zerrenda dokumentuaren <head>-ean injektatzeko (meta, link, script). |
+| `libs`          | Matrizea  | Kargatzeko hirugarrenen liburutegien zerrenda.                                       |
 
 ---
 

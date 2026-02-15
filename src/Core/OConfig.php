@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
-use Osumi\OsumiFramework\Tools\OTools;
-
 /**
  * OConfig - Class with all the configuration info for the framework
  */
@@ -20,8 +18,6 @@ class OConfig {
 	];
 	private bool $use_session = false;
 	private bool $allow_cross_origin = true;
-
-	private array $plugins  = [];
 
 	private array $dirs = [];
 	private array $db = [
@@ -51,14 +47,11 @@ class OConfig {
 	];
 
 	private array  $css_list      = [];
-	private array  $ext_css_list  = [];
 	private array  $js_list       = [];
-	private array  $ext_js_list   = [];
+	private array  $head_elements = [];
 	private string $default_title = '';
-	private string $admin_email   = '';
 	private string $mailing_from  = '';
 	private string $lang          = 'es';
-	private array  $image_types   = [];
 
 	private array $libs   = [];
 	private array $extras = [];
@@ -167,14 +160,11 @@ class OConfig {
 		if (array_key_exists('css', $config)) {
 			$this->setCssList($config['css']);
 		}
-		if (array_key_exists('ext_css', $config)) {
-			$this->setExtCssList($config['ext_css']);
-		}
 		if (array_key_exists('js', $config)) {
 			$this->setJsList($config['js']);
 		}
-		if (array_key_exists('ext_js', $config)) {
-			$this->setExtJsList($config['ext_js']);
+		if (array_key_exists('head_elements', $config)) {
+			$this->setHeadElements($config['head_elements']);
 		}
 		if (array_key_exists('extra', $config)) {
 			foreach ($config['extra'] as $key => $value) {
@@ -553,34 +543,34 @@ class OConfig {
 	}
 
 	/**
-	 * Set array of external CSS file URLs to be used in the application (eg in a CDN)
+	 * Set array of elements to be included in the <head> tag of the application
 	 *
-	 * @param string[] $ecl Array of external CSS file URLs to be included
-	 *
-	 * @return void
-	 */
-	public function setExtCssList(array $ecl): void {
-		$this->ext_css_list = $ecl;
-	}
-
-	/**
-	 * Get array of external CSS file URLs to be included in the application
-	 *
-	 * @return string[] Array of external CSS file URLs to be included
-	 */
-	public function getExtCssList(): array {
-		return $this->ext_css_list;
-	}
-
-	/**
-	 * Adds a single item to the array of external CSS file URLs to be included in the application
-	 *
-	 * @param string $item Name of a CSS file URL to be included
+	 * @param string[] $he Array of elements to be included in the <head> tag of the application
 	 *
 	 * @return void
 	 */
-	public function addExtCssList(string $item): void {
-		$this->ext_css_list[] = $item;
+	public function setHeadElements(array $he): void {
+		$this->head_elements = $he;
+	}
+
+	/**
+	 * Get array of elements to be included in the <head> tag of the application
+	 *
+	 * @return string[] Array of elements to be included in the <head> tag of the application
+	 */
+	public function getHeadElements(): array {
+		return $this->head_elements;
+	}
+
+	/**
+	 * Adds a single item to the array of elements to be included in the <head> tag of the application
+	 *
+	 * @param array $item Element to be included in the <head> tag of the application
+	 *
+	 * @return void
+	 */
+	public function addHeadElement(array $item): void {
+		$this->head_elements[] = $item;
 	}
 
 	/**
@@ -612,37 +602,6 @@ class OConfig {
 	 */
 	public function addJsList(string $item): void {
 		$this->js_list[] = $item;
-	}
-
-	/**
-	 * Set array of external JS file URLs to be used in the application (eg in a CDN)
-	 *
-	 * @param string[] $ejl Array of external JS file URLs to be included
-	 *
-	 * @return void
-	 */
-	public function setExtJsList(array $ejl): void {
-		$this->ext_js_list = $ejl;
-	}
-
-	/**
-	 * Get array of external JS file URLs to be included in the application
-	 *
-	 * @return string[] Array of external JS file URLs to be included
-	 */
-	public function getExtJsList(): array {
-		return $this->ext_js_list;
-	}
-
-	/**
-	 * Adds a single item to the array of external JS file URLs to be included in the application
-	 *
-	 * @param string $item Name of a JS file URL to be included
-	 *
-	 * @return void
-	 */
-	public function addExtJsList(string $item): void {
-		$this->ext_js_list[] = $item;
 	}
 
 	/**

@@ -9,12 +9,14 @@ use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Log\OLog;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
-use \ReflectionClass;
-use \ReflectionProperty;
-use \Exception;
+use ReflectionClass;
+use ReflectionProperty;
+use Exception;
 
 /**
  * Base class for components
+ *
+ * @method void run(mixed $data = null) Optional hook executed before rendering
  */
 class OComponent {
   protected OLog | null $log = null;

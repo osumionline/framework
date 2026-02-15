@@ -25,7 +25,10 @@ Global parameters for the application's basic behavior.
 	"lang": "en",
 	"use-session": true,
 	"allow-cross-origin": true,
-	"base_url": "https://example.com"
+	"base_url": "https://example.com",
+	"css_list": [],
+	"js_list": [],
+	"head_elements": []
 }
 ```
 
@@ -89,6 +92,57 @@ A key-value store for any custom data your application needs (API keys, secrets,
 ```
 
 ---
+
+### Assets and head elements
+
+The `css_list` and `js_list` entries accept arrays of strings. Each string is interpreted as a file name that must live under the application's `public` directory.
+
+- For `css_list`: each value `"name"` maps to the file `/public/css/name.css` and will be rendered as:
+
+    `<link rel="stylesheet" type="text/css" href="css/name.css">`
+
+    Example: `"css_list": ["main", "lib"]` includes:
+    - `/public/css/main.css` → `<link rel="stylesheet" type="text/css" href="css/main.css">`
+    - `/public/css/lib.css` → `<link rel="stylesheet" type="text/css" href="css/lib.css">`
+
+- For `js_list`: each value `"name"` maps to the file `/public/js/name.js` and will be rendered as:
+
+    `<script src="js/name.js"></script>`
+
+    Example: `"js_list": ["app"]` includes:
+    - `/public/js/app.js` → `<script src="js/app.js"></script>`
+
+The `head_elements` option accepts an array of objects to inject arbitrary elements into the document `<head>` using a simple structure.
+
+Example:
+
+```json
+{
+	"head_elements": [
+		{
+			"item": "meta",
+			"attributes": { "name": "theme-color", "content": "#000" }
+		},
+		{
+			"item": "link",
+			"attributes": {
+				"rel": "icon",
+				"href": "/fav.svg",
+				"type": "image/svg+xml"
+			}
+		},
+		{
+			"item": "script",
+			"attributes": {
+				"src": "https://cdn.example.com/lib.js",
+				"async": true
+			}
+		}
+	]
+}
+```
+
+Each `head_elements` entry must be an object with `item` (tag name) and `attributes` (an object of key/value pairs). Scripts will be rendered with an explicit closing tag (`<script></script>`); other tags are self-closed.
 
 ## Accessing Configuration in Code
 
@@ -163,16 +217,19 @@ When the application is loaded, a set of default paths are loaded on `OConfig`:
 
 ## Summary of Configuration Keys
 
-| Key           | Type    | Description                              |
-| ------------- | ------- | ---------------------------------------- |
-| `name`        | String  | Application name.                        |
-| `lang`        | String  | Default language (e.g., "en", "es").     |
-| `use-session` | Boolean | Whether to enable native PHP sessions.   |
-| `db`          | Object  | Database connection details.             |
-| `dir`         | Object  | Custom directory definitions.            |
-| `extra`       | Object  | Custom key-value pairs.                  |
-| `error_pages` | Object  | Custom URLs for 403, 404, or 500 errors. |
-| `libs`        | Array   | List of third-party libraries to load.   |
+| Key             | Type    | Description                                                |
+| --------------- | ------- | ---------------------------------------------------------- |
+| `name`          | String  | Application name.                                          |
+| `lang`          | String  | Default language (e.g., "en", "es").                       |
+| `use-session`   | Boolean | Whether to enable native PHP sessions.                     |
+| `db`            | Object  | Database connection details.                               |
+| `dir`           | Object  | Custom directory definitions.                              |
+| `extra`         | Object  | Custom key-value pairs.                                    |
+| `error_pages`   | Object  | Custom URLs for 403, 404, or 500 errors.                   |
+| `css_list`      | Array   | List of CSS files to include.                              |
+| `js_list`       | Array   | List of JavaScript files to include.                       |
+| `head_elements` | Array   | List of HTML head elements to inject (meta, link, script). |
+| `libs`          | Array   | List of third-party libraries to load.                     |
 
 ---
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tools;
 
-use \DateTime;
+use DateTime;
 
 class OPipeFunctions {
   /**

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\DTO;
 
-use \ReflectionClass;
-use \ReflectionProperty;
+use ReflectionClass;
+use ReflectionProperty;
 use Osumi\OsumiFramework\Web\ORequest;
 
 class ODTO {

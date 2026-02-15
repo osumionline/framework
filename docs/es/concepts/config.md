@@ -25,7 +25,10 @@ Parámetros globales para el comportamiento básico de la aplicación.
 	"lang": "es",
 	"use-session": true,
 	"allow-cross-origin": true,
-	"base_url": "https://ejemplo.com"
+	"base_url": "https://ejemplo.com",
+	"css_list": [],
+	"js_list": [],
+	"head_elements": []
 }
 ```
 
@@ -89,6 +92,57 @@ Un almacén de clave-valor para cualquier dato personalizado que necesite su apl
 ```
 
 ---
+
+### Archivos y elementos `head`
+
+`css_list` y `js_list` aceptan arrays de strings. Cada string se interpreta como un nombre de archivo que debe residir en el directorio `public` de la aplicación.
+
+- Para `css_list`: cada valor `"name"` mapea al archivo `/public/css/name.css` y se renderizará como:
+
+    `<link rel="stylesheet" type="text/css" href="css/name.css">`
+
+    Ejemplo: `"css_list": ["main", "lib"]` incluye:
+    - `/public/css/main.css` → `<link rel="stylesheet" type="text/css" href="css/main.css">`
+    - `/public/css/lib.css` → `<link rel="stylesheet" type="text/css" href="css/lib.css">`
+
+- Para `js_list`: cada valor `"name"` mapea al archivo `/public/js/name.js` y se renderizará como:
+
+    `<script src="js/name.js"></script>`
+
+    Ejemplo: `"js_list": ["app"]` incluye:
+    - `/public/js/app.js` → `<script src="js/app.js"></script>`
+
+La opción `head_elements` acepta un array de objetos para inyectar elementos arbitrarios en el `<head>` del documento usando una estructura simple.
+
+Ejemplo:
+
+```json
+{
+	"head_elements": [
+		{
+			"item": "meta",
+			"attributes": { "name": "theme-color", "content": "#000" }
+		},
+		{
+			"item": "link",
+			"attributes": {
+				"rel": "icon",
+				"href": "/fav.svg",
+				"type": "image/svg+xml"
+			}
+		},
+		{
+			"item": "script",
+			"attributes": {
+				"src": "https://cdn.example.com/lib.js",
+				"async": true
+			}
+		}
+	]
+}
+```
+
+Cada entrada de `head_elements` debe ser un objeto con `item` (nombre de la etiqueta) y `attributes` (objeto con pares clave/valor). Los `script` se generarán con etiqueta de cierre explícita (`<script></script>`); el resto como autocierre.
 
 ## Acceso a la configuración en el código
 
@@ -163,16 +217,19 @@ Al cargar la aplicación, se cargan las rutas predeterminadas en `OConfig`:
 
 ## Resumen de claves de configuración
 
-| Clave         | Tipo     | Descripción                                     |
-| ------------- | -------- | ----------------------------------------------- |
-| `name`        | Cadena   | Nombre de la aplicación.                        |
-| `lang`        | Cadena   | Idioma predeterminado (p. ej., "en", "es").     |
-| `use-session` | Booleano | Si se habilitarán sesiones nativas de PHP.      |
-| `db`          | Objeto   | Detalles de la conexión a la base de datos.     |
-| `dir`         | Objeto   | Definiciones de directorios personalizadas.     |
-| `extra`       | Objeto   | Pares clave-valor personalizados.               |
-| `error_pages` | Objeto   | URL personalizadas para errores 403, 404 o 500. |
-| `libs`        | Matriz   | Lista de bibliotecas de terceros para cargar.   |
+| Clave           | Tipo     | Descripción                                                              |
+| --------------- | -------- | ------------------------------------------------------------------------ |
+| `name`          | Cadena   | Nombre de la aplicación.                                                 |
+| `lang`          | Cadena   | Idioma predeterminado (p. ej., "en", "es").                              |
+| `use-session`   | Booleano | Si se habilitarán sesiones nativas de PHP.                               |
+| `db`            | Objeto   | Detalles de la conexión a la base de datos.                              |
+| `dir`           | Objeto   | Definiciones de directorios personalizadas.                              |
+| `extra`         | Objeto   | Pares clave-valor personalizados.                                        |
+| `error_pages`   | Objeto   | URL personalizadas para errores 403, 404 o 500.                          |
+| `css_list`      | Matriz   | Lista de archivos CSS para incluir.                                      |
+| `js_list`       | Matriz   | Lista de archivos JavaScript a incluir.                                  |
+| `head_elements` | Matriz   | Lista de elementos HTML para inyectar en el <head> (meta, link, script). |
+| `libs`          | Matriz   | Lista de bibliotecas de terceros para cargar.                            |
 
 ---
 
