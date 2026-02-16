@@ -310,7 +310,7 @@ Para llamar a la API:
 
 ```bash
 curl -X GET http://localhost:8000/api/get-users \
-  -H "Autorización: TU_TOKEN_AQUÍ"
+  -H "Authorization: TU_TOKEN_AQUÍ"
 ```
 
 Si el token es válido, recibirás:

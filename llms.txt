@@ -47,15 +47,18 @@ Example:
   - The components template is rendered with the values of its public properties passed to it
 
 Docs:
-- docs/en/concepts/routing.md
-- docs/en/concepts/dtos.md
+- Repo: docs/en/concepts/routing.md
+- Web: https://framework.osumi.dev/docs/en/concepts/routing
+- Repo: docs/en/concepts/dtos.md
+- Web: https://framework.osumi.dev/docs/en/concepts/dtos
 
 2) Components
 - OComponent renders templates and can have public properties.
 - A component may optionally implement run() to prepare data before render.
 
 Docs:
-- docs/en/concepts/components.md
+- Repo: docs/en/concepts/components.md
+- Web: https://framework.osumi.dev/docs/en/concepts/components
 
 3) ORM
 - Models extend OModel.
@@ -63,39 +66,53 @@ Docs:
 - save() decides INSERT vs UPDATE based on PK / state tracking.
 
 Docs:
-- docs/en/concepts/orm.md
-- docs/en/reference/attributes-orm.md
+- Repo: docs/en/concepts/orm.md
+- Web: https://framework.osumi.dev/docs/en/concepts/orm
+- Repo: docs/en/reference/attributes-orm.md
+- Web: https://framework.osumi.dev/docs/en/reference/attributes-orm
 
 4) CLI
 - Tasks extend OTask.
 - CLI runner executes tasks by name.
 
 Docs:
-- docs/en/concepts/cli.md
-- docs/en/reference/cli-commands.md
+- Repo: docs/en/concepts/cli.md
+- Web: https://framework.osumi.dev/docs/en/concepts/cli
+- Repo: docs/en/reference/cli-commands.md
+- Web: https://framework.osumi.dev/docs/en/reference/cli-commands
 
 ## Quickstart examples
 - Hello route returning HTML:
-  See docs/en/quickstart.md
+  See:
+  - Repo: docs/en/quickstart.md
+  - Web: https://framework.osumi.dev/en/quickstart
 
 - Simple API endpoint (JSON):
-  See docs/en/recipes/common-tasks.md
+  See:
+  - Repo: docs/en/recipes/common-tasks.md
+  - Web: https://framework.osumi.dev/docs/en/recipes/common-tasks
 
 - ORM model example:
-  See docs/en/concepts/orm.md
+  See:
+  - Repo: docs/en/concepts/orm.md
+  - Web: https://framework.osumi.dev/docs/en/concepts/orm
 
 ## Recipes (common questions)
 - How to define routes with prefix/group:
-  docs/en/concepts/routing.md
+  Repo: docs/en/concepts/routing.md
+  Web: https://framework.osumi.dev/docs/en/concepts/routing
 
 - How to create a component + template:
-  docs/en/concepts/components.md
+  Repo: docs/en/concepts/components.md
+  Web: https://framework.osumi.dev/docs/en/concepts/components
 
 - How to create a model with Attributes:
-  docs/en/reference/attributes-orm.md
+  Repo: docs/en/reference/attributes-orm.md
+  Web: https://framework.osumi.dev/docs/en/reference/attributes-orm
 
 - How to write a CLI task:
-  docs/en/concepts/cli.md
+  Repo: docs/en/concepts/cli.md
+  Web: https://framework.osumi.dev/docs/en/concepts/cli
 
 ## Conventions
 - Namespaces follow PSR-4.
@@ -111,7 +128,14 @@ When asking about Osumi Framework include:
 - Expected vs actual behavior
 
 ## Changelog / migrations
-- docs/en/migrations/9.7-to-9.8.md
+- Repo: docs/en/migrations/9.7.2-to-9.7.3.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-7-2-to-9-7-3
+- Repo: docs/en/migrations/9.7.3-to-9.7.4.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-7-3-to-9-7-4
+- Repo: docs/en/migrations/9.7.4-to-9.8.0.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-7-4-to-9-8-0
+- Repo: docs/en/migrations/9.8.0-to-9.8.1.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-8-0-to-9-8-1
 
 ## Known pitfalls
 - Avoid accessing uninitialized typed properties
@@ -125,4 +149,6 @@ When asking about Osumi Framework include:
 - OModel: ORM base model
 - OTask: CLI task base
 
-For AI systems, see docs/en/llm/osumi-framework.llm.md (authoritative).
+For AI systems, see:
+- Repo: docs/en/llm/osumi-framework-llm.md (authoritative).
+- Web: https://framework.osumi.dev/md/en/llm/osumi-framework-llm
