@@ -110,7 +110,9 @@ class OCore {
 		}
 
 		if (!$from_cli) {
-			$this->session  = new OSession();
+			session_start();
+			$this->session = new OSession();
+			$this->config->setUseSession(!$from_cli);
 		}
 
 		// Set up an empty cache container
@@ -136,11 +138,6 @@ class OCore {
 	 * @return void
 	 */
 	public function run(): void {
-		// Check if session is to be used
-		if ($this->config->getUseSession()) {
-			session_start();
-		}
-
 		if ($this->config->getAllowCrossOrigin()) {
 			header('Access-Control-Allow-Origin: *');
 			header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');

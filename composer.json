@@ -1,7 +1,7 @@
 {
 	"name": "osumionline/framework",
 	"description": "Framework PHP de Osumi para aplicaciones web.",
-	"version": "9.8.1",
+	"version": "9.8.2",
 	"type": "library",
 	"keywords": [
 		"framework",
@@ -28,6 +28,6 @@
 		}
 	},
 	"extra": {
-		"version-description": "Correcciones en documentación y guías de migración para las últimas versiones."
+		"version-description": "Corrección al usar sesiones de PHP."
 	}
 }
