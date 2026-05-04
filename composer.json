@@ -1,33 +1,33 @@
 {
-	"name": "osumionline/framework",
-	"description": "Framework PHP de Osumi para aplicaciones web.",
-	"version": "9.8.2",
-	"type": "library",
-	"keywords": [
-		"framework",
-		"php",
-		"web",
-		"osumi"
-	],
-	"homepage": "https://github.com/osumionline/framework",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Iñigo Gorosabel",
-			"homepage": "https://osumi.es",
-			"role": "Developer"
-		}
-	],
-	"require": {
-		"php": ">=8.2",
-		"ext-json": "*"
-	},
-	"autoload": {
-		"psr-4": {
-			"Osumi\\OsumiFramework\\": "src/"
-		}
-	},
-	"extra": {
-		"version-description": "Corrección al usar sesiones de PHP."
-	}
+  "name": "osumionline/framework",
+  "description": "Framework PHP de Osumi para aplicaciones web.",
+  "version": "9.8.3",
+  "type": "library",
+  "keywords": [
+    "framework",
+    "php",
+    "web",
+    "osumi"
+  ],
+  "homepage": "https://github.com/osumionline/framework",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Iñigo Gorosabel",
+      "homepage": "https://osumi.es",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Osumi\\OsumiFramework\\": "src/"
+    }
+  },
+  "extra": {
+    "version-description": "Corrección al usar hacer consultas a BD con valores NULL, mejoras internas y correcciones de seguridad."
+  }
 }

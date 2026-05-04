@@ -327,3 +327,12 @@ msgstr "ERROREA! Errore bat gertatu da irudia kargatzean."
 
 msgid "PLUGIN_IMAGE_FILE_NOT_LOADED"
 msgstr "ERROREA! Momentu honetan ez dago irudirik kargatuta."
+
+msgid "PLUGIN_IMAGE_INVALID_RATIO_FORMAT"
+msgstr "ERROR! Erlazio formatu baliogabea. Espero zen formatua: zabalera:altuera."
+
+msgid "PLUGIN_IMAGE_INVALID_CROP_SIZE"
+msgstr "ERROR! Mozketaren tamaina baliogabea. Zabalera eta altuera 0 baino handiagoak izan behar dira."
+
+msgid "PLUGIN_IMAGE_CROP_NOT_POSSIBLE"
+msgstr "ERROR! Mozketa ezinezkoa da irudiaren uneko dimentsioekin."

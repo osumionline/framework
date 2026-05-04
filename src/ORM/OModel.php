@@ -6,6 +6,7 @@ namespace Osumi\OsumiFramework\ORM;
 
 use PDO;
 use ReflectionClass;
+use ReflectionNamedType;
 use ReflectionProperty;
 use Exception;
 
@@ -105,11 +106,17 @@ abstract class OModel {
    */
   protected function validateFieldType(ReflectionProperty $property, OField $field): void {
     $field_name = $property->getName();
+    $property_type = $property->getType();
+
+    if (!$property_type instanceof ReflectionNamedType) {
+      throw new Exception("The type of the property '{$field_name}' could not be determined.");
+    }
+
+    $property_type_name = $property_type->getName();
 
     // If the type has not been defined in the OField decorator, automatically assign according to the property type
     if ($field->type === null) {
-      $property_type = $property->getType()->getName();
-      switch ($property_type) {
+      switch ($property_type_name) {
         case 'string':
           $field->type = OField::TEXT;
           break;
@@ -123,7 +130,7 @@ abstract class OModel {
           $field->type = OField::BOOL;
           break;
         default:
-          throw new Exception("Unsupported type for property '{$field_name}': {$property_type}.");
+          throw new Exception("Unsupported type for property '{$field_name}': {$property_type_name}.");
       }
     }
 
@@ -132,24 +139,28 @@ abstract class OModel {
 
     switch ($type) {
       case OField::NUMBER:
+        if ($property_type_name !== 'int') {
+          throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
+        }
+        break;
       case OField::FLOAT:
-        if (!in_array($property->getType()->getName(), ['int', 'float'])) {
+        if (!in_array($property_type_name, ['int', 'float'])) {
           throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
         }
         break;
       case OField::TEXT:
       case OField::LONGTEXT:
-        if ($property->getType()->getName() !== 'string') {
+        if ($property_type_name !== 'string') {
           throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
         }
         break;
       case OField::BOOL:
-        if ($property->getType()->getName() !== 'bool') {
+        if ($property_type_name !== 'bool') {
           throw new Exception("The type of the property '{$field_name}' does not match the expected type 'bool'.");
         }
         break;
       case OField::DATE:
-        if ($property->getType()->getName() !== 'string') {
+        if ($property_type_name !== 'string') {
           throw new Exception("The type of the property '{$field_name}' does not match the expected type 'string' for dates.");
         }
         break;
@@ -206,6 +217,8 @@ abstract class OModel {
           if ($attr_instance instanceof OPK) {
             // Primary key
             $field_schema['type'] = $attr_instance->type ?? null;  // Type might not be defined
+            $field_schema['nullable'] = $attr_instance->nullable;
+            $field_schema['default'] = $attr_instance->default;
             $field_schema['primary'] = true;
             $field_schema['auto_increment'] = $attr_instance->incr;
             $field_schema['ref'] = $attr_instance->ref;
@@ -234,7 +247,7 @@ abstract class OModel {
         // Get the type of the field if it is not defined in the attribute
         if ($field_schema['type'] === null) {
           $property_type = $property->getType();
-          if ($property_type !== null) {
+          if ($property_type instanceof ReflectionNamedType) {
             $type_name = $property_type->getName();
             switch ($type_name) {
               case 'string':
@@ -293,11 +306,20 @@ abstract class OModel {
     // Check every property
     foreach ($properties as $property) {
       $property_name = $property->getName();
-      $property_type = $property->getType()->getName();
+      $property_type = $property->getType();
+
+      if (!$property_type instanceof ReflectionNamedType) {
+        throw new Exception("The type of the property '{$property_name}' could not be determined.");
+      }
+
+      $property_type_name = $property_type->getName();
 
       // If the field is in the data, assign the provided value
       if (array_key_exists($property_name, $data)) {
-        if ($property_type === 'bool') {
+        if ($data[$property_name] === null) {
+          $this->$property_name = null;
+          $this->original_values[$property_name] = null;
+        } elseif ($property_type_name === 'bool') {
           $this->$property_name = (bool) $data[$property_name];
           $this->original_values[$property_name] = (bool) $data[$property_name];
         } else {
@@ -376,7 +398,7 @@ abstract class OModel {
           }
           break;
         case OField::FLOAT:
-          if (!is_float($value)) {
+          if (!is_float($value) && !is_int($value)) {
             throw new Exception("The '{$field_name}' field must be a decimal number.");
           }
           break;
@@ -435,6 +457,160 @@ abstract class OModel {
   protected static function clearResultsCache(): void {
     // Clear cache to mantain consistency
     self::$results_cache = [];
+  }
+
+  /**
+   * Validate a SQL identifier before interpolating it in a query.
+   *
+   * @param string $identifier Identifier to validate
+   *
+   * @param string $context Context used in the exception message
+   *
+   * @return string Validated identifier
+   */
+  protected static function validateSqlIdentifier(string $identifier, string $context = 'identifier'): string {
+    if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $identifier)) {
+      throw new Exception("Invalid SQL {$context} '{$identifier}'.");
+    }
+
+    return $identifier;
+  }
+
+  /**
+   * Parse a non-negative integer used on LIMIT or OFFSET clauses.
+   *
+   * @param mixed $value Value to parse
+   *
+   * @param string $context Context used in the exception message
+   *
+   * @return int Parsed value
+   */
+  protected static function parseNonNegativeInteger(mixed $value, string $context): int {
+    if (is_int($value)) {
+      $parsed_value = $value;
+    } elseif (is_string($value) && preg_match('/^\d+$/', $value)) {
+      $parsed_value = (int) $value;
+    } else {
+      throw new Exception("Invalid {$context} value.");
+    }
+
+    if ($parsed_value < 0) {
+      throw new Exception("Invalid {$context} value.");
+    }
+
+    return $parsed_value;
+  }
+
+  /**
+   * Build a WHERE clause and its parameters from a conditions array.
+   *
+   * @param array $conditions List of conditions to be applied on the query
+   *
+   * @return array Built SQL clause and parameters
+   */
+  protected static function buildWhereClause(array $conditions): array {
+    $params = [];
+    $where_clauses = [];
+
+    foreach ($conditions as $field => $value) {
+      if (!is_string($field)) {
+        throw new Exception("Invalid SQL field '{$field}'.");
+      }
+
+      $field = self::validateSqlIdentifier($field, 'field');
+
+      if ($value === null) {
+        $where_clauses[] = "`{$field}` IS NULL";
+      } else {
+        $where_clauses[] = "`{$field}` = :{$field}";
+        $params[":{$field}"] = $value;
+      }
+    }
+
+    return [
+      'clause' => implode(' AND ', $where_clauses),
+      'params' => $params
+    ];
+  }
+
+  /**
+   * Apply supported SQL query options.
+   *
+   * @param string $sql Base SQL query
+   *
+   * @param array $options List of options to be applied on the query
+   *
+   * @return string SQL query with applied options
+   */
+  protected static function applyQueryOptions(string $sql, array $options): string {
+    if (isset($options['order_by'])) {
+      // Splits the value of "order_by" into field and direction if it contains '#'
+      list($field, $direction) = array_pad(explode('#', (string) $options['order_by']), 2, 'ASC');
+      $field = self::validateSqlIdentifier(trim($field), 'order field');
+
+      // Checks if the direction is valid, otherwise sets 'ASC' by default
+      $direction = strtoupper(trim($direction));
+      if ($direction !== 'ASC' && $direction !== 'DESC') {
+        $direction = 'ASC';
+      }
+
+      $sql .= " ORDER BY `{$field}` {$direction}";
+    }
+
+    $has_limit = isset($options['limit']);
+    if ($has_limit) {
+      if (is_int($options['limit']) || (is_string($options['limit']) && preg_match('/^\d+$/', $options['limit']))) {
+        $count = null;
+        $start = self::parseNonNegativeInteger($options['limit'], 'limit');
+      } else {
+        // Splits the value of "limit" into start and amount if it contains '#'
+        list($start, $count) = array_pad(explode('#', (string) $options['limit']), 2, null);
+        $start = self::parseNonNegativeInteger($start, 'limit start');
+        $count = self::parseNonNegativeInteger($count, 'limit count');
+      }
+
+      // Constructs the LIMIT clause according to the format provided
+      if ($count !== null) {
+        // If both start and amount are specified
+        $sql .= " LIMIT {$start}, {$count}";
+      } else {
+        // If only one limit value is specified
+        $sql .= " LIMIT {$start}";
+      }
+    }
+
+    if (isset($options['offset'])) {
+      $offset = self::parseNonNegativeInteger($options['offset'], 'offset');
+      if (!$has_limit) {
+        $sql .= " LIMIT 18446744073709551615";
+      }
+      $sql .= " OFFSET {$offset}";
+    }
+
+    return $sql;
+  }
+
+  /**
+   * Quote a value for generated SQL.
+   *
+   * @param mixed $value Value to quote
+   *
+   * @return string SQL representation of the value
+   */
+  protected static function quoteSqlValue(mixed $value): string {
+    if ($value === null) {
+      return 'NULL';
+    }
+
+    if (is_bool($value)) {
+      return $value ? '1' : '0';
+    }
+
+    if (is_int($value) || is_float($value)) {
+      return (string) $value;
+    }
+
+    return "'" . str_replace("'", "''", (string) $value) . "'";
   }
 
   /**
@@ -506,54 +682,14 @@ abstract class OModel {
       return self::$results_cache[$cache_key];
     }
 
-    $sql = "SELECT * FROM `{$table_name}` WHERE ";
-    $params = [];
-    $wheres = [];
-
-    foreach ($conditions as $field => $value) {
-      $wheres[] = "`{$field}` = :{$field}";
-      $params[":{$field}"] = $value;
+    if (empty($conditions)) {
+      return self::all($options);
     }
 
-    $sql .= implode(' AND ', $wheres);
-
-    // Aditional options (order_by, limit, offset)
-    if (isset($options['order_by'])) {
-      // Splits the value of "order_by" into field and direction if it contains '#'
-      list($field, $direction) = array_pad(explode('#', $options['order_by']), 2, 'ASC');
-
-      // Checks if the direction is valid, otherwise sets 'ASC' by default
-      $direction = strtoupper($direction);
-      if ($direction !== 'ASC' && $direction !== 'DESC') {
-        $direction = 'ASC';
-      }
-
-      $sql .= " ORDER BY `{$field}` {$direction}";
-    }
-
-    if (isset($options['limit'])) {
-      if (is_numeric($options['limit'])) {
-        $count = null;
-        $start = $options['limit'];
-      } else {
-        // Splits the value of "limit" into start and amount if it contains '#'
-        list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
-      }
-
-      // Constructs the LIMIT clause according to the format provided
-      if ($count !== null) {
-        // If both start and amount are specified
-        $sql .= " LIMIT {$start}, {$count}";
-      } else {
-        // If only one limit value is specified
-        $sql .= " LIMIT {$start}";
-      }
-    }
-
-    if (isset($options['offset'])) {
-      $offset = $options['offset'];
-      $sql .= " OFFSET {$offset}";
-    }
+    $where = self::buildWhereClause($conditions);
+    $sql = "SELECT * FROM `{$table_name}` WHERE " . $where['clause'];
+    $sql = self::applyQueryOptions($sql, $options);
+    $params = $where['params'];
 
     $db = ODB::getInstance();
     $stmt = $db->prepare($sql);
@@ -592,42 +728,7 @@ abstract class OModel {
     $sql = "SELECT * FROM `{$table_name}`";
 
     // Aditional options (order_by, limit, offset)
-    if (isset($options['order_by'])) {
-      // Splits the value of "order_by" into field and direction if it contains '#'
-      list($field, $direction) = array_pad(explode('#', $options['order_by']), 2, 'ASC');
-
-      // Checks if the direction is valid, otherwise sets 'ASC' by default
-      $direction = strtoupper($direction);
-      if ($direction !== 'ASC' && $direction !== 'DESC') {
-        $direction = 'ASC';
-      }
-
-      $sql .= " ORDER BY `{$field}` {$direction}";
-    }
-
-    if (isset($options['limit'])) {
-      if (is_numeric($options['limit'])) {
-        $count = null;
-        $start = $options['limit'];
-      } else {
-        // Splits the value of "limit" into start and amount if it contains '#'
-        list($start, $count) = array_pad(explode('#', $options['limit']), 2, null);
-      }
-
-      // Constructs the LIMIT clause according to the format provided
-      if ($count !== null) {
-        // If both start and amount are specified
-        $sql .= " LIMIT {$start}, {$count}";
-      } else {
-        // If only one limit value is specified
-        $sql .= " LIMIT {$start}";
-      }
-    }
-
-    if (isset($options['offset'])) {
-      $offset = $options['offset'];
-      $sql .= " OFFSET {$offset}";
-    }
+    $sql = self::applyQueryOptions($sql, $options);
 
     $db = ODB::getInstance();
     $stmt = $db->prepare($sql);
@@ -662,12 +763,9 @@ abstract class OModel {
     // Add WHERE conditions if defined
     $params = [];
     if (!empty($conditions)) {
-      $where_clauses = [];
-      foreach ($conditions as $field => $value) {
-        $where_clauses[] = "`{$field}` = :{$field}";
-        $params[":{$field}"] = $value;
-      }
-      $sql .= " WHERE " . implode(' AND ', $where_clauses);
+      $where = self::buildWhereClause($conditions);
+      $sql .= " WHERE " . $where['clause'];
+      $params = $where['params'];
     }
 
     // Prepare and execute the query
@@ -676,7 +774,7 @@ abstract class OModel {
 
     // Gets the result and returns the value of "num"
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $result['num'] ?? 0;
+    return (int) ($result['num'] ?? 0);
   }
 
   /**
@@ -742,10 +840,14 @@ abstract class OModel {
       // UPDATE
       $updates = [];
       $params = [];
+      $updated_at_field = $schema['updated_at'];
 
       foreach ($fields as $field_name => $field) {
         if (in_array($field_name, $schema['primary_key'])) {
           continue; // Ommit primary keys
+        }
+        if ($field_name === $updated_at_field) {
+          continue; // The updated_at field is handled automatically
         }
 
         if ($this->$field_name !== $this->original_values[$field_name]) {
@@ -761,7 +863,6 @@ abstract class OModel {
 
       // Handle updated_at
       if (!is_null($schema['updated_at'])) {
-        $updated_at_field = $schema['updated_at'];
         $updates[] = "`{$updated_at_field}` = :{$updated_at_field}";
         $params[":{$updated_at_field}"] = date('Y-m-d H:i:s');
         $this->$updated_at_field = $params[":{$updated_at_field}"];
@@ -852,6 +953,10 @@ abstract class OModel {
 
     $field_schema = $schema['fields'][$field];
     $value = $this->$field;
+
+    if ($value === null) {
+      return null;
+    }
 
     // Case for date type fields
     if ($field_schema['type'] === OField::DATE) {
@@ -968,16 +1073,12 @@ abstract class OModel {
 
       // Default value
       if (isset($field['default'])) {
-        $default_value = $field['default'];
-        if (is_string($default_value)) {
-          $default_value = "'{$default_value}'";
-        }
-        $sql_field .= " DEFAULT {$default_value}";
+        $sql_field .= " DEFAULT " . self::quoteSqlValue($field['default']);
       }
 
       // Field comment
       if (!empty($field['comment'])) {
-        $sql_field .= " COMMENT '{$field['comment']}'";
+        $sql_field .= " COMMENT " . self::quoteSqlValue($field['comment']);
       }
 
       // Primary key
@@ -990,9 +1091,18 @@ abstract class OModel {
 
       // Foreign keys
       if (!empty($field['ref'])) {
-        [$ref_table, $ref_column] = explode('.', $field['ref']);
-        $foreign_keys[] = "ADD CONSTRAINT `fk_{$table_name}_{$ref_table}` FOREIGN KEY (`{$field_name}`) REFERENCES `{$ref_table}` (`{$ref_column}`) ON DELETE NO ACTION ON UPDATE NO ACTION";
-        $keys[] = "ADD KEY `fk_{$table_name}_{$ref_table}_idx` (`{$field_name}`)";
+        $ref_parts = explode('.', $field['ref']);
+        if (count($ref_parts) !== 2) {
+          throw new Exception("Invalid reference '{$field['ref']}' for field '{$field_name}'.");
+        }
+
+        [$ref_table, $ref_column] = $ref_parts;
+        $ref_table = self::validateSqlIdentifier($ref_table, 'reference table');
+        $ref_column = self::validateSqlIdentifier($ref_column, 'reference column');
+        $constraint_name = "fk_{$table_name}_{$field_name}_{$ref_table}";
+
+        $foreign_keys[] = "ADD CONSTRAINT `{$constraint_name}` FOREIGN KEY (`{$field_name}`) REFERENCES `{$ref_table}` (`{$ref_column}`) ON DELETE NO ACTION ON UPDATE NO ACTION";
+        $keys[] = "ADD KEY `{$constraint_name}_idx` (`{$field_name}`)";
       }
 
       // Add field to SQL array

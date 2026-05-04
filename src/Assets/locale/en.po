@@ -327,3 +327,12 @@ msgstr "ERROR! There was an error loading the file."
 
 msgid "PLUGIN_IMAGE_FILE_NOT_LOADED"
 msgstr "ERROR! There is not file already loaded."
+
+msgid "PLUGIN_IMAGE_INVALID_RATIO_FORMAT"
+msgstr "ERROR! Invalid ratio format. Expected format: width:height."
+
+msgid "PLUGIN_IMAGE_INVALID_CROP_SIZE"
+msgstr "ERROR! Invalid crop size. Width and height must be greater than 0."
+
+msgid "PLUGIN_IMAGE_CROP_NOT_POSSIBLE"
+msgstr "ERROR! Crop is not possible with current image dimensions."

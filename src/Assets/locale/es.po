@@ -327,3 +327,12 @@ msgstr "ERROR! Ha ocurrido un error al cargar el archivo."
 
 msgid "PLUGIN_IMAGE_FILE_NOT_LOADED"
 msgstr "ERROR! No hay ningún archivo cargado actualmente."
+
+msgid "PLUGIN_IMAGE_INVALID_RATIO_FORMAT"
+msgstr "ERROR! Formato de proporción no válido. Formato esperado: ancho:alto."
+
+msgid "PLUGIN_IMAGE_INVALID_CROP_SIZE"
+msgstr "ERROR! Tamaño de recorte no válido. El ancho y la altura deben ser mayores que 0."
+
+msgid "PLUGIN_IMAGE_CROP_NOT_POSSIBLE"
+msgstr "ERROR! No es posible recortar con las dimensiones actuales de la imagen."
