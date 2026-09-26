@@ -258,6 +258,8 @@ class OComponent {
                 return OPipeFunctions::getNumberValue(...$params);
               case 'string':
                 return OPipeFunctions::getStringValue($sub_value);
+              case 'plain':
+                return OPipeFunctions::getStringPlainValue($sub_value);
               case 'bool':
                 return OPipeFunctions::getBoolValue($sub_value);
               default:
@@ -287,6 +289,8 @@ class OComponent {
               return OPipeFunctions::getNumberValue(...$params);
             case 'string':
               return OPipeFunctions::getStringValue($property_value);
+            case 'plain':
+              return OPipeFunctions::getStringPlainValue($property_value);
             case 'bool':
               return OPipeFunctions::getBoolValue($property_value);
             default:
@@ -317,16 +321,23 @@ class OComponent {
   }
 
   /**
-   * Render a component mixing it's properties into the template
+   * Render a component mixing its properties into the template.
    *
-   * @param mixed $data Data to be passed to the "run" method, if exists
+   * If the component defines a run method, it is executed before rendering.
+   * The run method can receive an ORequest, an ODTO instance or no parameter.
    *
-   * @return string Return resulting string
+   * @param mixed $data Data to be passed to the run method, if any.
+   *
+   * @return string Resulting rendered content.
    */
   public function render(mixed $data = null): string {
     // Check if component has a "run" method
     if (method_exists($this, 'run')) {
-      $this->run($data);
+      if (is_null($data)) {
+        $this->run();
+      } else {
+        $this->run($data);
+      }
     }
 
     if ($this->component_info['template_type'] === 'php') {

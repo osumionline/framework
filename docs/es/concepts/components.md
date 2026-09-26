@@ -13,8 +13,6 @@ Se crea una instancia del componente, se le asignan propiedades y, a continuaci�
 
 ### Clase del componente
 
-Ejemplo de un archivo de clase de componente (`LostPasswordComponent.php`):
-
 ```php
 <?php declare(strict_types=1);
 
@@ -23,23 +21,16 @@ namespace Osumi\OsumiFramework\App\Component\Email\LostPassword;
 use Osumi\OsumiFramework\Core\OComponent;
 
 class LostPasswordComponent extends OComponent {
-  /**
-  * Las propiedades públicas se exponen automáticamente a la plantilla.
-  */
   public ?string $token = null;
 }
-
 ```
 
 ### Archivo de plantilla
-
-Ejemplo de plantilla (`LostPasswordTemplate.php`):
 
 ```php
 <div>
   Token: {{ token }}
 </div>
-
 ```
 
 ---
@@ -58,41 +49,13 @@ Cuando un componente se utiliza como acción principal para una URL, el framewor
 
 Los componentes se pueden encadenar o anidar. Un componente más grande puede incluir y renderizar componentes más pequeños dentro de su lógica o plantilla para facilitar su reutilización.
 
-Ejemplo de un archivo de clase de componente secundario (`ChildComponent.php`):
-
-```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Component\Child;
-
-use Osumi\OsumiFramework\Core\OComponent;
-
-class ChildComponent extends OComponent {
-  public ?string $name = null;
-}
-
-```
-
-### Archivo de plantilla
-
-Ejemplo de la plantilla (`ChildTemplate.php`):
-
-```php
-<div>
-  Nombre: {{ name }}
-</div>
-
-```
-
-Ejemplo de un archivo de clase de componente padre que utiliza un componente hijo (`FatherComponent.php`):
-
 ```php
 <?php declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\Component\Father;
 
-use Osumi\OsumiFramework\Core\OComponent;
 use Osumi\OsumiFramework\App\Component\Child\ChildComponent;
+use Osumi\OsumiFramework\Core\OComponent;
 
 class FatherComponent extends OComponent {
   public ?ChildComponent $child = null;
@@ -102,38 +65,12 @@ class FatherComponent extends OComponent {
     $this->child->name = 'Nombre del hijo';
   }
 }
-
-```
-
-### Archivo de plantilla
-
-Ejemplo de plantilla (`FatherTemplate.php`):
-
-```php
-<div>
-  Hijo: {{ hijo }}
-</div>
-
-```
-
-El resultado sería:
-
-```php
-Hijo: Nombre: Nombre del hijo
 ```
 
 ### Sintaxis y acceso a las plantillas
 
-Las plantillas acceden a las propiedades públicas del componente de forma diferente según la extensión del archivo:
-
-1. **Plantillas PHP (`.php`)**:
-
-- Pueden ejecutar código PHP nativo.
-- Acceden a las propiedades públicas como variables estándar (p. ej., `$token`).
-
-2. **Plantillas estáticas/estructuradas (`.html`, `.json`, `.xml`)**:
-
-- Use la notación de doble llave para mostrar las propiedades públicas: `{{ variable_name }}`.
+1. **Plantillas PHP (`.php`)** pueden ejecutar código PHP nativo y acceder a las propiedades públicas como variables estándar.
+2. **Plantillas estáticas/estructuradas (`.html`, `.json`, `.xml`)** usan la notación de doble llave: `{{ variable_name }}`.
 
 ---
 
@@ -141,28 +78,45 @@ Las plantillas acceden a las propiedades públicas del componente de forma difer
 
 Un componente puede definir un método `run()` opcional. Si está presente, se ejecuta automáticamente al inicio del proceso `render()` para preparar los datos antes de procesar la plantilla.
 
-Cuando el componente se utiliza como una acción (un componente renderizado como resultado de una ruta activada), la función `run()` puede recibir datos de las solicitudes:
+Cuando el componente se utiliza como una acción (un componente renderizado como resultado de una ruta activada), el método `run()` admite exactamente una de las siguientes firmas:
 
-- Si la función `run()` tiene un DTO, se utilizarán los datos de la solicitud para rellenar sus campos.
-- De lo contrario, se le pasará un objeto `ORequest` genérico.
+```php
+public function run(): void
+```
 
-La clase `ORequest` tiene métodos para obtener los datos pasados, como valores de formulario o parámetros pasados ​​a través de la URL:
+```php
+public function run(ORequest $req): void
+```
 
-- **`getParamString('name')`**: devuelve el valor del campo `name' pasado a la ruta como una cadena (null si no está presente).
-- **`getParamInt('name')`**: devuelve el valor del campo 'name' pasado a la ruta como un entero (nulo si no está presente).
-- **`getParamFloat('name')`**: devuelve el valor del campo 'name' pasado a la ruta como un float (nulo si no está presente).
-- **`getParamBool('name')`**: devuelve el valor del campo 'name' pasado a la ruta como un booleano (nulo si no está presente).
+```php
+public function run(MyDTO $dto): void
+```
+
+El comportamiento depende de la firma utilizada:
+
+- `run()` no recibe datos de la solicitud y puede utilizarse cuando el componente no necesita acceder a la solicitud actual.
+- `run(ORequest $req)` recibe la solicitud actual como una instancia de `ORequest`.
+- `run(MyDTO $dto)` recibe un DTO rellenado automáticamente con los datos de la solicitud actual. `MyDTO` debe extender `ODTO`.
+- Los DTO se detectan por herencia de `ODTO`, no por su namespace. Por tanto, las clases DTO pueden estar ubicadas en cualquier parte de la aplicación.
+- No se admite ninguna otra firma. El método puede recibir como máximo un parámetro, que debe ser un `ORequest` no nullable o una clase que extienda `ODTO`.
+
+La clase `ORequest` tiene métodos para obtener los datos recibidos, como valores de formulario o parámetros pasados a través de la URL:
+
+- **`getParamString('name')`**: devuelve el valor del campo `name` pasado a la ruta como una cadena (null si no está presente).
+- **`getParamInt('name')`**: devuelve el valor del campo `name` pasado a la ruta como un entero (null si no está presente).
+- **`getParamFloat('name')`**: devuelve el valor del campo `name` pasado a la ruta como un float (null si no está presente).
+- **`getParamBool('name')`**: devuelve el valor del campo `name` pasado a la ruta como un booleano (null si no está presente).
 
 Si una ruta tiene un filtro definido, la clase `ORequest` también proporciona maneras de acceder al resultado de su ejecución:
 
 ```php
 public function run(ORequest $req): void {
-  $login_filter = $req->getFilter('login'); // Accederá al resultado devuelto desde el archivo LoginFilter
-  $filters = $req->getFilters(); // Accederá al resultado devuelto por cada filtro aplicado como una matriz asociativa ['login' => [...]]
+  $login_filter = $req->getFilter('login');
+  $filters = $req->getFilters();
 }
 ```
 
-**Ejemplo:**
+**Ejemplos:**
 
 ```php
 class BooksComponent extends OComponent {
@@ -172,7 +126,6 @@ class BooksComponent extends OComponent {
     $this->books = ['Book A', 'Book B'];
   }
 }
-
 ```
 
 ```php
@@ -184,53 +137,38 @@ class GetBookComponent extends OComponent {
     $this->book = Book::findOne(['id' => $id_book]);
   }
 }
-
 ```
+
+---
 
 ## Acceso a opciones globales
 
-Los componentes tienen métodos para Acceso a opciones globales como la configuración de la aplicación, registros o datos de sesión:
+Los componentes tienen métodos para acceder a opciones globales como la configuración de la aplicación, logs o datos de sesión:
 
-- **`getConfig()`**: Devuelve `OConfig` global para leer rutas o valores definidos por el usuario (secretos, direcciones de correo electrónico, etc.).
-- Documentación: docs/es/concepts/config.md
-- **`getLog()`**: Devuelve la instancia `OLog` del componente. El usuario puede registrar información mediante métodos como `debug`, `info` o `error`.
-- Documentación: docs/es/concepts/log.md
-- **`getSession()`**: Devuelve la instancia `OSession` que permite acceder a los parámetros de $\_SESSION.
+- **`getConfig()`**: Devuelve el `OConfig` global.
+- **`getLog()`**: Devuelve la instancia `OLog` del componente.
+- **`getSession()`**: Devuelve la instancia `OSession`.
 
 ---
 
-## Convenciones de nomenclatura
-
-Para mantener la coherencia, siga estos patrones de nomenclatura:
-
-| Tipo de archivo         | Convención          | Ejemplo             |
-| ----------------------- | ------------------- | ------------------- |
-| **Clase de componente** | `XxxComponent.php`  | `UserComponent.php` |
-| **Plantilla**           | `XxxTemplate.<ext>` | `UserTemplate.json` |
-
----
-
-## Componentes de renderizado
-
-Un flujo de renderizado típico implica instanciar el componente, asignar datos y mostrar el resultado.
+## Renderizado de componentes
 
 ```php
 $cmp = new BooksComponent();
-
-// Puedes convertirlo a una cadena para activar run() y render()
 echo strval($cmp);
-
 ```
 
-# Canalizaciones de plantilla
+---
+
+# Pipes de plantilla
 
 Las plantillas de Osumi Framework admiten **pipes de estilo Angular**, lo que permite transformar valores directamente dentro de la plantilla.
 
 ### Sintaxis
 
-{{ valor | nombreDeLaPipa}}
-{{ valor | nombreDeLaPipa:param}}
-{{ valor | pipeName:param1:param2 }}
+    {{ valor | pipeName }}
+    {{ valor | pipeName:param }}
+    {{ valor | pipeName:param1:param2 }}
 
 ### Propósito
 
@@ -247,29 +185,25 @@ Los pipes son procesados por la clase interna **OPipeFunctions**.
 
 # Pipes disponibles
 
-A continuación se muestran todos los pipes integradas y su comportamiento, derivadas de las funciones de `OPipeFunctions.php`.
-
----
-
 ## 1. `date`
 
 Formatea una cadena de fecha (formato `Y-m-d H:i:s`) a un nuevo formato.
 
 ### Sintaxis
 
-{{ user.created_at | date }}
-{{ user.created_at | date:"d/m/Y" }}
-{{ user.created_at | fecha:"d-m-A H:i" }}
+    {{ user.created_at | date }}
+    {{ user.created_at | date:"d/m/Y" }}
+    {{ user.created_at | date:"d-m-Y H:i" }}
 
 ### Comportamiento
 
-- La entrada debe ser `A-m-d H:i:s`
+- La entrada debe ser `Y-m-d H:i:s`
 - La salida se formatea con `DateTime::format()` de PHP
 - Si la fecha no es válida → `"null"`
 
 ### Formato predeterminado
 
-d/m/A H:i:s
+    d/m/Y H:i:s
 
 ---
 
@@ -279,9 +213,9 @@ Formatea los números con `number_format()` de PHP.
 
 ### Sintaxis
 
-{{ precio | número }}
-{{ precio | número:2 }}
-{{ precio | number:2:".":"," }}
+    {{ price | number }}
+    {{ price | number:2 }}
+    {{ price | number:2:".":"," }}
 
 ### Comportamiento
 
@@ -289,11 +223,6 @@ Formatea los números con `number_format()` de PHP.
 - Separador decimal predeterminado: `"."`
 - Separador de miles predeterminado: `""`
 - Si el valor es nulo → `"null"`
-
-Ejemplos:
-
-1234.5 → 1234.50
-1234.5 → 1,234.50 (si el separador de miles es ",")
 
 ---
 
@@ -303,43 +232,67 @@ Aplica `urlencode()` a una cadena de texto.
 
 ### Sintaxis
 
-{{ user.name | string }}
+    {{ user.name | string }}
 
 ### Comportamiento
 
-- Nulo → `"null"`
-- Valor → `"urlencoded string"`
+- Nulo → `null`
+- Valor → cadena codificada como URL y entre comillas
 
 Ejemplo:
 
-"John Doe" → "John+Doe"
+    John Doe → "John+Doe"
 
 ---
 
-## 4. `bool`
+## 4. `plain`
 
-Convierte valores booleanos a:
-
-true
-false
-null
+Codifica una cadena como un valor seguro para JSON sin aplicar codificación URL.
 
 ### Sintaxis
 
-{{ user.isAdmin | bool }}
+    {{ user.name | plain }}
+
+### Comportamiento
+
+- Nulo → `null`
+- Valor → cadena entre comillas válida para JSON
+- Los caracteres Unicode se conservan
+- Las barras no se escapan
+- Las comillas y otros caracteres especiales para JSON se escapan correctamente
+
+Ejemplos:
+
+    John Doe → "John Doe"
+    Dijo "hola" → "Dijo \"hola\""
+
+Este pipe es especialmente útil en plantillas JSON cuando se quiere conservar el valor original de la cadena sin aplicar codificación URL.
+
+---
+
+## 5. `bool`
+
+Convierte valores booleanos a:
+
+    true
+    false
+    null
+
+### Sintaxis
+
+    {{ user.isAdmin | bool }}
 
 ---
 
 # Cómo se comportan los pipes en las plantillas JSON
 
-Dado que las plantillas como `.json` se representan como cadenas, los pipes garantizan automáticamente:
+Los pipes proporcionan valores adecuados para plantillas estructuradas:
 
-- Las cadenas se entrecomillan cuando es necesario
-- Los valores booleanos aparecen sin comillas
-- Los números aparecen sin comillas
-- Los valores nulos aparecen como `null`
-
-Esto garantiza una salida JSON válida.
+- `string` produce una cadena entre comillas y codificada como URL.
+- `plain` produce una cadena entre comillas segura para JSON sin codificación URL.
+- Los valores booleanos aparecen sin comillas.
+- Los números aparecen sin comillas.
+- Los valores nulos aparecen como `null`.
 
 ---
 
@@ -348,7 +301,8 @@ Esto garantiza una salida JSON válida.
 ```json
 {
   "id": {{ user.id | number }},
-  "name": {{ user.name | string }},
+  "name": {{ user.name | plain }},
+  "slug": {{ user.slug | string }},
   "created": {{ user.created_at | date:"d/m/Y" }},
   "active": {{ user.active | bool }}
 }
@@ -358,12 +312,14 @@ Esto garantiza una salida JSON válida.
 
 # Resumen de los pipes
 
-| Pipe     | Propósito                   | Notas                          |
-| -------- | --------------------------- | ------------------------------ |
-| `date`   | Formatear valores de fecha  | Acepta máscaras personalizadas |
-| `number` | Formatear valores numéricos | Admite decimales y separadores |
-| `string` | Codificar cadenas en URL    | Añade comillas                 |
-| `bool`   | Normalizar salida booleana  | `true` / `false` / `null`      |
+| Pipe     | Propósito                    | Notas                               |
+| -------- | ---------------------------- | ----------------------------------- |
+| `date`   | Formatear valores de fecha   | Acepta máscaras personalizadas      |
+| `number` | Formatear valores numéricos  | Admite decimales y separadores      |
+| `string` | Codificar cadenas como URL   | Añade comillas                      |
+| `plain`  | Cadenas sin codificación URL | Salida segura para JSON con comillas |
+| `bool`   | Normalizar salida booleana   | `true` / `false` / `null`           |
+
 
 ### Componentes ligados al modelo
 
@@ -372,20 +328,19 @@ Cuando los componentes representan vistas del modelo, puedes usar propiedades ti
 ```php
 namespace Osumi\OsumiFramework\App\Component\Model\User;
 
-use Osumi\OsumiFramework\Core\OComponent;
 use Osumi\OsumiFramework\App\Model\User;
+use Osumi\OsumiFramework\Core\OComponent;
 
 class UserComponent extends OComponent {
   public ?User $user = null;
 }
-
 ```
 
 ---
 
 ## Mejores prácticas
 
-- **Mantenga las plantillas simples**: Limítelas a una lógica de visualización mínima.
-- **Use `run()`**: Úselo para preparar datos o realizar cálculos antes de renderizar.
-- **Propiedades tipificadas**: Use propiedades públicas tipificadas para mayor claridad.
-- **Valores predeterminados**: Prefiera los valores predeterminados `?type = null` para evitar errores de "propiedad no inicializada" en PHP 8.3+.
+- **Mantén las plantillas simples**: Limítalas a una lógica de visualización mínima.
+- **Usa `run()`**: Úsalo para preparar datos o realizar cálculos antes de renderizar.
+- **Propiedades tipificadas**: Usa propiedades públicas tipificadas para mayor claridad.
+- **Valores predeterminados**: Prefiere `?type = null` para evitar errores de propiedades no inicializadas.

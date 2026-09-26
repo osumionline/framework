@@ -11,9 +11,7 @@ Osagai instantzia bat sortzen da, propietateak esleitzen zaizkio eta gero osagai
 
 ## Oinarrizko osagaien egitura
 
-### Osagai Klasea
-
-Osagai klase fitxategi baten adibidea (`LostPasswordComponent.php`):
+### Osagai-klasea
 
 ```php
 <?php declare(strict_types=1);
@@ -23,146 +21,102 @@ namespace Osumi\OsumiFramework\App\Component\Email\LostPassword;
 use Osumi\OsumiFramework\Core\OComponent;
 
 class LostPasswordComponent extends OComponent {
-  /**
-  * Propietate publikoak automatikoki agertzen dira txantiloian.
-  */
   public ?string $token = null;
 }
-
 ```
 
-### Txantiloi Fitxategia
-
-Txantiloi baten adibidea (`LostPasswordTemplate.php`):
+### Txantiloi-fitxategia
 
 ```php
 <div>
   Token: {{ token }}
 </div>
-
 ```
 
 ---
 
-## Ezaugarri Aurreratuak
+## Ezaugarri aurreratuak
 
-### Eduki Mota Goiburu Automatikoak
+### Eduki mota goiburu automatikoak
 
-Osagai bat URL baten ekintza nagusi gisa erabiltzen denean, esparruak automatikoki bidaltzen du dagokion `Content-Type` goiburua txantiloiaren fitxategi luzapenaren arabera:
+Osagai bat URL baten ekintza nagusi gisa erabiltzen denean, framework-ak automatikoki bidaltzen du dagokion `Content-Type` goiburua txantiloiaren fitxategi-luzapenaren arabera:
 
-- `.json`: `Content-type: application/json` bidaltzen du.
-- `.xml`: `Content-type: application/xml` bidaltzen du.
-- `.html` / `.php`: `Content-type: text/html` bidaltzen du.
+- `.json`: `Content-type: application/json`.
+- `.xml`: `Content-type: application/xml`.
+- `.html` / `.php`: `Content-type: text/html`.
 
-### Osagaien Habiaratzea
+### Osagaien habiaratzea
 
-Osagaiak kateatu edo habiaratu daitezke. Osagai handiago batek osagai txikiagoak sartu eta errendatu ditzake bere logika edo txantiloian berrerabilgarritasuna sustatzeko.
-
-Seme osagai klase fitxategi baten adibidea (`ChildComponent.php`):
-
-```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Component\Child;
-
-use Osumi\OsumiFramework\Core\OComponent;
-
-class ChildComponent extends OComponent {
-  public ?string $name = null;
-}
-
-```
-
-### Txantiloi Fitxategia
-
-Txantiloi baten adibidea (`ChildTemplate.php`):
-
-```php
-<div>
-  Izena: {{ name }}
-</div>
-
-```
-
-Seme osagai bat erabiliz aita osagai klase fitxategi baten adibidea (`FatherComponent.php`):
+Osagaiak kateatu edo habiaratu daitezke, osagai txikiagoak berrerabiltzeko.
 
 ```php
 <?php declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\Component\Father;
 
-use Osumi\OsumiFramework\Core\OComponent;
 use Osumi\OsumiFramework\App\Component\Child\ChildComponent;
+use Osumi\OsumiFramework\Core\OComponent;
 
 class FatherComponent extends OComponent {
   public ?ChildComponent $child = null;
 
   public function run(): void {
     $this->child = new ChildComponent();
-    $this->child->name = 'Semearen Izena';
+    $this->child->name = 'Semearen izena';
   }
 }
-
 ```
 
-### Txantiloi Fitxategia
+### Txantiloiaren sintaxia eta sarbidea
 
-Txantiloi baten adibidea (`FatherTemplate.php`):
-
-```php
-<div>
-  Semea: {{ child }}
-</div>
-
-```
-
-Emaitza hau izango litzateke:
-
-```php
-Semea: Izena: Semearen Izena
-```
-
-### Txantiloiaren Sintaxia eta Sarbidea
-
-Txantiloiek osagaiaren propietate publikoetara modu ezberdinean sartzen dira fitxategiaren luzapenaren arabera:
-
-1. **PHP Txantiloiak (`.php`)**:
-
-- PHP kode natiboa exekutatu dezakete.
-- Propietate publikoetara aldagai estandar gisa sartzen dira (adibidez, `$token`).
-
-2. **Txantiloi Estatikoak/Egituratuak (`.html`, `.json`, `.xml`)**:
-
-- Erabili kortxete bikoitzen notazioa propietate publikoak ateratzeko: `{{ aldagai_izena }}`.
+1. **PHP txantiloiak (`.php`)** PHP kode natiboa exekutatu dezakete eta propietate publikoak aldagai estandar gisa atzitu.
+2. **Txantiloi estatiko/egituratuek (`.html`, `.json`, `.xml`)** giltza bikoitzak erabiltzen dituzte: `{{ variable_name }}`.
 
 ---
 
-## `run()` metodoa (Hautazkoa)
+## `run()` metodoa (aukerakoa)
 
-Osagai batek `run()` metodo bat defini dezake aukeran. Baldin badago, automatikoki exekutatzen da `render()` prozesuaren hasieran, txantiloia prozesatu aurretik datuak prestatzeko.
+Osagai batek aukerako `run()` metodo bat defini dezake. Definituta badago, automatikoki exekutatzen da `render()` prozesuaren hasieran, txantiloia prozesatu aurretik datuak prestatzeko.
 
-Osagaia ekintza gisa erabiltzen denean (ibilbide aktibatu baten ondorioz errendatutako osagaia), `run()` funtzioak eskaeren datuak jaso ditzake:
-
-- `run()` funtzioak DTO bat badu, eskaerako datuak erabiliko dira bere eremuak betetzeko.
-- Bestela, `ORequest` objektu generiko bat pasatuko zaio.
-
-`ORequest` klaseak metodoak ditu pasatako datuak lortzeko, hala nola, formularioen balioak edo URL bidez pasatako parametroak:
-
-- **`getParamString('izena')`**: ibilbideari pasatako 'izena' eremuaren balioa kate gisa itzultzen du (nuloa ez badago).
-- **`getParamInt('izena')`**: ibilbideari pasatako 'izena' eremuaren balioa zenbaki oso gisa itzultzen du (nuloa ez badago).
-- **`getParamFloat('izena')`**: ibilbideari pasatako 'izena' eremuaren balioa itzultzen du float gisa (null ez badago).
-- **`getParamBool('izena')`**: ibilbideari pasatako 'izena' eremuaren balioa itzultzen du boolear gisa (null ez badago).
-
-Ibilbide batek iragazki bat definituta badu, `ORequest` klaseak haien exekuzioaren emaitza atzitzeko moduak ere eskaintzen ditu:
+Osagaia ekintza gisa erabiltzen denean (aktibatutako bide baten emaitza gisa errendatutako osagaia), `run()` metodoak honako sinadura hauetako bat izan behar du:
 
 ```php
-  public function run(ORequest $req): void {
-    $login_filter = $req->getFilter('login'); // LoginFilter fitxategitik itzulitako emaitza atzituko luke
-    $filters = $req->getFilters(); // Aplikatutako iragazki bakoitzaren itzulitako emaitza asoziazio-array gisa atzituko luke ['login' => [...]]
-  }
+public function run(): void
 ```
 
-**Adibidea:**
+```php
+public function run(ORequest $req): void
+```
+
+```php
+public function run(MyDTO $dto): void
+```
+
+Portaera erabilitako sinaduraren araberakoa da:
+
+- `run()` metodoak ez du eskaeraren daturik jasotzen, eta osagaiak uneko eskaera atzitu behar ez duenean erabil daiteke.
+- `run(ORequest $req)` metodoak uneko eskaera `ORequest` instantzia gisa jasotzen du.
+- `run(MyDTO $dto)` metodoak uneko eskaeraren datuekin automatikoki betetako DTO bat jasotzen du. `MyDTO` klaseak `ODTO` hedatu behar du.
+- DTOak `ODTO`-ren herentziaren bidez detektatzen dira, ez namespace-aren bidez. Beraz, DTO klaseak aplikazioaren edozein lekutan egon daitezke.
+- Ez da beste sinadurarik onartzen. Metodoak gehienez parametro bat jaso dezake, eta parametro horrek nullable ez den `ORequest` bat edo `ODTO` hedatzen duen klase bat izan behar du.
+
+`ORequest` klaseak jasotako datuak eskuratzeko metodoak eskaintzen ditu, hala nola formulario-balioak edo URLaren bidez jasotako parametroak:
+
+- **`getParamString('name')`**: bideari pasatutako `name` eremuaren balioa kate gisa itzultzen du (null ez badago).
+- **`getParamInt('name')`**: bideari pasatutako `name` eremuaren balioa zenbaki oso gisa itzultzen du (null ez badago).
+- **`getParamFloat('name')`**: bideari pasatutako `name` eremuaren balioa float gisa itzultzen du (null ez badago).
+- **`getParamBool('name')`**: bideari pasatutako `name` eremuaren balioa boolear gisa itzultzen du (null ez badago).
+
+Bide batek iragazki bat definituta badu, `ORequest` klaseak exekuzioaren emaitza atzitzeko moduak ere eskaintzen ditu:
+
+```php
+public function run(ORequest $req): void {
+  $login_filter = $req->getFilter('login');
+  $filters = $req->getFilters();
+}
+```
+
+**Adibideak:**
 
 ```php
 class BooksComponent extends OComponent {
@@ -172,7 +126,6 @@ class BooksComponent extends OComponent {
     $this->books = ['A Liburua', 'B Liburua'];
   }
 }
-
 ```
 
 ```php
@@ -184,82 +137,63 @@ class GetBookComponent extends OComponent {
     $this->book = Book::findOne(['id' => $id_book]);
   }
 }
-
 ```
+
+---
 
 ## Aukera globaletara sartzea
 
-Osagaiek metodoak dituzte aplikazioaren konfigurazioa, erregistroak edo saio-datuak bezalako aukera globaletara sartzeko:
+Osagaiek aplikazioaren konfigurazioa, log-ak edo saio-datuak bezalako aukera globaletara sartzeko metodoak dituzte:
 
-- **`getConfig()`**: `OConfig` globala itzultzen du bideak edo erabiltzaileak definitutako balioak (sekretuak, helbide elektronikoak...) irakurtzeko
-    - Dokumentazioa: docs/eu/concepts/config.md
-- **`getLog()`**: Osagaiko `OLog` instantzia itzultzen du. Erabiltzaileak informazioa erregistratu dezake `debug`, `info` edo `error` bezalako metodoak erabiliz.
-    - Dokumentazioa: docs/eu/concepts/log.md
-- **`getSession()`**: `OSession` instantzia itzultzen du, $\_SESSION parametroetara sartzeko erabil daitekeena.
+- **`getConfig()`**: `OConfig` globala itzultzen du.
+- **`getLog()`**: Osagaiaren `OLog` instantzia itzultzen du.
+- **`getSession()`**: `OSession` instantzia itzultzen du.
 
 ---
 
-## Izendapen-konbentzioak
-
-Koherentzia mantentzeko, jarraitu izendapen-eredu hauek:
-
-| Fitxategi mota    | Konbentzioa         | Adibidea            |
-| ----------------- | ------------------- | ------------------- |
-| **Osagai-klasea** | `XxxComponent.php`  | `UserComponent.php` |
-| **Txantiloia**    | `XxxTemplate.<ext>` | `UserTemplate.json` |
-
----
-
-## Osagaiak Errendatzea
-
-Errendatze-fluxu tipiko batek osagaia instantziatzea, datuak esleitzea eta emaitza irteeratzea dakar.
+## Osagaiak errendatzea
 
 ```php
 $cmp = new BooksComponent();
-
-// Kate bihurtu dezakezu run() eta render() abiarazteko
 echo strval($cmp);
-
 ```
 
-# Txantiloi-hodiak
+---
 
-Osumi Framework-eko txantiloiek **Angular erako hodiak** onartzen dituzte, balioak txantiloiaren barruan zuzenean eraldatzeko aukera emanez.
+# Txantiloi-pipeak
+
+Osumi Framework-eko txantiloiek **Angular estiloko pipeak** onartzen dituzte, balioak txantiloiaren barruan zuzenean eraldatzeko aukera emanez.
 
 ### Sintaxia
 
-{{ value | pipeName }}
-{{ value | pipeName:param }}
-{{ value | pipeName:param1:param2 }}
+    {{ value | pipeName }}
+    {{ value | pipeName:param }}
+    {{ value | pipeName:param1:param2 }}
 
 ### Helburua
 
-Hodiek formatua ahalbidetzen dute:
+Pipeek formatua ahalbidetzen dute:
 
 - Datak
 - Zenbakiak
 - Kateak
 - Boolearrak
 
-Hodiak barneko **OPipeFunctions** klaseak prozesatzen ditu.
+Pipeak barneko **OPipeFunctions** klaseak prozesatzen ditu.
 
 ---
 
-# Eskuragarri dauden hodiak
-
-Jarraian, `OPipeFunctions.php`-ko funtzioetatik eratorriak diren hodi integratu guztiak eta haien portaera ageri dira.
-
----
+# Eskuragarri dauden pipeak
 
 ## 1. `date`
 
-Data-kate bat formatu berri batean formateatzen du (`Y-m-d H:i:s` formatua).
+Data-kate bat (`Y-m-d H:i:s` formatua) formatu berri batean formateatzen du.
 
 ### Sintaxia
 
-{{ user.created_at | date }}
-{{ user.created_at | date:"d/m/Y" }}
-{{ user.created_at | date:"d-m-Y H:i" }}
+    {{ user.created_at | date }}
+    {{ user.created_at | date:"d/m/Y" }}
+    {{ user.created_at | date:"d-m-Y H:i" }}
 
 ### Portaera
 
@@ -269,7 +203,7 @@ Data-kate bat formatu berri batean formateatzen du (`Y-m-d H:i:s` formatua).
 
 ### Formatu lehenetsia
 
-d/m/Y H:i:s
+    d/m/Y H:i:s
 
 ---
 
@@ -279,21 +213,16 @@ Zenbakiak PHP-ren `number_format()` erabiliz formateatzen ditu.
 
 ### Sintaxia
 
-{{ prezioa | number }}
-{{ prezioa | number:2 }}
-{{ prezioa | number:2:".":"," }}
+    {{ price | number }}
+    {{ price | number:2 }}
+    {{ price | number:2:".":"," }}
 
 ### Portaera
 
 - Lehenetsitako hamartarrak: **2**
-- Lehenetsitako hamartarren bereizlea: `".."`
+- Lehenetsitako hamartarren bereizlea: `"."`
 - Lehenetsitako milakoen bereizlea: `""`
 - Balioa nulua bada → `"null"`
-
-Adibideak:
-
-1234.5 → 1234.50
-1234.5 → 1,234.50 (milakoen bereizlea "," bada)
 
 ---
 
@@ -303,20 +232,45 @@ Adibideak:
 
 ### Sintaxia
 
-{{ erabiltzaile.izena | string }}
+    {{ user.name | string }}
 
 ### Portaera
 
-- Nulua → `"null"`
-- Balioa → `"urlencode-rekin kodeatutako katea"`
+- Nulua → `null`
+- Balioa → URL bidez kodetutako katea komatxo artean
 
 Adibidea:
 
-"John Doe" → "John+Doe"
+    John Doe → "John+Doe"
 
 ---
 
-## 4. `bool`
+## 4. `plain`
+
+Kate bat JSONerako balio seguru gisa kodetzen du, URL kodetzea aplikatu gabe.
+
+### Sintaxia
+
+    {{ user.name | plain }}
+
+### Portaera
+
+- Nulua → `null`
+- Balioa → JSONerako baliozko katea komatxo artean
+- Unicode karaktereak mantentzen dira
+- Barrak ez dira ihes egiten
+- Komatxoak eta JSONerako bereziak diren beste karaktereak behar bezala ihes egiten dira
+
+Adibideak:
+
+    John Doe → "John Doe"
+    "Kaixo" esan zuen → "\"Kaixo\" esan zuen"
+
+Pipe hau bereziki erabilgarria da JSON txantiloietan jatorrizko katearen balioa URL kodetzerik gabe mantendu nahi denean.
+
+---
+
+## 5. `bool`
 
 Boolearrak bihurtzen ditu:
 
@@ -326,20 +280,19 @@ Boolearrak bihurtzen ditu:
 
 ### Sintaxia
 
-{{ erabiltzailea.isAdmin | bool }}
+    {{ user.isAdmin | bool }}
 
 ---
 
-# Nola jokatzen duten hodiak JSON txantiloietan
+# Nola jokatzen duten pipeek JSON txantiloietan
 
-`.json` bezalako txantiloiak kate gisa errendatzen direnez, hodiek automatikoki ziurtatzen dute:
+Pipeek txantiloi egituratuetarako balio egokiak sortzen dituzte:
 
-- Kateak komatxo artean agertzen dira behar direnean
-- Boolearrak komatxorik gabe agertzen dira
-- Zenbakiak komatxorik gabe agertzen dira
-- Balio nuluak `null` gisa agertzen dira
-
-Honek JSON irteera baliozkoa bermatzen du.
+- `string` pipeak URL bidez kodetutako katea sortzen du komatxo artean.
+- `plain` pipeak JSONerako kate segurua sortzen du komatxo artean, URL kodetzerik gabe.
+- Boolearrak komatxorik gabe agertzen dira.
+- Zenbakiak komatxorik gabe agertzen dira.
+- Balio nuluak `null` gisa agertzen dira.
 
 ---
 
@@ -348,7 +301,8 @@ Honek JSON irteera baliozkoa bermatzen du.
 ```json
 {
   "id": {{ user.id | number }},
-  "name": {{ user.name | string }},
+  "name": {{ user.name | plain }},
+  "slug": {{ user.slug | string }},
   "created": {{ user.created_at | date:"d/m/Y" }},
   "active": {{ user.active | bool }}
 }
@@ -356,36 +310,37 @@ Honek JSON irteera baliozkoa bermatzen du.
 
 ---
 
-# Hodien laburpena
+# Pipeen laburpena
 
-| Hodia    | Helburua                      | Oharrak                                  |
-| -------- | ----------------------------- | ---------------------------------------- |
-| `date`   | Data balioak formateatu       | Maskara pertsonalizatuak onartzen ditu   |
-| `number` | Zenbakizko balioak formateatu | Hamartarrak eta bereizleak onartzen ditu |
-| `string` | URL kodeketa kateak           | Komatxoak gehitzen ditu                  |
-| `bool`   | Normalizatu irteera boolearra | `true` / `false` / `null`                |
+| Pipe     | Helburua                        | Oharrak                              |
+| -------- | ------------------------------- | ------------------------------------ |
+| `date`   | Data-balioak formateatzea       | Maskara pertsonalizatuak onartzen ditu |
+| `number` | Zenbakizko balioak formateatzea | Dezimalak eta bereizleak onartzen ditu |
+| `string` | Kateak URL gisa kodetzea        | Komatxoak gehitzen ditu              |
+| `plain`  | URL kodetu gabeko kateak        | JSONerako irteera segurua            |
+| `bool`   | Irteera boolearra normalizatzea | `true` / `false` / `null`            |
+
 
 ### Ereduari lotutako osagaiak
 
-Osagaiek ereduaren ikuspegiak adierazten dituztenean, motatutako propietateak erabil ditzakezu zure eredu klaseekin.
+Osagaiek ereduaren ikuspegiak adierazten dituztenean, motatutako propietateak erabil ditzakezu.
 
 ```php
 namespace Osumi\OsumiFramework\App\Component\Model\User;
 
-use Osumi\OsumiFramework\Core\OComponent;
 use Osumi\OsumiFramework\App\Model\User;
+use Osumi\OsumiFramework\Core\OComponent;
 
 class UserComponent extends OComponent {
   public ?User $user = null;
 }
-
 ```
 
 ---
 
 ## Praktika onak
 
-- **Mantendu txantiloiak sinpleak**: Mugatu bistaratze logika minimora.
+- **Mantendu txantiloiak sinpleak**: Mugatu bistaratze-logika minimora.
 - **Erabili `run()`**: Erabili datuak prestatzeko edo kalkuluak egiteko errendatu aurretik.
 - **Motatutako propietateak**: Erabili motatutako propietate publikoak argitasunerako.
-- **Balio lehenetsiak**: Hobetsi `?type = null` lehenetsitako balioak PHP 8.3+-n "hasi gabeko propietatea" erroreak saihesteko.
+- **Balio lehenetsiak**: Hobetsi `?type = null` hasieratu gabeko propietateen erroreak saihesteko.

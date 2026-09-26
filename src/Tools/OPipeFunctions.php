@@ -63,6 +63,27 @@ class OPipeFunctions {
   }
 
   /**
+   * Encodes a string value as a JSON-safe string without URL encoding,
+   * or returns "null" if value is null.
+   *
+   * @param string|null $value String value, or null.
+   *
+   * @return string JSON-safe string in quotes, or "null" if value is null.
+   *
+   * @throws \JsonException If the value cannot be encoded as JSON.
+   */
+  public static function getStringPlainValue(?string $value): string {
+    if (is_null($value)) {
+      return 'null';
+    }
+
+    return json_encode(
+      $value,
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+  }
+
+  /**
    * Converts a boolean value to "true" or "false", or returns "null" if value is null.
    *
    * @param bool|null $value Boolean value, or null.
