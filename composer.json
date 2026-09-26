@@ -1,7 +1,7 @@
 {
   "name": "osumionline/framework",
   "description": "Framework PHP de Osumi para aplicaciones web.",
-  "version": "9.8.3",
+  "version": "9.8.4",
   "type": "library",
   "keywords": [
     "framework",
@@ -19,7 +19,7 @@
     }
   ],
   "require": {
-    "php": ">=8.2",
+    "php": ">=8.5",
     "ext-json": "*"
   },
   "autoload": {
@@ -28,6 +28,6 @@
     }
   },
   "extra": {
-    "version-description": "Corrección al usar hacer consultas a BD con valores NULL, mejoras internas y correcciones de seguridad."
+    "version-description": "Cambios en rutas para permitir anidamiento con prefix y group. Nuevo caso 401 para HttpStatus."
   }
 }

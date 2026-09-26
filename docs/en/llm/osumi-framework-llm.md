@@ -74,9 +74,11 @@ Routes map URLs to Components.
 - HTTP verbs: GET, POST, PUT, DELETE
 - Supports route params via `:name`
 - Supports:
-    - Prefix groups (`ORoute::prefix()`)
-    - Layout groups (`ORoute::layout()`)
-    - Combined groups (`ORoute::group(prefix, layout, fn)`)
+  - Prefix groups (`ORoute::prefix()`)
+  - Layout groups (`ORoute::layout()`)
+  - Combined groups (`ORoute::group(prefix, layout, fn)`)
+- Prefix and combined groups can be nested; nested prefixes accumulate.
+- Route URLs are normalized by `get()`, `post()`, `put()`, `delete()`, `view()`, `group()`, and `prefix()`: repeated slashes are collapsed, trailing slashes are removed except for the root URL `/`, and URLs have a single leading slash.
 
 Examples:
 
@@ -113,8 +115,8 @@ Optional:
 - Filters run in order.
 - First failing filter stops the request.
 - On failure:
-    - Redirect if `return` exists
-    - Otherwise HTTP 403
+  - Redirect if `return` exists
+  - Otherwise HTTP 403
 
 Filter outputs are available later via `ORequest->getFilter('Name')`.
 
@@ -158,8 +160,8 @@ DTOs should not contain business logic.
 - Public typed properties are exposed to templates.
 - Optional `run()` method.
 - `run()` may accept either:
-    - a DTO (typed input)
-    - an `ORequest` (raw access to params/headers/filters/files)
+  - a DTO (typed input)
+  - an `ORequest` (raw access to params/headers/filters/files)
 
 Keep components thin; move business logic to Services.
 
@@ -193,8 +195,8 @@ Static templates (`.html/.json/.xml`) use curly output:
 
 1. Route component is executed and rendered
 2. If a layout is defined for the route, the layout receives:
-    - `title` (default page title)
-    - `body` (rendered output from the route component)
+   - `title` (default page title)
+   - `body` (rendered output from the route component)
 3. The layout template is rendered as the final response
 
 Layouts are the natural place for global structure and asset injection.

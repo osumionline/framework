@@ -74,9 +74,11 @@ Ibilbideek URLak Osagaiei mapatzen dizkiete.
 - HTTP aditzak: GET, POST, PUT, DELETE
 - Ibilbide-parametroak onartzen ditu `:name` bidez
 - Onartzen ditu:
-    - Aurrizki taldeak (`ORoute::prefix()`)
-    - Diseinu taldeak (`ORoute::layout()`)
-    - Talde konbinatuak (`ORoute::group(prefix, layout, fn)`)
+  - Aurrizki taldeak (`ORoute::prefix()`)
+  - Diseinu taldeak (`ORoute::layout()`)
+  - Talde konbinatuak (`ORoute::group(prefix, layout, fn)`)
+- Aurrizki-taldeak eta talde konbinatuak habiaratu daitezke; habiaratutako aurrizkiak metatu egiten dira.
+- `ORoute`-ren metodo estatikoek (`get()`, `post()`, `put()`, `delete()`, `view()`, `group()` eta `prefix()`) URLak normalizatzen dituzte: barra errepikatuak bakarrera murrizten dituzte, amaierako barrak kentzen dituzte erroko `/` URLan izan ezik, eta hasierako barra bakarra bermatzen dute.
 
 Adibideak:
 
@@ -158,8 +160,8 @@ DTOek ez lukete negozio-logikarik izan behar.
 - Mota publikoko propietateak txantiloietan agertzen dira.
 - Aukerako `run()` metodoa.
 - `run()`-k hau onartu dezake:
-    - DTO bat (sarrera idatzia)
-    - `ORequest` bat (parametro/goiburu/iragazki/fitxategietarako sarbide gordina)
+  - DTO bat (sarrera idatzia)
+  - `ORequest` bat (parametro/goiburu/iragazki/fitxategietarako sarbide gordina)
 
 Mantendu osagaiak meheak; eraman negozio logika Zerbitzuetara.
 
@@ -193,8 +195,8 @@ Txantiloi estatikoek (`.html/.json/.xml`) irteera kizkurra erabiltzen dute:
 
 1. Ibilbide-osagaia exekutatu eta errendatzen da
 2. Ibilbiderako diseinu bat definitzen bada, diseinuak hau jasotzen du:
-    - `title` (orrialde-izenburu lehenetsia)
-    - `body` (ibilbide-osagaiaren irteera errendatua)
+   - `title` (orrialde-izenburu lehenetsia)
+   - `body` (ibilbide-osagaiaren irteera errendatua)
 3. Diseinu-txantiloia azken erantzun gisa errendatzen da
 
 Diseinuak dira egitura globalaren eta aktiboen injekzioaren leku naturala.

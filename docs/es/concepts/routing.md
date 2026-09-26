@@ -53,15 +53,21 @@ Osumi Framework ofrece tres maneras de agrupar rutas con características comune
 
 ### 1. Prefijos
 
-Se utilizan cuando varias rutas comparten la misma URL de inicio (por ejemplo, una API).
+Se utilizan cuando varias rutas comparten el mismo inicio de URL (por ejemplo, una API). Los prefijos pueden anidarse; cada prefijo anidado se añade al prefijo activo.
 
 ```php
-ORoute::prefix('/api', function() {
-  ORoute::post('/login', LoginComponent::class);
-  ORoute::post('/register', RegisterComponent::class);
+ORoute::prefix('/api', function(): void {
+  ORoute::get('/health', HealthComponent::class);
+
+  ORoute::prefix('/admin', function(): void {
+    ORoute::post('/login', LoginComponent::class);
+    ORoute::get('/me', MeComponent::class, [AdminAuthFilter::class]);
+  });
 });
 
 ```
+
+Esto registra `/api/health`, `/api/admin/login` y `/api/admin/me`.
 
 ### 2. Diseños
 
@@ -77,15 +83,34 @@ ORoute::layout(MainLayoutComponent::class, function() {
 
 ### 3. Grupos (Prefijo + Diseño)
 
-Combina la asignación de prefijos y diseños en un solo bloque.
+Combina la asignación de un prefijo y un diseño en un solo bloque. Los grupos pueden anidarse con otros grupos o prefijos; sus prefijos se acumulan y cada grupo aplica su diseño a las rutas declaradas en su interior.
 
 ```php
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-  ORoute::get('/settings', SettingsComponent::class);
+ORoute::group('/admin', AdminLayoutComponent::class, function(): void {
+  ORoute::group('/users', UserLayoutComponent::class, function(): void {
+    ORoute::get('/profile', ProfileComponent::class);
+  });
 });
 
 ```
+
+La ruta anterior se registra como `/admin/users/profile` y utiliza `UserLayoutComponent`.
+
+### Normalización de URL
+
+Todos los métodos estáticos de `ORoute` normalizan las URL. Las barras iniciales se unifican, las barras repetidas se reducen a una sola y las barras finales se eliminan, excepto en la URL raíz `/`. Esto se aplica a `get()`, `post()`, `put()`, `delete()`, `view()`, `group()` y `prefix()`.
+
+Por ejemplo, con prefijos anidados y barras adicionales:
+
+```php
+ORoute::prefix('/api/', function(): void {
+  ORoute::prefix('//admin///', function(): void {
+    ORoute::get('//users/', UsersComponent::class);
+  });
+});
+```
+
+La ruta se registra como `/api/admin/users`.
 
 ---
 
@@ -120,9 +145,9 @@ El método `run(ORequest $req)` del componente puede acceder a ese parámetro me
 | `put()`    | Registra una ruta PUT.                                            |
 | `delete()` | Registra una ruta DELETE.                                         |
 | `view()`   | Registra una ruta que renderiza un archivo estático directamente. |
-| `prefix()` | Agrupa las rutas bajo un prefijo de URL común.                    |
-| `layout()` | Agrupa las rutas bajo un componente de diseño común.              |
-| `group()`  | Agrupa rutas con un prefijo y un diseño.                          |
+| `prefix()` | Agrupa rutas bajo un prefijo acumulativo y anidable.              |
+| `layout()` | Agrupa rutas bajo un componente de diseño común.                  |
+| `group()`  | Agrupa rutas con un prefijo anidable y un diseño.                 |
 
 ---
 

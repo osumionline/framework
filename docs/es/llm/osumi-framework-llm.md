@@ -74,9 +74,11 @@ Las rutas asignan URL a componentes.
 - Verbos HTTP: GET, POST, PUT, DELETE
 - Admite parámetros de ruta mediante `:name`
 - Admite:
-    - Grupos de prefijos (`ORoute::prefix()`)
-    - Grupos de diseño (`ORoute::layout()`)
-    - Grupos combinados (`ORoute::group(prefix, layout, fn)`)
+  - Grupos de prefijos (`ORoute::prefix()`)
+  - Grupos de diseño (`ORoute::layout()`)
+  - Grupos combinados (`ORoute::group(prefix, layout, fn)`)
+- Los grupos de prefijos y los grupos combinados pueden anidarse; los prefijos anidados se acumulan.
+- Las URL se normalizan mediante `get()`, `post()`, `put()`, `delete()`, `view()`, `group()` y `prefix()`: las barras repetidas se reducen a una sola, se eliminan las barras finales excepto en la URL raíz `/` y se garantiza una única barra inicial.
 
 Ejemplos:
 
@@ -113,8 +115,8 @@ Opcional:
 - Los filtros se ejecutan en orden.
 - El primer filtro que falla detiene la solicitud.
 - En caso de error:
-    - Redirigir si `return` existe
-    - En caso contrario, HTTP 403
+  - Redirigir si `return` existe
+  - En caso contrario, HTTP 403
 
 Las salidas de los filtros están disponibles posteriormente mediante `ORequest->getFilter('Nombre')`.
 
@@ -158,8 +160,8 @@ Los DTO no deben contener lógica de negocio.
 - Las propiedades públicas tipificadas se exponen a las plantillas.
 - Método `run()` opcional.
 - `run()` puede aceptar:
-    - un DTO (entrada tipificada)
-    - un `ORequest` (acceso directo a parámetros/encabezados/filtros/archivos)
+  - un DTO (entrada tipificada)
+  - un `ORequest` (acceso directo a parámetros/encabezados/filtros/archivos)
 
 Mantener los componentes reducidos; trasladar la lógica de negocio a los servicios.
 
@@ -193,8 +195,8 @@ Las plantillas estáticas (`.html/.json/.xml`) usan salida curly:
 
 1. El componente de ruta se ejecuta y renderiza.
 2. Si se define un diseño para la ruta, este recibe:
-    - `title` (título de página predeterminado).
-    - `body` (salida renderizada del componente de ruta).
+   - `title` (título de página predeterminado).
+   - `body` (salida renderizada del componente de ruta).
 3. La plantilla de diseño se renderiza como respuesta final.
 
 Los diseños son el lugar natural para la estructura global y la inyección de recursos.

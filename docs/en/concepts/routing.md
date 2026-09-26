@@ -53,15 +53,21 @@ Osumi Framework provides three ways to group routes that share common characteri
 
 ### 1. Prefixes
 
-Used when multiple routes share the same URL start (e.g., an API).
+Use prefixes when multiple routes share the same URL start (e.g., an API). Prefixes can be nested; each nested prefix is appended to the active prefix.
 
 ```php
-ORoute::prefix('/api', function() {
-  ORoute::post('/login', LoginComponent::class);
-  ORoute::post('/register', RegisterComponent::class);
+ORoute::prefix('/api', function(): void {
+  ORoute::get('/health', HealthComponent::class);
+
+  ORoute::prefix('/admin', function(): void {
+    ORoute::post('/login', LoginComponent::class);
+    ORoute::get('/me', MeComponent::class, [AdminAuthFilter::class]);
+  });
 });
 
 ```
+
+This registers `/api/health`, `/api/admin/login`, and `/api/admin/me`.
 
 ### 2. Layouts
 
@@ -77,15 +83,34 @@ ORoute::layout(MainLayoutComponent::class, function() {
 
 ### 3. Groups (Prefix + Layout)
 
-Combines both prefixing and layout assignment in a single block.
+Combines a prefix and layout assignment in a single block. Groups can be nested with other groups or prefixes; their URL prefixes accumulate, and each group applies its layout to the routes declared inside it.
 
 ```php
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-  ORoute::get('/settings', SettingsComponent::class);
+ORoute::group('/admin', AdminLayoutComponent::class, function(): void {
+  ORoute::group('/users', UserLayoutComponent::class, function(): void {
+    ORoute::get('/profile', ProfileComponent::class);
+  });
 });
 
 ```
+
+The route above is registered at `/admin/users/profile` and uses `UserLayoutComponent`.
+
+### URL Normalization
+
+All static `ORoute` methods normalize URLs. Leading slashes are made consistent, repeated slashes are collapsed, and trailing slashes are removed except for the root URL `/`. This applies to `get()`, `post()`, `put()`, `delete()`, `view()`, `group()`, and `prefix()`.
+
+For example, nested prefixes with extra slashes:
+
+```php
+ORoute::prefix('/api/', function(): void {
+  ORoute::prefix('//admin///', function(): void {
+    ORoute::get('//users/', UsersComponent::class);
+  });
+});
+```
+
+Register the route at `/api/admin/users`.
 
 ---
 
@@ -120,9 +145,9 @@ The method `run(ORequest $req)` of the component can then access that parameter 
 | `put()`    | Registers a PUT route.                                 |
 | `delete()` | Registers a DELETE route.                              |
 | `view()`   | Registers a route that renders a static file directly. |
-| `prefix()` | Groups routes under a common URL prefix.               |
+| `prefix()` | Groups routes under a cumulative, nestable URL prefix. |
 | `layout()` | Groups routes under a common layout component.         |
-| `group()`  | Groups routes with both a prefix and a layout.         |
+| `group()`  | Groups routes with a nestable prefix and layout.       |
 
 ---
 

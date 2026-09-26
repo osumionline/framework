@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Core;
 
+use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\ORM\ODBContainer;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
@@ -246,7 +247,9 @@ class OCore {
 					$layout_body = str_ireplace('</head>', $this->renderExternal() . '</head>', $layout_body);
 				}
 				$body = $layout_body;
-				$return_type = $component_instance->component_info['template_type'];
+				if (isset($component_instance)) {
+					$return_type = $component_instance->component_info['template_type'];
+				}
 			}
 
 			// If type is not html is most likely it's and API call so tell the browsers not to cache it
@@ -417,6 +420,9 @@ class OCore {
 				break;
 			case 400:
 				return '400 Bad Request';
+				break;
+			case 401:
+				return '401 Unauthorized';
 				break;
 			case 403:
 				return '403 Forbidden';

@@ -11,7 +11,7 @@ Prefer code examples and short, actionable answers.
 
 ## Version
 - Framework: 9.8
-- PHP: 8.3+ (works on 8.5)
+- PHP: 8.5+
 
 ## Installation
 - Requires Composer
@@ -136,6 +136,12 @@ When asking about Osumi Framework include:
 - Web: https://framework.osumi.dev/docs/en/migrations/9-7-4-to-9-8-0
 - Repo: docs/en/migrations/9.8.0-to-9.8.1.md
 - Web: https://framework.osumi.dev/docs/en/migrations/9-8-0-to-9-8-1
+- Repo: docs/en/migrations/9.8.1-to-9.8.2.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-8-1-to-9-8-2
+- Repo: docs/en/migrations/9.8.2-to-9.8.3.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-8-1-to-9-8-3
+- Repo: docs/en/migrations/9.8.3-to-9.8.4.md
+- Web: https://framework.osumi.dev/docs/en/migrations/9-8-3-to-9-8-4
 
 ## Known pitfalls
 - Avoid accessing uninitialized typed properties
