@@ -11,13 +11,13 @@ use Osumi\OsumiFramework\Log\OLog;
  */
 class OCookie {
 	private bool        $debug       = false;
-	private Olog | null $l           = null;
+	private OLog | null $l           = null;
 	private array       $cookie_list = [];
 
 	/**
-	 * Set up a logger for internal operations and get applications configuration (shortcut to $core->config)
+	 * Set up a logger for internal cookie operations.
 	 */
-	function __construct() {
+	public function __construct() {
 		global $core;
 		$this->debug = ($core->config->getLog('level') == 'ALL');
 		if ($this->debug) {
@@ -93,13 +93,18 @@ class OCookie {
 		global $core;
 		$this->cookie_list = [];
 
-		if (isset($_COOKIE[$core->config->getCookiePrefix()])) {
-			foreach ($_COOKIE[$core->config->getCookiePrefix()] as $key => $value) {
-				$key = htmlspecialchars($key);
-				$value = htmlspecialchars($value);
+		$cookies = $_COOKIE[$core->config->getCookiePrefix()] ?? [];
 
-				$this->cookie_list[$key] = $value;
+		if (!is_array($cookies)) {
+			return;
+		}
+
+		foreach ($cookies as $key => $value) {
+			if (!is_string($key) || !is_string($value)) {
+				continue;
 			}
+
+			$this->cookie_list[$key] = $value;
 		}
 
 		$this->log('load - Cookie list:');
@@ -107,32 +112,47 @@ class OCookie {
 	}
 
 	/**
-	 * Store all the values in the list into the users cookies
+	 * Store all the values in the list into the user's cookies.
 	 *
 	 * @return void
 	 */
 	public function save(): void {
 		global $core;
+
 		$this->log('save - Cookie list:');
 		$this->log(var_export($this->cookie_list, true));
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie($core->getCookiePrefix() . '[' . $key . ']', $value, time() + (3600 * 24 * 31), '/', $core->getCookieUrl());
+			setcookie(
+				$core->config->getCookiePrefix() . '[' . $key . ']',
+				$value,
+				time() + (3600 * 24 * 31),
+				'/',
+				$core->config->getCookieUrl()
+			);
 		}
 	}
 
 	/**
-	 * Delete all user cookies
+	 * Delete all user cookies.
 	 *
 	 * @return void
 	 */
 	public function clean(): void {
 		global $core;
+
 		$this->log('clean - Cookies removed');
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie($core->getCookiePrefix() . '[' . $key . ']', $value, 1, '/', $core->getCookieUrl());
+			setcookie(
+				$core->config->getCookiePrefix() . '[' . $key . ']',
+				$value,
+				1,
+				'/',
+				$core->config->getCookieUrl()
+			);
 		}
+
 		$this->cookie_list = [];
 	}
 }

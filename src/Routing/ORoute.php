@@ -157,9 +157,11 @@ class ORoute {
     $previous_prefix = self::$current_prefix;
     self::$current_prefix = self::normalizeUrl(self::$current_prefix . '/' . $prefix);
 
-    $callback();
-
-    self::$current_prefix = $previous_prefix;
+    try {
+      $callback();
+    } finally {
+      self::$current_prefix = $previous_prefix;
+    }
   }
 
   /**
@@ -175,9 +177,11 @@ class ORoute {
     $previous_layout = self::$current_layout;
     self::$current_layout = $layout;
 
-    $callback();
-
-    self::$current_layout = $previous_layout;
+    try {
+      $callback();
+    } finally {
+      self::$current_layout = $previous_layout;
+    }
   }
 
   /**
@@ -203,10 +207,12 @@ class ORoute {
     self::$current_prefix = self::normalizeUrl(self::$current_prefix . '/' . $prefix);
     self::$current_layout = $layout;
 
-    $callback();
-
-    self::$current_prefix = $previous_prefix;
-    self::$current_layout = $previous_layout;
+    try {
+      $callback();
+    } finally {
+      self::$current_prefix = $previous_prefix;
+      self::$current_layout = $previous_layout;
+    }
   }
 
   /**

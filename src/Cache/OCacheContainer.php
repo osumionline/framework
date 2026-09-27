@@ -16,7 +16,7 @@ class OCacheContainer {
 	/**
 	 * On startup, the cache container reads the cache folder and loads the cache keys, not the objects itself.
 	 */
-	function __construct() {
+	public function __construct() {
 		global $core;
 		OTools::checkOfw('cache');
 		$this->cache_folder = $core->config->getDir('ofw_cache');
@@ -24,21 +24,38 @@ class OCacheContainer {
 	}
 
 	/**
-	 * Reads the cache folder and loads the cache items found there into the list.
+	 * Read the cache folder and load the cache items found there into the list.
 	 *
 	 * @return void
 	 */
 	public function loadItems(): void {
 		$this->list = [];
-		if ($model = opendir($this->cache_folder)) {
-			while (false !== ($entry = readdir($model))) {
-				if ($entry != '.' && $entry != '..') {
-					$name = str_ireplace('.cache.json', '', $entry);
-					$this->list[$name] = new OCache($name);
-				}
-			}
-			closedir($model);
+
+		$model = opendir($this->cache_folder);
+
+		if ($model === false) {
+			return;
 		}
+
+		while (($entry = readdir($model)) !== false) {
+			if (
+				$entry === '.' ||
+				$entry === '..' ||
+				!str_ends_with($entry, '.cache.json')
+			) {
+				continue;
+			}
+
+			$name = substr($entry, 0, -strlen('.cache.json'));
+
+			if ($name === '') {
+				continue;
+			}
+
+			$this->list[$name] = new OCache($name);
+		}
+
+		closedir($model);
 	}
 
 	/**
@@ -87,7 +104,9 @@ class OCacheContainer {
 	}
 
 	/**
-	 * Deletes a cache item, both from the list and the cache file.
+	 * Delete a cache item from both the filesystem and the container.
+	 *
+	 * @param string $key Cache item key.
 	 *
 	 * @return bool True if the cache item was successfully deleted, false otherwise.
 	 */
@@ -95,14 +114,19 @@ class OCacheContainer {
 		if (!$this->hasItem($key)) {
 			return false;
 		}
+
 		$route = $this->cache_folder . $key . '.cache.json';
+
 		if (!file_exists($route)) {
 			return false;
 		}
-		unset($this->list[$key]);
+
 		if (!unlink($route)) {
 			return false;
 		}
+
+		unset($this->list[$key]);
+
 		return true;
 	}
 

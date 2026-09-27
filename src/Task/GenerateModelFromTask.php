@@ -17,15 +17,40 @@ class GenerateModelFromTask extends OTask {
   }
 
   /**
-   * Load specified file
+   * Load models from a JSON definition.
    *
-   * @param string $content Content of the specified file
+   * @param string $content JSON content containing the model definitions.
    *
    * @return void
+   *
+   * @throws \JsonException If the content contains invalid JSON.
+   * @throws \InvalidArgumentException If the model definition has an invalid structure.
    */
   private function loadFile(string $content): void {
-    $data = json_decode($content, true);
+    $data = json_decode(
+      $content,
+      true,
+      512,
+      JSON_THROW_ON_ERROR
+    );
+
+    if (
+      !is_array($data) ||
+      !array_key_exists('model', $data) ||
+      !is_array($data['model'])
+    ) {
+      throw new \InvalidArgumentException(
+        'The model definition must contain a "model" array.'
+      );
+    }
+
     foreach ($data['model'] as $table) {
+      if (!is_array($table)) {
+        throw new \InvalidArgumentException(
+          'Each model definition must be an array.'
+        );
+      }
+
       $this->generateTable($table);
     }
   }
@@ -77,7 +102,11 @@ class GenerateModelFromTask extends OTask {
    * @return void Echoes generated model files and creates them on the Model folder
    */
   public function run(array $options = []): void {
-    if (count($options) === 0) {
+    if (
+      !array_key_exists('file', $options) ||
+      !is_string($options['file']) ||
+      $options['file'] === ''
+    ) {
       echo "\n  " . $this->getColors()->getColoredString(OTools::getMessage('TASK_GENERATE_MODEL_FROM_WARNING'), 'red') . "\n\n";
       echo "  " . OTools::getMessage('TASK_GENERATE_MODEL_FROM_CONTINUE') . "\n\n";
       exit;
@@ -91,6 +120,13 @@ class GenerateModelFromTask extends OTask {
     }
 
     $content = file_get_contents($file);
+
+    if ($content === false) {
+      throw new \RuntimeException(
+        "Unable to read model definition file '{$file}'."
+      );
+    }
+
     $this->loadFile($content);
   }
 }

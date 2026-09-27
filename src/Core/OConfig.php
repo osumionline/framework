@@ -57,20 +57,32 @@ class OConfig {
 	private array $extras = [];
 
 	/**
-	 * Load app/config/config.json file into this class wich provides methods to access them
+	 * Load the application configuration files.
 	 *
-	 * @param string $bd Base directory of the application
+	 * @param string $bd Base directory of the application.
+	 *
+	 * @throws \JsonException If a configuration file contains invalid JSON.
+	 * @throws \RuntimeException If a configuration file cannot be read.
 	 */
-	function __construct(string $bd) {
+	public function __construct(string $bd) {
 		$this->setBaseDir($bd);
 		$json_file = $this->getDir('app_config') . 'Config.json';
 		$config = [];
 		if (file_exists($json_file)) {
-			$config = json_decode(file_get_contents($json_file), true);
-			if (is_null($config)) {
-				echo "ERROR: config.json file is malformed.\n";
-				exit;
+			$config_content = file_get_contents($json_file);
+
+			if ($config_content === false) {
+				throw new \RuntimeException(
+					"Unable to read configuration file '{$json_file}'."
+				);
 			}
+
+			$config = json_decode(
+				$config_content,
+				true,
+				512,
+				JSON_THROW_ON_ERROR
+			);
 		}
 		$this->loadConfig($config);
 		if (array_key_exists('environment', $config)) {
@@ -78,11 +90,21 @@ class OConfig {
 
 			$json_env_file = $this->getDir('app_config') . 'Config_' . $config['environment'] . '.json';
 			if (file_exists($json_env_file)) {
-				$config_env = json_decode(file_get_contents($json_env_file), true);
-				if (!$config_env) {
-					echo "ERROR: config." . $config['environment'] . ".json file is malformed.\n";
-					exit;
+				$config_env_content = file_get_contents($json_env_file);
+
+				if ($config_env_content === false) {
+					throw new \RuntimeException(
+						"Unable to read environment configuration file '{$json_env_file}'."
+					);
 				}
+
+				$config_env = json_decode(
+					$config_env_content,
+					true,
+					512,
+					JSON_THROW_ON_ERROR
+				);
+
 				$this->loadConfig($config_env);
 			}
 		}

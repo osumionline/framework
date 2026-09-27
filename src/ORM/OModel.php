@@ -432,21 +432,34 @@ abstract class OModel {
   }
 
   /**
-   * Method used to generate a cache key (for internal use)
+   * Generate a cache key for an ORM query.
    *
-   * @param string $table Table name
+   * @param string $table Table name.
+   * @param string $method Method that originated the cache item.
+   * @param array $conditions Conditions used on the query.
+   * @param array $options Query options.
    *
-   * @param string $method Method that originated the cache item
+   * @return string Generated cache key.
    *
-   * @param array $conditions Conditions used on the query
-   *
-   * @param array $options Options of the query
-   *
-   * @return string Generated cache key
+   * @throws \JsonException If conditions or options cannot be encoded as JSON.
    */
-  protected static function generateCacheKey(string $table, string $method, array $conditions, array $options = []): string {
-    // Combine method ('where', 'findOne'...), conditions and options on a single key
-    return $table . ':' . $method . ':' . json_encode($conditions) . ':' . json_encode($options);
+  protected static function generateCacheKey(
+    string $table,
+    string $method,
+    array $conditions,
+    array $options = []
+  ): string {
+    $encoded_conditions = json_encode(
+      $conditions,
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+
+    $encoded_options = json_encode(
+      $options,
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+
+    return $table . ':' . $method . ':' . $encoded_conditions . ':' . $encoded_options;
   }
 
   /**
@@ -1015,12 +1028,17 @@ abstract class OModel {
   }
 
   /**
-   * Return a JSON representation of the model class data
+   * Return a JSON representation of the model data.
    *
-   * @return string JSON representation of the model class data
+   * @return string JSON representation of the model data.
+   *
+   * @throws \JsonException If the model data cannot be encoded as JSON.
    */
   public function toJSON(): string {
-    return json_encode($this->toArray());
+    return json_encode(
+      $this->toArray(),
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
   }
 
   /**

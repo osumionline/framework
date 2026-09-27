@@ -45,28 +45,51 @@ class OUrl {
 	public function setCheckUrl(string $check_url, array | null $get = null, array | null $post = null, array | null $files = null): void {
 		$this->check_url = $check_url;
 		$check_params = stripos($check_url, '?');
+
 		if ($check_params !== false) {
 			$this->check_url = substr($check_url, 0, $check_params);
 		}
+
 		if (!is_null($get)) {
 			foreach ($get as $key => $value) {
 				$this->url_params[$key] = $value;
 			}
 		}
+
 		if (!is_null($post)) {
 			foreach ($post as $key => $value) {
 				$this->url_params[$key] = $value;
 			}
 		}
+
 		if (!is_null($files)) {
 			foreach ($files as $key => $value) {
 				$this->url_params[$key] = $value;
 			}
 		}
-		$input = json_decode(file_get_contents('php://input'), true);
-		if (!is_null($input)) {
-			foreach ($input as $key => $value) {
-				$this->url_params[$key] = $value;
+
+		$raw_input = file_get_contents('php://input');
+
+		if ($raw_input === false) {
+			throw new \RuntimeException('Unable to read the request body.');
+		}
+
+		if ($raw_input !== '') {
+			try {
+				$input = json_decode(
+					$raw_input,
+					true,
+					512,
+					JSON_THROW_ON_ERROR
+				);
+
+				if (is_array($input)) {
+					foreach ($input as $key => $value) {
+						$this->url_params[$key] = $value;
+					}
+				}
+			} catch (\JsonException) {
+				// The request body is not JSON, so it is ignored.
 			}
 		}
 	}

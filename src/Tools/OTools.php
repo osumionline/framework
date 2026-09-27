@@ -306,38 +306,43 @@ class OTools {
 	}
 
 	/**
-	 * Performs a curl request to an outside URL with the given method and data
+	 * Performs a cURL request to an external URL with the given method and data.
 	 *
-	 * @param string $method Method of the request (get / post / delete)
+	 * @param string $method HTTP method of the request (get / post / delete).
+	 * @param string $url URL to be called.
+	 * @param array $data Key/value array with parameters to be sent.
 	 *
-	 * @param string $url URL to be called
-	 *
-	 * @param array $data Key / value array with parameters to be sent
-	 *
-	 * @return string|false Result of the curl request or false if the execution failed
+	 * @return string|false Result of the cURL request or false if the execution failed.
 	 */
 	public static function curlRequest(string $method, string $url, array $data): string|false {
 		$ch = curl_init();
-		if ($method === 'get') {
-			$url .= '?';
-			$params = [];
-			foreach ($data as $key => $value) {
-				$params[] = $key . '=' . $value;
-			}
-			$url .= implode('&', $params);
+
+		if ($ch === false) {
+			return false;
 		}
+
+		if ($method === 'get' && count($data) > 0) {
+			$query = http_build_query($data);
+			$separator = str_contains($url, '?') ? '&' : '?';
+			$url .= $separator . $query;
+		}
+
 		if ($method === 'post') {
-			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POST, true);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		}
+
 		if ($method === 'delete') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		}
+
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
 		$result = curl_exec($ch);
 		curl_close($ch);
 
@@ -727,27 +732,87 @@ class OTools {
 	}
 
 	/**
-	 * Return version number of the Framework
+	 * Load Framework Composer metadata.
 	 *
-	 * @return string Version number of the Framework (eg 5.0.0)
+	 * @return array Composer metadata.
+	 *
+	 * @throws \JsonException If composer.json contains invalid JSON.
+	 * @throws \RuntimeException If composer.json cannot be read.
 	 */
-	public static function getVersion(): string {
+	private static function getComposerData(): array {
 		global $core;
-		$version_file = $core->config->getDir('ofw_base') . 'composer.json';
-		$version = json_decode(file_get_contents($version_file), true);
-		return $version['version'];
+
+		$composer_file = $core->config->getDir('ofw_base') . 'composer.json';
+		$composer_content = file_get_contents($composer_file);
+
+		if ($composer_content === false) {
+			throw new \RuntimeException(
+				"Unable to read Composer file '{$composer_file}'."
+			);
+		}
+
+		$composer_data = json_decode(
+			$composer_content,
+			true,
+			512,
+			JSON_THROW_ON_ERROR
+		);
+
+		if (!is_array($composer_data)) {
+			throw new \RuntimeException(
+				"Invalid Composer data in '{$composer_file}'."
+			);
+		}
+
+		return $composer_data;
 	}
 
 	/**
-	 * Returns current versions information message
+	 * Return version number of the Framework.
 	 *
-	 * @return string Current versions information message
+	 * @return string Framework version number.
+	 *
+	 * @throws \JsonException If composer.json contains invalid JSON.
+	 * @throws \RuntimeException If composer.json cannot be read or has an invalid structure.
+	 */
+	public static function getVersion(): string {
+		$composer_data = self::getComposerData();
+
+		if (
+			!array_key_exists('version', $composer_data) ||
+			!is_string($composer_data['version'])
+		) {
+			throw new \RuntimeException(
+				'Framework version is not defined in composer.json.'
+			);
+		}
+
+		return $composer_data['version'];
+	}
+
+	/**
+	 * Return current Framework version information.
+	 *
+	 * @return string Framework version information.
+	 *
+	 * @throws \JsonException If composer.json contains invalid JSON.
+	 * @throws \RuntimeException If composer.json cannot be read or has an invalid structure.
 	 */
 	public static function getVersionInformation(): string {
-		global $core;
-		$version_file = $core->config->getDir('ofw_base') . 'composer.json';
-		$version = json_decode(file_get_contents($version_file), true);
-		return $version['extra']['version-description'];
+		$composer_data = self::getComposerData();
+
+		if (
+			!array_key_exists('extra', $composer_data) ||
+			!is_array($composer_data['extra']) ||
+			!array_key_exists('version-description', $composer_data['extra']) ||
+			!is_string($composer_data['extra']['version-description'])
+		) {
+			throw new \RuntimeException(
+				'Framework version information is not defined in composer.json.'
+			);
+		}
+
+		return $composer_data['extra']['version-description'];
 	}
 
 	/**

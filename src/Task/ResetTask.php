@@ -164,11 +164,32 @@ class ResetTask extends OTask {
 		$reset_date = 0;
 
 		if (file_exists($tmp_file)) {
-			$reset_data = json_decode(file_get_contents($tmp_file), true);
-			if (!is_null($reset_data)) {
-				$reset_key  = $reset_data['key'];
-				$reset_date = $reset_data['date'];
+			$reset_content = file_get_contents($tmp_file);
+
+			if ($reset_content !== false) {
+				try {
+					$reset_data = json_decode(
+						$reset_content,
+						true,
+						512,
+						JSON_THROW_ON_ERROR
+					);
+
+					if (
+						is_array($reset_data) &&
+						array_key_exists('key', $reset_data) &&
+						is_string($reset_data['key']) &&
+						array_key_exists('date', $reset_data) &&
+						is_int($reset_data['date'])
+					) {
+						$reset_key = $reset_data['key'];
+						$reset_date = $reset_data['date'];
+					}
+				} catch (\JsonException) {
+					// Invalid reset data is ignored.
+				}
 			}
+
 			unlink($tmp_file);
 		}
 
@@ -184,7 +205,16 @@ class ResetTask extends OTask {
 				'date' => time() + (60 * 15)
 			];
 			OTools::checkOfw('tmp');
-			file_put_contents($tmp_file, json_encode($data));
+			$reset_content = json_encode(
+				$data,
+				JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+			);
+
+			if (file_put_contents($tmp_file, $reset_content) === false) {
+				throw new \RuntimeException(
+					"Unable to write reset data file '{$tmp_file}'."
+				);
+			}
 
 			echo "\n  " . OTools::getMessage('TASK_RESET_RESET_KEY_CREATED') . "\n\n";
 			echo "    php of reset --key " . $data['key'] . "\n\n";

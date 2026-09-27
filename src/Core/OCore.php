@@ -143,7 +143,7 @@ class OCore {
 		if ($this->config->getAllowCrossOrigin()) {
 			header('Access-Control-Allow-Origin: *');
 			header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');
-			header('Access-Control-Allow-Methods: GET, POST');
+			header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 		}
 
 		// Load current URL
@@ -210,56 +210,62 @@ class OCore {
 			if (!$url_result['is_view']) {
 				$component_instance = new $url_result['component']();
 				$reflection = new ReflectionClass($component_instance);
-				$run_method = $reflection->getMethod('run');
-				$run_parameters = $run_method->getParameters();
-				$run_parameter_count = count($run_parameters);
 
-				// run() without parameters
-				if ($run_parameter_count === 0) {
+				// Component without run()
+				if (!$reflection->hasMethod('run')) {
 					$body = $component_instance->render();
-				}
-				// run() with one parameter
-				elseif ($run_parameter_count === 1) {
-					$reflection_param_type = $run_parameters[0]->getType();
+				} else {
+					$run_method = $reflection->getMethod('run');
+					$run_parameters = $run_method->getParameters();
+					$run_parameter_count = count($run_parameters);
 
-					// Parameter must have a non-nullable named type
-					if (
-						!$reflection_param_type instanceof ReflectionNamedType ||
-						$reflection_param_type->allowsNull()
-					) {
-						throw new Exception(
-							"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO."
-						);
+					// run() without parameters
+					if ($run_parameter_count === 0) {
+						$body = $component_instance->render();
 					}
+					// run() with one parameter
+					elseif ($run_parameter_count === 1) {
+						$reflection_param_type = $run_parameters[0]->getType();
 
-					$param_class = $reflection_param_type->getName();
-					$req = new ORequest($url_result, $filter_results);
+						// Parameter must have a non-nullable named type
+						if (
+							!$reflection_param_type instanceof ReflectionNamedType ||
+							$reflection_param_type->allowsNull()
+						) {
+							throw new Exception(
+								"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO."
+							);
+						}
 
-					// ORequest parameter
-					if ($param_class === ORequest::class) {
-						$body = $component_instance->render($req);
+						$param_class = $reflection_param_type->getName();
+						$req = new ORequest($url_result, $filter_results);
+
+						// ORequest parameter
+						if ($param_class === ORequest::class) {
+							$body = $component_instance->render($req);
+						}
+						// ODTO parameter
+						elseif (
+							class_exists($param_class) &&
+							is_subclass_of($param_class, ODTO::class)
+						) {
+							/** @var ODTO $dto */
+							$dto = new $param_class($req);
+							$body = $component_instance->render($dto);
+						}
+						// Any other parameter type is invalid
+						else {
+							throw new Exception(
+								"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO. Received: '{$param_class}'."
+							);
+						}
 					}
-					// ODTO parameter
-					elseif (
-						class_exists($param_class) &&
-						is_subclass_of($param_class, ODTO::class)
-					) {
-						/** @var ODTO $dto */
-						$dto = new $param_class($req);
-						$body = $component_instance->render($dto);
-					}
-					// Any other parameter type is invalid
+					// More than one parameter is not allowed
 					else {
 						throw new Exception(
-							"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO. Received: '{$param_class}'."
+							"The run method of component '{$url_result['component']}' can receive at most one parameter."
 						);
 					}
-				}
-				// More than one parameter is not allowed
-				else {
-					throw new Exception(
-						"The run method of component '{$url_result['component']}' can receive at most one parameter."
-					);
 				}
 
 				$return_type = $component_instance->component_info['template_type'];

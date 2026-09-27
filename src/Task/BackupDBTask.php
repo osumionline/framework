@@ -16,11 +16,31 @@ class BackupDBTask extends OTask {
 	}
 
 	/**
-	 * Run the task
+	 * Escapes a value to be safely used in a MySQL option file.
 	 *
-	 * @param array $params If $params has one item and is true, generates the backup silently, else it echoes information messages
+	 * @param string $value Value to be escaped.
 	 *
-	 * @return void Echoes messages generated while performing the backup
+	 * @return string Escaped value enclosed in double quotes.
+	 */
+	private function escapeOptionFileValue(string $value): string {
+		$value = str_replace(
+			['\\', '"', "\n", "\r", "\t"],
+			['\\\\', '\\"', '\\n', '\\r', '\\t'],
+			$value
+		);
+
+		return '"' . $value . '"';
+	}
+
+	/**
+	 * Run the task.
+	 *
+	 * @param array $params If $params has one item and is true, generates the backup silently, otherwise it echoes information messages.
+	 *
+	 * @return void Echoes messages generated while performing the backup.
+	 *
+	 * @throws \RuntimeException If a database backup or temporary credentials file operation fails.
+	 * @throws \Random\RandomException If a secure temporary filename cannot be generated.
 	 */
 	public function run(array $params = []): void {
 		$silent = false;
@@ -55,14 +75,55 @@ class BackupDBTask extends OTask {
 			$values['dump_exists'] = file_exists($values['dump_file']);
 
 
-			if ($values['dump_exists']) {
-				unlink($values['dump_file']);
-			}
-			$command = "mysqldump --user={$this->getConfig()->getDB('user')} --password={$this->getConfig()->getDB('pass')} --host={$this->getConfig()->getDB('host')} {$this->getConfig()->getDB('name')} --result-file={$values['dump_file']} 2>&1";
+			OTools::checkOfw('tmp');
 
-			exec($command, $output);
-			if (is_array($output) && count($output) === 0) {
-				$values['success'] = true;
+			$credentials_file = $this->getConfig()->getDir('ofw_tmp')
+				. 'mysqldump_'
+				. bin2hex(random_bytes(16))
+				. '.cnf';
+
+			$credentials = implode("\n", [
+				'[client]',
+				'host=' . $this->escapeOptionFileValue($this->getConfig()->getDB('host')),
+				'user=' . $this->escapeOptionFileValue($this->getConfig()->getDB('user')),
+				'password=' . $this->escapeOptionFileValue($this->getConfig()->getDB('pass')),
+				''
+			]);
+
+			if (file_put_contents($credentials_file, $credentials, LOCK_EX) === false) {
+				throw new \RuntimeException(
+					'Could not create temporary database credentials file.'
+				);
+			}
+
+			try {
+				if (DIRECTORY_SEPARATOR === '/' && !chmod($credentials_file, 0600)) {
+					throw new \RuntimeException(
+						'Could not set permissions on temporary database credentials file.'
+					);
+				}
+
+				$command = sprintf(
+					'mysqldump --defaults-extra-file=%s %s --result-file=%s 2>&1',
+					escapeshellarg($credentials_file),
+					escapeshellarg($this->getConfig()->getDB('name')),
+					escapeshellarg($values['dump_file'])
+				);
+
+				$output = [];
+				$return_code = 0;
+
+				exec($command, $output, $return_code);
+
+				if ($return_code === 0 && file_exists($values['dump_file'])) {
+					$values['success'] = true;
+				}
+			} finally {
+				if (file_exists($credentials_file) && !unlink($credentials_file)) {
+					throw new \RuntimeException(
+						'Could not remove temporary database credentials file.'
+					);
+				}
 			}
 		}
 

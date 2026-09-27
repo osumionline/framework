@@ -13,7 +13,13 @@ class ORequest {
 	private array $params = [];
 	private array $filters = [];
 
-	function __construct(array $url_result, array $filter_results) {
+	/**
+	 * Create a request instance.
+	 *
+	 * @param array $url_result Processed route information.
+	 * @param array $filter_results Values returned by request filters.
+	 */
+	public function __construct(array $url_result, array $filter_results) {
 		$this->setMethod($url_result['method']);
 		$this->setHeaders($url_result['headers']);
 		$this->setParams($url_result['params']);
@@ -92,13 +98,14 @@ class ORequest {
 	}
 
 	/**
-	 * Get a specific parameter or a default value if not found
+	 * Get a specific parameter or a default value if not found.
 	 *
-	 * @param string $key Key code of the value to be retrieved
+	 * @param string $key Parameter key.
+	 * @param mixed $default Default value if the key is not found.
 	 *
-	 * @param mixed $default Default value if key not found
+	 * @return mixed Parameter value or the default value.
 	 */
-	public function getParam(string $key, mixed $default = null) {
+	public function getParam(string $key, mixed $default = null): mixed {
 		return array_key_exists($key, $this->params) ? $this->params[$key] : $default;
 	}
 
@@ -145,17 +152,25 @@ class ORequest {
 	}
 
 	/**
-	 * Get a specific parameter as a boolean
+	 * Get a specific parameter as a boolean.
 	 *
-	 * @param string $key Key code of the value to be retrieved
+	 * @param string $key Parameter key.
+	 * @param mixed $default Default value if the key is not found.
 	 *
-	 * @param mixed $default Default value if key not found
-	 *
-	 * @return bool | null Boolean value of the required parameter
+	 * @return bool|null Boolean value, or null if the value cannot be interpreted as a boolean.
 	 */
 	public function getParamBool(string $key, mixed $default = null): bool | null {
 		$param = $this->getParam($key, $default);
-		return !is_null($param) ? filter_var($param, FILTER_VALIDATE_BOOLEAN) : null;
+
+		if (is_null($param)) {
+			return null;
+		}
+
+		return filter_var(
+			$param,
+			FILTER_VALIDATE_BOOLEAN,
+			FILTER_NULL_ON_FAILURE
+		);
 	}
 
 	/**
@@ -179,13 +194,12 @@ class ORequest {
 	}
 
 	/**
-	 * Set the values returned of a specific filter
+	 * Set the values returned by a specific filter.
 	 *
-	 * @param string $key Name of the filter
+	 * @param string $key Filter name.
+	 * @param array $values Values returned by the filter.
 	 *
-	 * @param array $values Values returned by the filter
-	 *
-	 * @return false
+	 * @return void
 	 */
 	public function setFilter(string $key, array $values): void {
 		$this->filters[$key] = $values;

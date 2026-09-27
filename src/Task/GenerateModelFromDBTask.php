@@ -213,20 +213,6 @@ class GenerateModelFromDBTask extends OTask {
 	}
 
 	/**
-	 * Load specified file
-	 *
-	 * @param string $content Content of the specified file
-	 *
-	 * @return void
-	 */
-	private function loadFile(string $content): void {
-		$data = json_decode($content, true);
-		foreach ($data['model'] as $table) {
-			$this->generateTable($table);
-		}
-	}
-
-	/**
 	 * Generate a table
 	 *
 	 * @param array $table Data of a table

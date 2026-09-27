@@ -14,9 +14,11 @@ use ReflectionProperty;
 use Exception;
 
 /**
- * Base class for components
+ * Base class for components.
  *
- * @method void run(mixed $data = null) Optional hook executed before rendering
+ * Components may optionally define a run() method. The method can receive
+ * no parameters, an ORequest instance or an instance of a class extending
+ * ODTO.
  */
 class OComponent {
   protected OLog | null $log = null;
