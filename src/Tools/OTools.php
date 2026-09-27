@@ -9,46 +9,89 @@ namespace Osumi\OsumiFramework\Tools;
  */
 class OTools {
 	/**
-	 * Get a string with a random number of characters (letters, numbers or special characters)
+	 * Generate a cryptographically secure random string.
 	 *
-	 * @param array $options Array of options to generate the string (num -number of characters to return-, lower -include lower case letters-, upper -include upper case letters-, numbers -include numbers- and special -include special characters-)
+	 * Available options:
+	 * - num: Number of characters to generate. Defaults to 5.
+	 * - lower: Include lowercase letters.
+	 * - upper: Include uppercase letters.
+	 * - numbers: Include numbers.
+	 * - special: Include special characters.
 	 *
-	 * @return string Generated string based on given options
+	 * @param array $options Random string options.
+	 *
+	 * @return string Generated random string.
+	 *
+	 * @throws \InvalidArgumentException If the supplied options are invalid or no
+	 *                                   character group has been selected.
+	 * @throws \Random\RandomException If a secure random value cannot be generated.
 	 */
 	public static function getRandomCharacters(array $options): string {
-		$num     = array_key_exists('num',     $options) ? $options['num']     : 5;
-		$lower   = array_key_exists('lower',   $options) ? $options['lower']   : false;
-		$upper   = array_key_exists('upper',   $options) ? $options['upper']   : false;
-		$numbers = array_key_exists('numbers', $options) ? $options['numbers'] : false;
-		$special = array_key_exists('special', $options) ? $options['special'] : false;
+		$num = $options['num'] ?? 5;
+		$lower = $options['lower'] ?? false;
+		$upper = $options['upper'] ?? false;
+		$numbers = $options['numbers'] ?? false;
+		$special = $options['special'] ?? false;
 
-		$seed = '';
+		if (
+			!is_int($num) ||
+			$num < 1
+		) {
+			throw new \InvalidArgumentException(
+				'Random string length must be a positive integer.'
+			);
+		}
+
+		foreach (
+			[
+				'lower' => $lower,
+				'upper' => $upper,
+				'numbers' => $numbers,
+				'special' => $special
+			] as $option => $value
+		) {
+			if (!is_bool($value)) {
+				throw new \InvalidArgumentException(
+					"Random string option '{$option}' must be boolean."
+				);
+			}
+		}
+
+		$characters = '';
+
 		if ($lower) {
-			$seed .= 'abcdefghijklmnopqrstuvwxyz';
+			$characters .= 'abcdefghijklmnopqrstuvwxyz';
 		}
+
 		if ($upper) {
-			$seed .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			$characters .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 		}
+
 		if ($numbers) {
-			$seed .= '0123456789';
+			$characters .= '0123456789';
 		}
+
 		if ($special) {
-			$seed .= '!@#$%^&*()';
+			$characters .= '!@#$%^&*()';
 		}
 
-		$seed = str_split($seed);
-		shuffle($seed);
-		$rand = '';
-		$list = array_rand($seed, $num);
-		if (!is_array($list)) {
-			$list = [$list];
+		if ($characters === '') {
+			throw new \InvalidArgumentException(
+				'At least one random string character group must be enabled.'
+			);
 		}
 
-		foreach ($list as $k) {
-			$rand .= $seed[$k];
+		$result = '';
+		$max_index = strlen($characters) - 1;
+
+		for ($i = 0; $i < $num; $i++) {
+			$result .= $characters[random_int(
+				0,
+				$max_index
+			)];
 		}
 
-		return $rand;
+		return $result;
 	}
 
 	/**
@@ -100,27 +143,81 @@ class OTools {
 	}
 
 	/**
-	 * Get a component's content anywhere, even in a template-less execution
+	 * Check whether a slash-separated component path contains only valid PHP
+	 * identifiers.
 	 *
-	 * @param string $name Name of the component file that will be loaded
+	 * @param string $name Component path to validate.
 	 *
-	 * @param array $values Array of information that will be loaded into the component
-	 *
-	 * @return string Loaded component with rendered parameters
+	 * @return bool Whether the component path is valid.
 	 */
-	public static function getComponent(string $name, array $values = []): string | null {
-		global $core;
-		$component_name = $name;
-		if (stripos($component_name, '/') !== false) {
-			$parts = explode('/', $component_name);
-			$component_name = array_pop($parts);
+	private static function isValidComponentPath(string $name): bool {
+		if ($name === '') {
+			return false;
 		}
 
-		$component_file = $core->config->getDir('app_component') . $name . '/' . $component_name . 'Component.php';
-		$output = self::getPartial($component_file, $values);
+		$parts = explode(
+			'/',
+			$name
+		);
 
-		if (is_null($output)) {
-			$output = 'ERROR: File ' . $name . ' not found';
+		foreach ($parts as $part) {
+			if (
+				preg_match(
+					'/^[A-Za-z_][A-Za-z0-9_]*$/D',
+					$part
+				) !== 1
+			) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Get a component's content anywhere, even in a template-less execution.
+	 *
+	 * @param string $name Slash-separated component path.
+	 * @param array $values Values passed to the component.
+	 *
+	 * @return string|null Loaded component content.
+	 */
+	public static function getComponent(
+		string $name,
+		array $values = []
+	): ?string {
+		global $core;
+
+		if (!self::isValidComponentPath($name)) {
+			return null;
+		}
+
+		$parts = explode(
+			'/',
+			$name
+		);
+
+		$component_name = array_pop($parts);
+
+		if ($component_name === null) {
+			return null;
+		}
+
+		$component_file = $core->config->getDir('app_component')
+			. $name
+			. '/'
+			. $component_name
+			. 'Component.php';
+
+		$output = self::getPartial(
+			$component_file,
+			$values
+		);
+
+		if ($output === null) {
+			return 'ERROR: File '
+				. $name
+				. ' not found';
 		}
 
 		return $output;

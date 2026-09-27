@@ -537,28 +537,29 @@ class OCore {
 	}
 
 	/**
-	 * Custom error handler, shows an error page and the error's stack trace
+	 * Handle an uncaught exception.
 	 *
-	 * @param Throwable $ex Given error
+	 * Full exception details are written to the application log but are never
+	 * exposed in the HTTP response.
+	 *
+	 * @param Throwable $ex Exception to handle.
 	 *
 	 * @return void
 	 */
 	public function errorHandler(Throwable $ex): void {
-		$log = new OLog(get_class($this));
-		$params = ['message' => OTools::getMessage('ERROR_500_LABEL')];
-		$params['message'] = "<strong>Error:</strong> \"" . $ex->getMessage() . "\"\n<strong>File:</strong> \"" . $ex->getFile() . "\" (Line: " . $ex->getLine() . ")\n\n<strong>Trace:</strong> \n";
-		foreach ($ex->getTrace() as $trace) {
-			if (array_key_exists('file', $trace)) {
-				$params['message'] .= "  <strong>File:</strong> \"" . $trace['file'] . " (Line: " . $trace['line'] . ")\"\n";
-			}
-			if (array_key_exists('class', $trace)) {
-				$params['message'] .= "  <strong>Class:</strong> \"" . $trace['class'] . "\"\n";
-			}
-			if (array_key_exists('function', $trace)) {
-				$params['message'] .= "  <strong>Function:</strong> \"" . $trace['function'] . "\"\n\n";
-			}
-		}
-		$log->error(str_ireplace('</strong>', '', str_ireplace('<strong>', '', $params['message'])));
-		OTools::showErrorPage($params, '500');
+		$log = new OLog(
+			get_class($this)
+		);
+
+		$log->error(
+			(string) $ex
+		);
+
+		$this->setHttpStatus(500);
+
+		OTools::showErrorPage(
+			[],
+			'500'
+		);
 	}
 }
