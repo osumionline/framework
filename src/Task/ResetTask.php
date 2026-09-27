@@ -15,20 +15,44 @@ class ResetTask extends OTask {
 		return $this->getColors()->getColoredString('reset', 'light_green') . ': ' . OTools::getMessage('TASK_RESET');
 	}
 
-	private function rrmdir(string $dir): bool {
-		if (is_dir($dir)) {
-			$files = array_diff(scandir($dir), ['.', '..']);
-			foreach ($files as $file) {
-				if (is_dir($dir . '/' . $file)) {
-					$this->rrmdir($dir . '/' . $file);
-				} else {
-					unlink($dir . '/' . $file);
-				}
-			}
-			return rmdir($dir);
-		} else {
-			return unlink($dir);
+	/**
+	 * Recursively remove a directory or file without following symbolic links.
+	 *
+	 * @param string $path Path to remove.
+	 *
+	 * @return bool Whether the path was successfully removed.
+	 *
+	 * @throws \RuntimeException If a directory cannot be scanned or one of its
+	 *                           contents cannot be removed.
+	 */
+	private function rrmdir(string $path): bool {
+		if (is_link($path) || !is_dir($path)) {
+			return unlink($path);
 		}
+
+		$files = scandir($path);
+
+		if ($files === false) {
+			throw new \RuntimeException(
+				"Could not scan directory '{$path}'."
+			);
+		}
+
+		foreach ($files as $file) {
+			if ($file === '.' || $file === '..') {
+				continue;
+			}
+
+			$item = $path . DIRECTORY_SEPARATOR . $file;
+
+			if (!$this->rrmdir($item)) {
+				throw new \RuntimeException(
+					"Could not remove '{$item}'."
+				);
+			}
+		}
+
+		return rmdir($path);
 	}
 
 	private function countDown(): void {
@@ -53,17 +77,25 @@ class ResetTask extends OTask {
 
 		// Empty and delete folders
 		foreach ($clean_list as $value => $delete) {
-			if (is_dir($this->getConfig()->getDir($value))) {
-				if ($model = opendir($this->getConfig()->getDir($value))) {
+			$directory = $this->getConfig()->getDir($value);
+
+			if (is_dir($directory)) {
+				$this->assertSafeDeletePath($directory);
+
+				if ($model = opendir($directory)) {
 					while (false !== ($entry = readdir($model))) {
 						if ($entry !== '.' && $entry !== '..') {
-							$this->rrmdir($this->getConfig()->getDir($value) . $entry);
+							$this->rrmdir($directory . $entry);
 						}
 					}
+
 					closedir($model);
 				}
-				if ($delete) {
-					rmdir($this->getConfig()->getDir($value));
+
+				if ($delete && !rmdir($directory)) {
+					throw new \RuntimeException(
+						"Could not remove directory '{$directory}'."
+					);
 				}
 			}
 		}
@@ -163,10 +195,68 @@ class ResetTask extends OTask {
 	}
 
 	/**
-	 * Run the task
+	 * Ensure a directory selected for deletion belongs to the current project.
+	 *
+	 * The project root itself cannot be used as a deletion target.
+	 *
+	 * @param string $path Directory path to validate.
 	 *
 	 * @return void
-	 * @throws \RuntimeException If a required directory or file cannot be created.
+	 *
+	 * @throws \RuntimeException If the project root or target path cannot be
+	 *                           resolved or the target is outside the project.
+	 */
+	private function assertSafeDeletePath(string $path): void {
+		$base_path = realpath($this->getConfig()->getDir('base'));
+		$target_path = realpath($path);
+
+		if ($base_path === false) {
+			throw new \RuntimeException(
+				'Could not resolve the project base directory.'
+			);
+		}
+
+		if ($target_path === false) {
+			throw new \RuntimeException(
+				"Could not resolve deletion target '{$path}'."
+			);
+		}
+
+		$base_path = rtrim(
+			str_replace('\\', '/', $base_path),
+			'/'
+		);
+
+		$target_path = rtrim(
+			str_replace('\\', '/', $target_path),
+			'/'
+		);
+
+		if (PHP_OS_FAMILY === 'Windows') {
+			$base_path = strtolower($base_path);
+			$target_path = strtolower($target_path);
+		}
+
+		if (
+			$target_path === $base_path ||
+			!str_starts_with($target_path . '/', $base_path . '/')
+		) {
+			throw new \RuntimeException(
+				"Refusing to delete unsafe path '{$path}'."
+			);
+		}
+	}
+
+	/**
+	 * Run the reset task.
+	 *
+	 * @param array $options Reset task options.
+	 *
+	 * @return void
+	 *
+	 * @throws \JsonException If reset data cannot be encoded.
+	 * @throws \Random\RandomException If a secure reset key cannot be generated.
+	 * @throws \RuntimeException If a required directory or file operation fails.
 	 */
 	public function run(array $options = []): void {
 		$tmp_file = $this->getConfig()->getDir('ofw_tmp') . 'reset.json';
@@ -211,7 +301,7 @@ class ResetTask extends OTask {
 			$this->countDown();
 
 			$data = [
-				'key' => substr(hash('sha512', strval(time())), 0, 12),
+				'key'  => bin2hex(random_bytes(16)),
 				'date' => time() + (60 * 15)
 			];
 			OTools::checkOfw('tmp');
@@ -220,31 +310,31 @@ class ResetTask extends OTask {
 				JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
 			);
 
-			if (file_put_contents($tmp_file, $reset_content) === false) {
+			if (
+				file_put_contents(
+					$tmp_file,
+					$reset_content,
+					LOCK_EX
+				) === false
+			) {
 				throw new \RuntimeException(
 					"Unable to write reset data file '{$tmp_file}'."
 				);
 			}
 
+			if (
+				PHP_OS_FAMILY !== 'Windows' &&
+				!chmod($tmp_file, 0600)
+			) {
+				unlink($tmp_file);
+
+				throw new \RuntimeException(
+					"Unable to secure reset data file '{$tmp_file}'."
+				);
+			}
+
 			echo "\n  " . OTools::getMessage('TASK_RESET_RESET_KEY_CREATED') . "\n\n";
 			echo "    php of reset --key " . $data['key'] . "\n\n";
-		} else {
-			if (array_key_exists('silent', $options) && $options['silent'] === 'true') {
-				$this->cleanData();
-			} else {
-				if (
-					array_key_exists('key', $options) &&
-					$options['key'] === $reset_key &&
-					$reset_date > time()
-				) {
-					$this->cleanData();
-					echo "\n  " . OTools::getMessage('TASK_RESET_DATA_ERASED') . "\n\n";
-				} else {
-					echo "\n  " . $this->getColors()->getColoredString(OTools::getMessage('TASK_RESET_ERROR'), 'red') . "\n\n";
-					echo "  " . OTools::getMessage('TASK_RESET_GET_NEW_KEY') . "\n\n";
-					echo "    php of reset\n\n";
-				}
-			}
 		}
 	}
 }

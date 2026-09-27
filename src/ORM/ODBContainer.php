@@ -13,24 +13,33 @@ class ODBContainer {
 	private array $connections = [];
 
 	/**
-	 * Get a previously stablished connection or create a new one and store it
+	 * Get a previously established connection or create a new one and store it.
 	 *
-	 * @param string $driver Driver used to connect to the database (eg mysql, postgresql, sqlite...)
+	 * @param string $driver Driver used to connect to the database (eg mysql, postgresql, sqlite...).
+	 * @param string $host Host name where the database is.
+	 * @param string $user Username to connect to the database.
+	 * @param string $pass Password to connect to the database.
+	 * @param string $name Name of the database to connect to.
+	 * @param string $charset Charset used in the database connection.
 	 *
-	 * @param string $host Host name where the database is
-	 *
-	 * @param string $user Username to connect to the database
-	 *
-	 * @param string $pass Password to connect to the database
-	 *
-	 * @param string $name Name of the database to connect to
-	 *
-	 * @param string $charset Charset used in the database connection
-	 *
-	 * @return array Connection data, array with the connection index and the PDO connection link
+	 * @return array Connection data, containing the connection index and PDO link.
 	 */
-	public function getConnection(string $driver, string $host, string $user, string $pass, string $name, string $charset): array {
-		$index = $driver . ':' . $host . ':' . $user . ':' . $pass . ':' . $name . ':' . $charset;
+	public function getConnection(
+		string $driver,
+		string $host,
+		string $user,
+		string $pass,
+		string $name,
+		string $charset
+	): array {
+		$index = $this->getConnectionIndex(
+			$driver,
+			$host,
+			$user,
+			$pass,
+			$name,
+			$charset
+		);
 
 		if (!array_key_exists($index, $this->connections)) {
 			$conn = new PDO(
@@ -44,24 +53,52 @@ class ODBContainer {
 					PDO::ATTR_STRINGIFY_FETCHES => false
 				]
 			);
+
 			$this->connections[$index] = $conn;
 		}
 
-		return ['index' => $index, 'link' => $this->connections[$index]];
+		return [
+			'index' => $index,
+			'link'  => $this->connections[$index]
+		];
 	}
 
 	/**
-	 * Get a connection by its hashed index
+	 * Generate an opaque and deterministic index for a database connection.
 	 *
-	 * @param string $index Hashed index of the connection
+	 * @param string $driver Driver used to connect to the database.
+	 * @param string $host Host name where the database is located.
+	 * @param string $user Username used to connect to the database.
+	 * @param string $pass Password used to connect to the database.
+	 * @param string $name Database name.
+	 * @param string $charset Database connection charset.
 	 *
-	 * @return array | null Connection data, array with the connection index and the PDO connection link
+	 * @return string Hashed connection index.
 	 */
-	public function getConnectionByIndex(string $index): array | null {
-		if (array_key_exists($index, $this->connections)) {
-			return ['index' => $index, 'link' => $this->connections[$index]];
+	private function getConnectionIndex(
+		string $driver,
+		string $host,
+		string $user,
+		string $pass,
+		string $name,
+		string $charset
+	): string {
+		$values = [
+			$driver,
+			$host,
+			$user,
+			$pass,
+			$name,
+			$charset
+		];
+
+		$index_source = '';
+
+		foreach ($values as $value) {
+			$index_source .= strlen($value) . ':' . $value . ';';
 		}
-		return null;
+
+		return hash('sha256', $index_source);
 	}
 
 	/**

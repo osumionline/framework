@@ -19,15 +19,23 @@ class GenerateModelFromDBTask extends OTask {
 
 	private string $db_name = '';
 
+	/**
+	 * Get the list of tables from the configured database.
+	 *
+	 * @return array List of database tables.
+	 */
 	private function getTables(): array {
 		$sql = "SELECT
-			t.`TABLE_NAME` AS `table_name`
+		t.`TABLE_NAME` AS `table_name`
 		FROM INFORMATION_SCHEMA.`TABLES` t
-		WHERE t.`TABLE_SCHEMA` = '{$this->db_name}'
+		WHERE t.`TABLE_SCHEMA` = :db_name
 		ORDER BY t.`TABLE_NAME`";
 
 		$db = new ODB();
-		$db->query($sql);
+		$db->query($sql, [
+			'db_name' => $this->db_name
+		]);
+
 		$ret = [];
 
 		while ($res = $db->next()) {
@@ -37,34 +45,45 @@ class GenerateModelFromDBTask extends OTask {
 		return $ret;
 	}
 
+	/**
+	 * Get the column definitions for a database table.
+	 *
+	 * @param string $table_name Table name.
+	 *
+	 * @return array List of column definitions.
+	 */
 	private function getColumns(string $table_name): array {
 		$sql = "SELECT
-		  c.`COLUMN_NAME`,
-		  c.`ORDINAL_POSITION`,
-		  c.`COLUMN_DEFAULT`,
-		  c.`IS_NULLABLE`,                     -- 'YES'/'NO'
-		  c.`DATA_TYPE`,                       -- varchar, int, float, datetime, text, tinyint, etc.
-		  c.`CHARACTER_MAXIMUM_LENGTH`,
-		  c.`NUMERIC_PRECISION`,
-		  c.`NUMERIC_SCALE`,
-		  c.`COLUMN_TYPE`,                     -- incluye ENUM/SET o longitudes exactas (ej: int(11), tinyint(1))
-		  c.`COLUMN_KEY`,                      -- 'PRI', 'UNI', 'MUL'…
-		  c.`EXTRA`,                           -- auto_increment, on update CURRENT_TIMESTAMP, VIRTUAL/ STORED, etc.
-		  c.`GENERATION_EXPRESSION`,           -- columnas generadas
-		  c.`COLLATION_NAME`,
-		  c.`COLUMN_COMMENT`
+			c.`COLUMN_NAME`,
+			c.`ORDINAL_POSITION`,
+			c.`COLUMN_DEFAULT`,
+			c.`IS_NULLABLE`,                     -- 'YES'/'NO'
+			c.`DATA_TYPE`,                       -- varchar, int, float, datetime, text, tinyint, etc.
+			c.`CHARACTER_MAXIMUM_LENGTH`,
+			c.`NUMERIC_PRECISION`,
+			c.`NUMERIC_SCALE`,
+			c.`COLUMN_TYPE`,
+			c.`COLUMN_KEY`,
+			c.`EXTRA`,
+			c.`GENERATION_EXPRESSION`,
+			c.`COLLATION_NAME`,
+			c.`COLUMN_COMMENT`
 		FROM INFORMATION_SCHEMA.`COLUMNS` c
-		WHERE c.`TABLE_SCHEMA` = '{$this->db_name}'
-		AND c.`TABLE_NAME` = '{$table_name}'
+		WHERE c.`TABLE_SCHEMA` = :db_name
+		AND c.`TABLE_NAME` = :table_name
 		ORDER BY c.`TABLE_NAME`, c.`ORDINAL_POSITION`";
 
 		$db = new ODB();
-		$db->query($sql);
+		$db->query($sql, [
+			'db_name'    => $this->db_name,
+			'table_name' => $table_name
+		]);
+
 		$ret = [];
 
 		while ($res = $db->next()) {
 			$field = [
-				'name' => $res['COLUMN_NAME'],
+				'name'    => $res['COLUMN_NAME'],
 				'comment' => $res['COLUMN_COMMENT']
 			];
 
@@ -73,7 +92,7 @@ class GenerateModelFromDBTask extends OTask {
 				$field['decorator'] = 'OCreatedAt';
 			}
 			// Updated At
-			else if ($field['name'] === 'updated_at') {
+			elseif ($field['name'] === 'updated_at') {
 				$field['decorator'] = 'OUpdatedAt';
 			} else {
 				$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
@@ -87,6 +106,7 @@ class GenerateModelFromDBTask extends OTask {
 						? ($field['nullable'] ? null : '')
 						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
+
 				// Float
 				if ($res['DATA_TYPE'] === 'float' || $res['DATA_TYPE'] === 'decimal') {
 					$field['decorator'] = 'OField';
@@ -95,19 +115,27 @@ class GenerateModelFromDBTask extends OTask {
 						? ($field['nullable'] ? null : 0.0)
 						: floatval($res['COLUMN_DEFAULT']);
 				}
+
 				// Datetime
 				if ($res['DATA_TYPE'] === 'datetime') {
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::DATE';
 					$field['attribute_type'] = 'string';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL' ? null : $res['COLUMN_DEFAULT'];
+					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
+						? null
+						: $res['COLUMN_DEFAULT'];
 				}
+
 				// Bool
-				if ($res['DATA_TYPE'] === 'tinyint' && ($res['COLUMN_DEFAULT'] === '0' || $res['COLUMN_DEFAULT'] === '1')) {
+				if (
+					$res['DATA_TYPE'] === 'tinyint' &&
+					($res['COLUMN_DEFAULT'] === '0' || $res['COLUMN_DEFAULT'] === '1')
+				) {
 					$field['decorator'] = 'OField';
 					$field['attribute_type'] = 'bool';
 					$field['default'] = $res['COLUMN_DEFAULT'] === '1';
 				}
+
 				// String
 				if ($res['DATA_TYPE'] === 'varchar' || $res['DATA_TYPE'] === 'char') {
 					$field['decorator'] = 'OField';
@@ -117,6 +145,7 @@ class GenerateModelFromDBTask extends OTask {
 						? ($field['nullable'] ? null : '')
 						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
 				}
+
 				// Int
 				if ($res['DATA_TYPE'] === 'int' || $res['DATA_TYPE'] === 'bigint') {
 					$field['decorator'] = 'OField';
@@ -126,30 +155,41 @@ class GenerateModelFromDBTask extends OTask {
 						: intval($res['COLUMN_DEFAULT']);
 				}
 			}
+
 			$ret[] = $field;
 		}
 
 		return $ret;
 	}
 
+	/**
+	 * Apply primary key information to a model definition.
+	 *
+	 * @param array $model Model definition.
+	 *
+	 * @return array Updated model definition.
+	 */
 	private function getPK(array $model): array {
 		$sql = "SELECT
-		  kcu.`TABLE_SCHEMA`,
-		  kcu.`TABLE_NAME`,
-		  kcu.`COLUMN_NAME`,
-		  kcu.`ORDINAL_POSITION`        -- orden dentro de la PK
+			kcu.`TABLE_SCHEMA`,
+			kcu.`TABLE_NAME`,
+			kcu.`COLUMN_NAME`,
+			kcu.`ORDINAL_POSITION`
 		FROM INFORMATION_SCHEMA.`KEY_COLUMN_USAGE` kcu
 		JOIN INFORMATION_SCHEMA.`TABLE_CONSTRAINTS` tc
-		  ON tc.`CONSTRAINT_SCHEMA` = kcu.`CONSTRAINT_SCHEMA`
-		 AND tc.`TABLE_NAME`        = kcu.`TABLE_NAME`
-		 AND tc.`CONSTRAINT_NAME`   = kcu.`CONSTRAINT_NAME`
+		ON tc.`CONSTRAINT_SCHEMA` = kcu.`CONSTRAINT_SCHEMA`
+		AND tc.`TABLE_NAME`        = kcu.`TABLE_NAME`
+		AND tc.`CONSTRAINT_NAME`   = kcu.`CONSTRAINT_NAME`
 		WHERE tc.`CONSTRAINT_TYPE` = 'PRIMARY KEY'
-		  AND tc.`TABLE_SCHEMA`    = '{$this->db_name}'
-			AND kcu.`TABLE_NAME`     = '{$model['name']}'
+		AND tc.`TABLE_SCHEMA` = :db_name
+		AND kcu.`TABLE_NAME` = :table_name
 		ORDER BY kcu.`TABLE_NAME`, kcu.`ORDINAL_POSITION`";
 
 		$db = new ODB();
-		$db->query($sql);
+		$db->query($sql, [
+			'db_name'    => $this->db_name,
+			'table_name' => $model['name']
+		]);
 
 		while ($res = $db->next()) {
 			for ($i = 0; $i < count($model['fields']); $i++) {
@@ -166,23 +206,34 @@ class GenerateModelFromDBTask extends OTask {
 		return $model;
 	}
 
+	/**
+	 * Apply foreign key relationship information to model definitions.
+	 *
+	 * @param array $models Model definitions.
+	 *
+	 * @return array Updated model definitions.
+	 */
 	private function getRefs(array $models): array {
 		$sql = "SELECT
-		  kcu.TABLE_NAME,
-		  kcu.COLUMN_NAME,                -- columna local
-		  kcu.REFERENCED_TABLE_NAME,
-		  kcu.REFERENCED_COLUMN_NAME      -- columna referenciada (respeta el orden)
+			kcu.TABLE_NAME,
+			kcu.COLUMN_NAME,
+			kcu.REFERENCED_TABLE_NAME,
+			kcu.REFERENCED_COLUMN_NAME
 		FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
 		JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
-		  ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
-		 AND rc.CONSTRAINT_NAME   = kcu.CONSTRAINT_NAME
-		WHERE kcu.TABLE_SCHEMA = '{$this->db_name}'
-		  AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+		ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
+		AND rc.CONSTRAINT_NAME   = kcu.CONSTRAINT_NAME
+		WHERE kcu.TABLE_SCHEMA = :db_name
+		AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
 		ORDER BY kcu.TABLE_NAME, kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION";
 
 		$db = new ODB();
-		$db->query($sql);
+		$db->query($sql, [
+			'db_name' => $this->db_name
+		]);
+
 		$refs = [];
+
 		while ($res = $db->next()) {
 			$refs[] = $res;
 		}
@@ -192,18 +243,23 @@ class GenerateModelFromDBTask extends OTask {
 				if ($models[$i]['name'] === $ref['TABLE_NAME']) {
 					for ($j = 0; $j < count($models[$i]['fields']); $j++) {
 						if ($models[$i]['fields'][$j]['name'] === $ref['COLUMN_NAME']) {
-							$models[$i]['fields'][$j]['ref'] = $ref['REFERENCED_TABLE_NAME'] . '.' . $ref['REFERENCED_COLUMN_NAME'];
+							$models[$i]['fields'][$j]['ref'] =
+								$ref['REFERENCED_TABLE_NAME']
+								. '.'
+								. $ref['REFERENCED_COLUMN_NAME'];
 						}
 					}
 				}
+
 				if ($models[$i]['name'] === $ref['REFERENCED_TABLE_NAME']) {
 					if (!isset($models[$i]['refs'])) {
 						$models[$i]['refs'] = [];
 					}
+
 					$models[$i]['refs'][] = [
-						'to' => $ref['TABLE_NAME'],
+						'to'         => $ref['TABLE_NAME'],
 						'field_from' => $ref['REFERENCED_COLUMN_NAME'],
-						'field_to' => $ref['COLUMN_NAME']
+						'field_to'   => $ref['COLUMN_NAME']
 					];
 				}
 			}

@@ -867,4 +867,46 @@ class OConfig {
 	public function getExtra(string $key): string | int | float | bool | null {
 		return array_key_exists($key, $this->extras) ? $this->extras[$key] : null;
 	}
+
+	/**
+	 * Return configuration information safe for debugging.
+	 *
+	 * Sensitive database credentials, plugin configuration values and extra values
+	 * are hidden to prevent accidental disclosure.
+	 *
+	 * @return array Safe configuration information.
+	 */
+	public function __debugInfo(): array {
+		$info = get_object_vars($this);
+
+		if (
+			isset($info['db']) &&
+			is_array($info['db']) &&
+			array_key_exists('pass', $info['db'])
+		) {
+			$info['db']['pass'] = '[HIDDEN]';
+		}
+
+		if (
+			isset($info['plugin_config']) &&
+			is_array($info['plugin_config'])
+		) {
+			$info['plugin_config'] = array_fill_keys(
+				array_keys($info['plugin_config']),
+				'[HIDDEN]'
+			);
+		}
+
+		if (
+			isset($info['extras']) &&
+			is_array($info['extras'])
+		) {
+			$info['extras'] = array_fill_keys(
+				array_keys($info['extras']),
+				'[HIDDEN]'
+			);
+		}
+
+		return $info;
+	}
 }
