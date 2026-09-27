@@ -17,6 +17,44 @@ class AddTask extends OTask {
 	}
 
 	/**
+	 * Check whether a value can safely be used as a PHP identifier.
+	 *
+	 * @param string $value Value to validate.
+	 *
+	 * @return bool Whether the value is a valid PHP identifier.
+	 */
+	private function isValidIdentifier(string $value): bool {
+		return preg_match(
+			'/^[A-Za-z_][A-Za-z0-9_]*$/D',
+			$value
+		) === 1;
+	}
+
+	/**
+	 * Check whether a slash-separated value contains only valid PHP identifiers.
+	 *
+	 * @param string $value Value to validate.
+	 *
+	 * @return bool Whether every path segment is a valid PHP identifier.
+	 */
+	private function isValidIdentifierPath(string $value): bool {
+		if ($value === '') {
+			return false;
+		}
+
+		$value = str_replace('\\', '/', $value);
+		$parts = explode('/', $value);
+
+		foreach ($parts as $part) {
+			if (!$this->isValidIdentifier($part)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Creates a new action with the given parameters
 	 *
 	 * @param array Array with the action "action", name of the new action, URL of the action and optionally action type
@@ -43,6 +81,33 @@ class AddTask extends OTask {
 			exit;
 		}
 
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifierPath($params['name']) ||
+			!array_key_exists('url', $params) ||
+			!is_string($params['url'])
+		) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
+		$action_type = $params['type'] ?? 'html';
+
+		if (
+			!is_string($action_type) ||
+			!in_array(
+				$action_type,
+				['html', 'json', 'xml', 'php'],
+				true
+			)
+		) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
 		$action_name_parts = explode('/', $params['name']);
 		for ($i = 0; $i < count($action_name_parts); $i++) {
 			$action_name_parts[$i] = ucfirst($action_name_parts[$i]);
@@ -51,7 +116,7 @@ class AddTask extends OTask {
 		$values['action_folder']   = $this->getConfig()->getDir('app') . $values['folders'] . '/';
 		$values['action_name']     = $action_name_parts[count($action_name_parts) - 1];
 		$values['action_url']      = $params['url'];
-		$values['action_type']     = isset($params['type']) ? $params['type'] : 'html';
+		$values['action_type']     = $action_type;
 		$values['action_file']     = $values['action_folder'] . $values['action_name'] . 'Component.php';
 		$values['action_template'] = $values['action_folder'] . $values['action_name'] . 'Template.' . $values['action_type'];
 
@@ -94,6 +159,16 @@ class AddTask extends OTask {
 			exit;
 		}
 
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifier($params['name'])
+		) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
 		$values['service_name'] = $params['name'];
 		$values['service_file'] = $this->getConfig()->getDir('app_service') . ucfirst($values['service_name']) . 'Service.php';
 
@@ -126,6 +201,16 @@ class AddTask extends OTask {
 		];
 
 		if (count($params) < 2) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifier($params['name'])
+		) {
 			$values['error'] = 1;
 			echo OTools::getPartial($path, $values);
 			exit;
@@ -174,6 +259,16 @@ class AddTask extends OTask {
 		];
 
 		if (count($params) < 2) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifier($params['name'])
+		) {
 			$values['error'] = 1;
 			echo OTools::getPartial($path, $values);
 			exit;
@@ -290,6 +385,16 @@ class AddTask extends OTask {
 			exit;
 		}
 
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifierPath($params['name'])
+		) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
 		$component_name_parts = explode('/', $params['name']);
 		for ($i = 0; $i < count($component_name_parts); $i++) {
 			$component_name_parts[$i] = ucfirst($component_name_parts[$i]);
@@ -329,6 +434,16 @@ class AddTask extends OTask {
 		];
 
 		if (count($params) < 2) {
+			$values['error'] = 1;
+			echo OTools::getPartial($path, $values);
+			exit;
+		}
+
+		if (
+			!array_key_exists('name', $params) ||
+			!is_string($params['name']) ||
+			!$this->isValidIdentifier($params['name'])
+		) {
 			$values['error'] = 1;
 			echo OTools::getPartial($path, $values);
 			exit;

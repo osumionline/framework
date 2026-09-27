@@ -6,7 +6,7 @@ use Osumi\OsumiFramework\Core\OTask;
 
 class {{uc_name}}Task extends OTask {
 	public function __toString() {
-		return "{{name}}: {{str_message}}";
+		return {{task_description}};
 	}
 
 	public function run(array $options = []): void {}

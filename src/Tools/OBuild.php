@@ -169,7 +169,16 @@ class OBuild {
 		// Update URLs file
 		$urls_path = $core->config->getDir('app_routes') . 'Web.php';
 
-		$new_url = "ORoute::get('" . $values['action_url'] . "', " . $values['action_name'] . "Component::class);";
+		$route = var_export(
+			$values['action_url'],
+			true
+		);
+
+		$new_url = "ORoute::get("
+			. $route
+			. ", "
+			. $values['action_name']
+			. "Component::class);";
 		$use_url = "use Osumi\OsumiFramework\App\\" . $folders . "\\" . $values['action_name'] . "Component;";
 
 		self::updateRoutesFile($urls_path, $new_url, $use_url);
@@ -235,12 +244,20 @@ class OBuild {
 		}
 
 		$str_message = str_ireplace('"', '\"', OTools::getMessage('TASK_ADD_TASK_MESSAGE', [$name]));
+		$task_description = var_export(
+			$name
+				. ': '
+				. OTools::getMessage(
+					'TASK_ADD_TASK_MESSAGE',
+					[$name]
+				),
+			true
+		);
 
 		$template_path = $core->config->getDir('ofw_template') . 'add/taskTemplate.tpl';
 		$str_task = OTools::getTemplate($template_path, '', [
-			'uc_name'     => ucfirst($name),
-			'name'        => $name,
-			'str_message' => $str_message
+			'uc_name'          => ucfirst($name),
+			'task_description' => $task_description
 		]);
 		file_put_contents($task_file, $str_task);
 
@@ -475,7 +492,10 @@ class OBuild {
 						$field_value = $value ? "true" : "false";
 					} elseif (is_string($value)) {
 						if ($key !== 'type') {
-							$field_value = "'" . $value . "'";
+							$field_value = var_export(
+								$value,
+								true
+							);
 						} else {
 							$field_value = $value;
 						}
