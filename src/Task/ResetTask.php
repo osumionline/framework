@@ -168,19 +168,29 @@ class ResetTask extends OTask {
 		file_put_contents($layout_file, $default_layout);
 
 		// Generate default .htaccess
-		$default_htaccess = "Options +FollowSymLinks +ExecCGI\n\n";
+		$default_htaccess = "Options +FollowSymLinks\n\n";
 		$default_htaccess .= "<IfModule mod_rewrite.c>\n";
 		$default_htaccess .= "	RewriteEngine On\n";
 		$default_htaccess .= "	RewriteBase /\n\n";
 		$default_htaccess .= "	RewriteCond %{HTTP:Authorization} ^(.*)\n";
 		$default_htaccess .= "	RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]\n\n";
-		$default_htaccess .= "	RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]\n";
-		$default_htaccess .= "	RewriteRule ^(.*)$ http://%1/$1 [R=301,L]\n\n";
 		$default_htaccess .= "	RewriteCond %{REQUEST_FILENAME} !-f\n";
 		$default_htaccess .= "	RewriteRule ^(.*)$ index.php [QSA,L]\n";
 		$default_htaccess .= "</IfModule>\n";
+
 		$htaccess_file = $this->getConfig()->getDir('public') . '.htaccess';
-		file_put_contents($htaccess_file, $default_htaccess);
+
+		if (
+			file_put_contents(
+				$htaccess_file,
+				$default_htaccess,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not create default .htaccess file '{$htaccess_file}'."
+			);
+		}
 
 		// Generate default index file
 		$default_index = "<" . "?php\n\n";
@@ -260,6 +270,7 @@ class ResetTask extends OTask {
 	 */
 	public function run(array $options = []): void {
 		$tmp_file = $this->getConfig()->getDir('ofw_tmp') . 'reset.json';
+
 		$reset_key = '';
 		$reset_date = 0;
 
@@ -290,13 +301,28 @@ class ResetTask extends OTask {
 				}
 			}
 
-			unlink($tmp_file);
+			if (!unlink($tmp_file)) {
+				throw new \RuntimeException(
+					"Unable to remove reset data file '{$tmp_file}'."
+				);
+			}
 		}
 
 		if (count($options) === 0) {
-			echo "\n  " . $this->getColors()->getColoredString(OTools::getMessage('TASK_RESET_WARNING'), 'red') . "\n\n";
-			echo "  " . OTools::getMessage('TASK_RESET_CONTINUE') . "\n\n";
-			echo "  " . OTools::getMessage('TASK_RESET_TIME_TO_CANCEL') . "\n\n";
+			echo "\n  "
+				. $this->getColors()->getColoredString(
+					OTools::getMessage('TASK_RESET_WARNING'),
+					'red'
+				)
+				. "\n\n";
+
+			echo "  "
+				. OTools::getMessage('TASK_RESET_CONTINUE')
+				. "\n\n";
+
+			echo "  "
+				. OTools::getMessage('TASK_RESET_TIME_TO_CANCEL')
+				. "\n\n";
 
 			$this->countDown();
 
@@ -304,10 +330,14 @@ class ResetTask extends OTask {
 				'key'  => bin2hex(random_bytes(16)),
 				'date' => time() + (60 * 15)
 			];
+
 			OTools::checkOfw('tmp');
+
 			$reset_content = json_encode(
 				$data,
-				JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+				JSON_UNESCAPED_UNICODE
+					| JSON_UNESCAPED_SLASHES
+					| JSON_THROW_ON_ERROR
 			);
 
 			if (
@@ -333,8 +363,53 @@ class ResetTask extends OTask {
 				);
 			}
 
-			echo "\n  " . OTools::getMessage('TASK_RESET_RESET_KEY_CREATED') . "\n\n";
-			echo "    php of reset --key " . $data['key'] . "\n\n";
+			echo "\n  "
+				. OTools::getMessage(
+					'TASK_RESET_RESET_KEY_CREATED'
+				)
+				. "\n\n";
+
+			echo "    php of reset --key "
+				. $data['key']
+				. "\n\n";
+
+			return;
 		}
+
+		if (
+			array_key_exists('key', $options) &&
+			is_string($options['key']) &&
+			$reset_key !== '' &&
+			$reset_date > time() &&
+			hash_equals(
+				$reset_key,
+				$options['key']
+			)
+		) {
+			$this->cleanData();
+
+			echo "\n  "
+				. OTools::getMessage(
+					'TASK_RESET_DATA_ERASED'
+				)
+				. "\n\n";
+
+			return;
+		}
+
+		echo "\n  "
+			. $this->getColors()->getColoredString(
+				OTools::getMessage('TASK_RESET_ERROR'),
+				'red'
+			)
+			. "\n\n";
+
+		echo "  "
+			. OTools::getMessage(
+				'TASK_RESET_GET_NEW_KEY'
+			)
+			. "\n\n";
+
+		echo "    php of reset\n\n";
 	}
 }

@@ -293,35 +293,244 @@ class OTools {
 	}
 
 	/**
-	 * Parse a string with bbcode tags (i / b / u / img / url / mailto / color)
+	 * Validate and escape a URL used in generated BBCode HTML.
 	 *
-	 * @param string $str String to be parsed with bbcodes
+	 * Only HTTP, HTTPS and relative URLs are accepted.
 	 *
-	 * @return string String with parsed bbcodes
+	 * @param string $value URL value.
+	 *
+	 * @return string|null Escaped safe URL or null if the URL is unsafe.
+	 */
+	private static function getSafeBBCodeUrl(string $value): ?string {
+		$url = html_entity_decode(
+			trim($value),
+			ENT_QUOTES | ENT_HTML5,
+			'UTF-8'
+		);
+
+		if (
+			$url === '' ||
+			preg_match('/[\x00-\x1F\x7F]/', $url) === 1
+		) {
+			return null;
+		}
+
+		$parts = parse_url($url);
+
+		if ($parts === false) {
+			return null;
+		}
+
+		if (
+			array_key_exists('scheme', $parts) &&
+			(
+				!is_string($parts['scheme']) ||
+				!in_array(
+					strtolower($parts['scheme']),
+					[
+						'http',
+						'https'
+					],
+					true
+				)
+			)
+		) {
+			return null;
+		}
+
+		return htmlspecialchars(
+			$url,
+			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5,
+			'UTF-8'
+		);
+	}
+
+	/**
+	 * Validate a CSS color used in generated BBCode HTML.
+	 *
+	 * Named colors and hexadecimal colors are supported.
+	 *
+	 * @param string $value Color value.
+	 *
+	 * @return string|null Safe color or null if the color is invalid.
+	 */
+	private static function getSafeBBCodeColor(string $value): ?string {
+		$color = html_entity_decode(
+			trim($value),
+			ENT_QUOTES | ENT_HTML5,
+			'UTF-8'
+		);
+
+		if (
+			preg_match(
+				'/^(?:#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|[a-z]+)$/iD',
+				$color
+			) !== 1
+		) {
+			return null;
+		}
+
+		return $color;
+	}
+
+	/**
+	 * Parse a string containing supported BBCode tags.
+	 *
+	 * Supported tags are i, b, u, img, url, mailto and color. Raw HTML is
+	 * escaped before parsing. URLs are restricted to HTTP, HTTPS and relative
+	 * URLs.
+	 *
+	 * @param string $str String containing BBCode.
+	 *
+	 * @return string Safe HTML generated from the supplied BBCode.
+	 *
+	 * @throws \RuntimeException If an internal BBCode regular expression fails.
 	 */
 	public static function bbcode(string $str): string {
-		$bbcode = [
-			"/\<(.*?)>/is",
-			"/\[i\](.*?)\[\/i\]/is",
-			"/\[b\](.*?)\[\/b\]/is",
-			"/\[u\](.*?)\[\/u\]/is",
-			"/\[img\](.*?)\[\/img\]/is",
-			"/\[url=(.*?)\](.*?)\[\/url\]/is",
-			"/\[mailto=(.*?)\](.*?)\[\/mailto\]/is",
-			"/\[color=(.*?)\](.*?)\[\/color\]/is"
-		];
-		$html = [
-			"<$1>",
-			"<i>$1</i>",
-			"<b>$1</b>",
-			"<u>$1</u>",
-			"<img src=\"$1\" />",
-			"<a href=\"$1\" target=\"_blank\">$2</a>",
-			"<a href=\"mailto:$1\">$2</a>",
-			"<span style=\"color:$1\">$2</span>"
-		];
-		$str = preg_replace($bbcode, $html, $str);
-		return $str;
+		$str = htmlspecialchars(
+			$str,
+			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5,
+			'UTF-8'
+		);
+
+		$parsed = preg_replace(
+			[
+				'/\[i\](.*?)\[\/i\]/is',
+				'/\[b\](.*?)\[\/b\]/is',
+				'/\[u\](.*?)\[\/u\]/is'
+			],
+			[
+				'<i>$1</i>',
+				'<b>$1</b>',
+				'<u>$1</u>'
+			],
+			$str
+		);
+
+		if ($parsed === null) {
+			throw new \RuntimeException(
+				'Could not parse BBCode formatting tags.'
+			);
+		}
+
+		$parsed_url = preg_replace_callback(
+			'/\[url=(.*?)\](.*?)\[\/url\]/is',
+			static function (array $matches): string {
+				$url = self::getSafeBBCodeUrl(
+					$matches[1]
+				);
+
+				if ($url === null) {
+					return $matches[2];
+				}
+
+				return '<a href="'
+					. $url
+					. '" target="_blank" rel="noopener noreferrer">'
+					. $matches[2]
+					. '</a>';
+			},
+			$parsed
+		);
+
+		if ($parsed_url === null) {
+			throw new \RuntimeException(
+				'Could not parse BBCode URL tags.'
+			);
+		}
+
+		$parsed_image = preg_replace_callback(
+			'/\[img\](.*?)\[\/img\]/is',
+			static function (array $matches): string {
+				$url = self::getSafeBBCodeUrl(
+					$matches[1]
+				);
+
+				if ($url === null) {
+					return '';
+				}
+
+				return '<img src="'
+					. $url
+					. '" alt="">';
+			},
+			$parsed_url
+		);
+
+		if ($parsed_image === null) {
+			throw new \RuntimeException(
+				'Could not parse BBCode image tags.'
+			);
+		}
+
+		$parsed_mailto = preg_replace_callback(
+			'/\[mailto=(.*?)\](.*?)\[\/mailto\]/is',
+			static function (array $matches): string {
+				$email = html_entity_decode(
+					trim($matches[1]),
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				);
+
+				if (
+					filter_var(
+						$email,
+						FILTER_VALIDATE_EMAIL
+					) === false
+				) {
+					return $matches[2];
+				}
+
+				$safe_email = htmlspecialchars(
+					$email,
+					ENT_QUOTES
+						| ENT_SUBSTITUTE
+						| ENT_HTML5,
+					'UTF-8'
+				);
+
+				return '<a href="mailto:'
+					. $safe_email
+					. '">'
+					. $matches[2]
+					. '</a>';
+			},
+			$parsed_image
+		);
+
+		if ($parsed_mailto === null) {
+			throw new \RuntimeException(
+				'Could not parse BBCode mailto tags.'
+			);
+		}
+
+		$parsed_color = preg_replace_callback(
+			'/\[color=(.*?)\](.*?)\[\/color\]/is',
+			static function (array $matches): string {
+				$color = self::getSafeBBCodeColor(
+					$matches[1]
+				);
+
+				if ($color === null) {
+					return $matches[2];
+				}
+
+				return '<span style="color:'
+					. $color
+					. '">'
+					. $matches[2]
+					. '</span>';
+			},
+			$parsed_mailto
+		);
+
+		if ($parsed_color === null) {
+			throw new \RuntimeException(
+				'Could not parse BBCode color tags.'
+			);
+		}
+
+		return $parsed_color;
 	}
 
 	/**
@@ -765,24 +974,63 @@ class OTools {
 	}
 
 	/**
-	 * Run a user defined task (app/task)
+	 * Check whether a task name can safely be used as a PHP class and file name.
 	 *
-	 * @param string $task_name Name of the task
+	 * @param string $task_name Task name to validate.
 	 *
-	 * @param array $params Array of parameters passed to the task
-	 *
-	 * @return bool Returns true after the task is complete or false if task file doesn't exist
+	 * @return bool Whether the task name is valid.
 	 */
-	public static function runTask(string $task_name, array $params = []): bool {
+	private static function isValidTaskName(string $task_name): bool {
+		return preg_match(
+			'/^[A-Za-z_][A-Za-z0-9_]*$/D',
+			$task_name
+		) === 1;
+	}
+
+	/**
+	 * Run a user-defined application task.
+	 *
+	 * @param string $task_name Name of the task.
+	 * @param array $params Parameters passed to the task.
+	 *
+	 * @return bool True if the task was executed or false if it does not exist
+	 *              or its name is invalid.
+	 */
+	public static function runTask(
+		string $task_name,
+		array $params = []
+	): bool {
 		global $core;
-		$task_file = $core->config->getDir('app_task') . $task_name . '.task.php';
-		if (!file_exists($task_file)) {
+
+		if (!self::isValidTaskName($task_name)) {
+			return false;
+		}
+
+		$class_name = ucfirst($task_name) . 'Task';
+		$task_file = $core->config->getDir('app_task')
+			. $class_name
+			. '.php';
+
+		if (!is_file($task_file)) {
 			return false;
 		}
 
 		require_once $task_file;
-		$task_name = "\\OsumiFramework\\App\\Task\\" . $task_name . "Task";
-		$task = new $task_name;
+
+		$task_class = '\\Osumi\\OsumiFramework\\App\\Task\\'
+			. $class_name;
+
+		if (
+			!class_exists($task_class) ||
+			!is_subclass_of(
+				$task_class,
+				\Osumi\OsumiFramework\Core\OTask::class
+			)
+		) {
+			return false;
+		}
+
+		$task = new $task_class();
 		$task->loadTask();
 		$task->run($params);
 
@@ -790,38 +1038,83 @@ class OTools {
 	}
 
 	/**
-	 * Run a Framework specific task (ofw/task)
+	 * Run a Framework task.
 	 *
-	 * @param string $task_name Name of the task
+	 * @param string $task_name Name of the task.
+	 * @param array $params Parameters passed to the task.
+	 * @param bool $return Whether task output should be captured and returned.
 	 *
-	 * @param array $params Array of parameters passed to the task
-	 *
-	 * @param bool $return Lets the task echo or captures everything and returns it
-	 *
-	 * @return array Returns the status ok/error if task was run and it's return messages if $return is set to true
+	 * @return array{
+	 *     status: string,
+	 *     return: string
+	 * } Task execution result.
 	 */
-	public static function runOFWTask(string $task_name, array $params = [], bool $return = false): array {
+	public static function runOFWTask(
+		string $task_name,
+		array $params = [],
+		bool $return = false
+	): array {
 		global $core;
+
 		$ret = [
 			'status' => 'ok',
 			'return' => ''
 		];
-		$task_file = $core->config->getDir('ofw_task') . $task_name . '.task.php';
-		if (!file_exists($task_file)) {
+
+		if (!self::isValidTaskName($task_name)) {
 			$ret['status'] = 'error';
+
+			return $ret;
+		}
+
+		$class_name = ucfirst($task_name) . 'Task';
+		$task_file = $core->config->getDir('ofw_task')
+			. $class_name
+			. '.php';
+
+		if (!is_file($task_file)) {
+			$ret['status'] = 'error';
+
 			return $ret;
 		}
 
 		require_once $task_file;
-		$task_name = "\\OsumiFramework\\OFW\\Task\\" . $task_name . "Task";
-		$task = new $task_name();
+
+		$task_class = '\\Osumi\\OsumiFramework\\Task\\'
+			. $class_name;
+
+		if (
+			!class_exists($task_class) ||
+			!is_subclass_of(
+				$task_class,
+				\Osumi\OsumiFramework\Core\OTask::class
+			)
+		) {
+			$ret['status'] = 'error';
+
+			return $ret;
+		}
+
+		$task = new $task_class();
 		$task->loadTask();
+
 		if (!$return) {
 			$task->run($params);
-		} else {
-			ob_start();
+
+			return $ret;
+		}
+
+		ob_start();
+
+		try {
 			$task->run($params);
-			$ret['return'] = ob_get_contents();
+
+			$output = ob_get_contents();
+
+			if ($output !== false) {
+				$ret['return'] = $output;
+			}
+		} finally {
 			ob_end_clean();
 		}
 
@@ -913,24 +1206,29 @@ class OTools {
 	}
 
 	/**
-	 * Get user's IP address
+	 * Get the remote IP address of the current connection.
 	 *
-	 * @return string User's IP address
+	 * Forwarded client IP headers are deliberately ignored because they cannot be
+	 * trusted unless the request comes through an explicitly configured trusted
+	 * proxy.
+	 *
+	 * @return string Valid remote IP address or an empty string if it cannot be
+	 *                determined.
 	 */
 	public static function getIPAddress(): string {
-		// Whether ip is from the share internet
-		if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-			$ip = $_SERVER['HTTP_CLIENT_IP'];
+		$remote_address = $_SERVER['REMOTE_ADDR'] ?? '';
+
+		if (
+			!is_string($remote_address) ||
+			filter_var(
+				$remote_address,
+				FILTER_VALIDATE_IP
+			) === false
+		) {
+			return '';
 		}
-		// Whether ip is from the proxy
-		elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-			$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-		}
-		// Whether ip is from the remote address
-		else {
-			$ip = $_SERVER['REMOTE_ADDR'];
-		}
-		return $ip;
+
+		return $remote_address;
 	}
 
 	/**
