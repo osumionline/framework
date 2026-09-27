@@ -11,7 +11,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  * Cleans all non framework data, to be used on new installations
  */
 class ResetTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString('reset', 'light_green') . ': ' . OTools::getMessage('TASK_RESET');
 	}
 

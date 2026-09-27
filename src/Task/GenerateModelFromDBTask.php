@@ -13,7 +13,7 @@ use Osumi\OsumiFramework\ORM\ODB;
  * Generates all model files from a database connection
  */
 class GenerateModelFromDBTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString('generateModelFromDB', 'light_green') . ': ' . OTools::getMessage('TASK_GENERATE_MODEL_FROM_DB');
 	}
 

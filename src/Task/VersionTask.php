@@ -11,7 +11,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  * Get Frameworks current version information
  */
 class VersionTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString('version', 'light_green') . ': ' . OTools::getMessage('TASK_VERSION');
 	}
 

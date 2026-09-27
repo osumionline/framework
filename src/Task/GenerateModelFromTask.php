@@ -12,7 +12,7 @@ use Osumi\OsumiFramework\Tools\OBuild;
  * Generates all model files from a JSON file.
  */
 class GenerateModelFromTask extends OTask {
-  public function __toString() {
+  public function __toString(): string {
     return $this->getColors()->getColoredString(
       'generateModelFrom',
       'light_green'

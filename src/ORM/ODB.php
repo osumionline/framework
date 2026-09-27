@@ -146,14 +146,17 @@ class ODB {
     }
 
     /**
-     * Method to hide database password if object is inspected
+     * Return database information safe for debugging.
+     *
+     * @return array Database information with sensitive values hidden.
      */
-    public function __debugInfo() {
+    public function __debugInfo(): array {
         $info = get_object_vars($this);
 
         if (isset($info['pass'])) {
             $info['pass'] = '[HIDDEN]';
         }
+
         if (isset($info['connection_index'])) {
             $info['connection_index'] = '[HIDDEN]';
         }

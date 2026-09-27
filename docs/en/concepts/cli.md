@@ -51,7 +51,7 @@ use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\App\Model\User;
 
 class AddUserTask extends OTask {
-  public function __toString() {
+  public function __toString(): string {
     return "addUser: Task to create new users";
   }
 

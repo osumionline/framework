@@ -224,18 +224,23 @@ class OTools {
 	}
 
 	/**
-	 * Function to get a model object's JSON representstion
+	 * Get a model object's JSON representation.
 	 *
-	 * @param any $obj Model object
+	 * @param mixed $obj Object to generate.
+	 * @param array $exclude Fields to exclude.
+	 * @param array $empty Fields to return empty.
 	 *
-	 * @param array $exclude List of fields to be excluded
-	 *
-	 * @param array $empty List of fields to be returned empty
-	 *
-	 * @return string JSON string representation of the object or null if given object was null or not a model object
+	 * @return string JSON representation or "null" when the object cannot be
+	 *                generated.
 	 */
-	public static function getModelComponent($obj, array $exclude = [], array $empty = []): string {
-		return (!is_null($obj) && method_exists($obj, 'generate')) ? $obj->generate('json', $exclude, $empty) : 'null';
+	public static function getModelComponent(
+		mixed $obj,
+		array $exclude = [],
+		array $empty = []
+	): string {
+		return (!is_null($obj) && method_exists($obj, 'generate'))
+			? $obj->generate('json', $exclude, $empty)
+			: 'null';
 	}
 
 	/**
@@ -373,19 +378,19 @@ class OTools {
 	}
 
 	/**
-	 * Decode data from Base64URL (credit to https://base64.guru/developers/php/examples/base64url)
+	 * Decode Base64URL data.
 	 *
-	 * @param string $data Data to be decoded
+	 * @param string $data Data to decode.
+	 * @param bool $strict Whether invalid Base64 characters should cause failure.
 	 *
-	 * @param bool $strict Optional parameter for strict base64_decode
-	 *
-	 * @return bool|string Data decoded or false if there was an error
+	 * @return string|false Decoded data or false if decoding fails.
 	 */
-	public static function base64urlDecode(string $data, bool $strict = false) {
-		// Convert Base64URL to Base64 by replacing “-” with “+” and “_” with “/”
+	public static function base64urlDecode(
+		string $data,
+		bool $strict = false
+	): string | false {
 		$b64 = strtr($data, '-_', '+/');
 
-		// Decode Base64 string and return the original data
 		return base64_decode($b64, $strict);
 	}
 

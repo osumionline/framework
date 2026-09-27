@@ -11,7 +11,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  * Performs a database backup using "mysqldump" CLI tool. Generates a file on ofw/export folder with the name of the database.
  */
 class BackupDBTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString("backupDB", "light_green") . ": " . OTools::getMessage('TASK_BACKUP_DB');
 	}
 

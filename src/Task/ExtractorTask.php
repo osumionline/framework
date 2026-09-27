@@ -11,7 +11,7 @@ use Osumi\OsumiFramework\Tools\OTools;
  * Function to export an application with all its files to a single self-extracting PHP file.
  */
 class ExtractorTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString(
 			'extractor',
 			'light_green'

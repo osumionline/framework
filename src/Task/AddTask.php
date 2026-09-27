@@ -12,7 +12,7 @@ use Osumi\OsumiFramework\Tools\OBuild;
  * Add new actions, services, tasks, model components, components or filters
  */
 class AddTask extends OTask {
-	public function __toString() {
+	public function __toString(): string {
 		return $this->getColors()->getColoredString('add', 'light_green') . ': ' . OTools::getMessage('TASK_ADD');
 	}
 

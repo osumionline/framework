@@ -387,17 +387,21 @@ class OConfig {
 	}
 
 	/**
-	 * Get path of a given directory or full list of configured directories if ommitted
+	 * Get the path of a configured directory or the complete directory list.
 	 *
-	 * @param string | null $dir Name or code of the directory
+	 * @param string|null $dir Directory name or null to return all directories.
 	 *
-	 * @return string | array Path of requested directory or full list of configured directories
+	 * @return string|array|null Requested directory path, complete directory list
+	 *                           or null if the directory does not exist.
 	 */
-	public function getDir(string | null $dir = null) {
-		if (is_null($dir)) {
+	public function getDir(?string $dir = null): string | array | null {
+		if ($dir === null) {
 			return $this->dirs;
 		}
-		return array_key_exists($dir, $this->dirs) ? $this->dirs[$dir] : null;
+
+		return array_key_exists($dir, $this->dirs)
+			? $this->dirs[$dir]
+			: null;
 	}
 
 	/**
