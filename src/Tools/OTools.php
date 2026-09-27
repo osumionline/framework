@@ -142,35 +142,115 @@ class OTools {
 	}
 
 	/**
-	 * Get a files content as a Base64 string
+	 * Get a file's content as a Base64 data URI.
 	 *
-	 * @param string $filename Route of the filename to be loaded
+	 * @param string $filename Path of the file to be loaded.
 	 *
-	 * @return string Content of the file as a Base64 string
+	 * @return string|null File content as a Base64 data URI or null if the file
+	 *                     cannot be read or its MIME type cannot be determined.
 	 */
 	public static function fileToBase64(string $filename): ?string {
-		if (file_exists($filename)) {
-			$finfo = finfo_open(FILEINFO_MIME_TYPE);
-			$filebinary = (filesize($filename) > 0) ? fread(fopen($filename, 'r'), filesize($filename)) : '';
-			return 'data:' . finfo_file($finfo, $filename) . ';base64,' . base64_encode($filebinary);
+		if (
+			$filename === '' ||
+			str_contains($filename, "\0") ||
+			!is_file($filename) ||
+			!is_readable($filename)
+		) {
+			return null;
 		}
-		return null;
+
+		$content = file_get_contents($filename);
+
+		if ($content === false) {
+			return null;
+		}
+
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+
+		if ($finfo === false) {
+			return null;
+		}
+
+		$mime_type = finfo_file(
+			$finfo,
+			$filename
+		);
+
+		if ($mime_type === false) {
+			return null;
+		}
+
+		return 'data:'
+			. $mime_type
+			. ';base64,'
+			. base64_encode($content);
 	}
 
 	/**
-	 * Save a Base64 string back to a file
+	 * Save a Base64 data URI to a file.
 	 *
-	 * @param string $base64_string Base64 string containing a file
-	 *
-	 * @param string $filename Route to the file to be saved
+	 * @param string $base64_string Base64 data URI containing the file content.
+	 * @param string $filename Destination file path.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the Base64 data URI is invalid.
+	 * @throws \RuntimeException If the destination file cannot be written.
 	 */
-	public static function base64ToFile(string $base64_string, string $filename): void {
-		$ifp = fopen($filename, 'wb');
-		$data = explode(',', $base64_string);
-		fwrite($ifp, base64_decode($data[1]));
-		fclose($ifp);
+	public static function base64ToFile(
+		string $base64_string,
+		string $filename
+	): void {
+		if (
+			$filename === '' ||
+			str_contains($filename, "\0")
+		) {
+			throw new \InvalidArgumentException(
+				'Invalid destination filename.'
+			);
+		}
+
+		$data = explode(
+			',',
+			$base64_string,
+			2
+		);
+
+		if (
+			count($data) !== 2 ||
+			!str_starts_with($data[0], 'data:') ||
+			!str_ends_with(
+				strtolower($data[0]),
+				';base64'
+			)
+		) {
+			throw new \InvalidArgumentException(
+				'Invalid Base64 data URI.'
+			);
+		}
+
+		$content = base64_decode(
+			$data[1],
+			true
+		);
+
+		if ($content === false) {
+			throw new \InvalidArgumentException(
+				'Invalid Base64 encoded content.'
+			);
+		}
+
+		if (
+			file_put_contents(
+				$filename,
+				$content,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not write Base64 content to file '{$filename}'."
+			);
+		}
 	}
 
 	/**
