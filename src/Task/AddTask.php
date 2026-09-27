@@ -42,7 +42,6 @@ class AddTask extends OTask {
 			return false;
 		}
 
-		$value = str_replace('\\', '/', $value);
 		$parts = explode('/', $value);
 
 		foreach ($parts as $part) {

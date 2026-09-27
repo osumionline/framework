@@ -243,7 +243,6 @@ class OBuild {
 			return ['status' => 'ofw-exists', 'name' => $name];
 		}
 
-		$str_message = str_ireplace('"', '\"', OTools::getMessage('TASK_ADD_TASK_MESSAGE', [$name]));
 		$task_description = var_export(
 			$name
 				. ': '
