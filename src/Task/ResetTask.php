@@ -88,7 +88,16 @@ class ResetTask extends OTask {
 
 		// Create framework folders again
 		foreach ($create_list as $value) {
-			mkdir($this->getConfig()->getDir($value));
+			$directory = $this->getConfig()->getDir($value);
+
+			if (
+				!is_dir($directory) &&
+				!mkdir($directory, 0755, true)
+			) {
+				throw new \RuntimeException(
+					"Could not create directory '{$directory}'."
+				);
+			}
 		}
 
 		// Generate default Config.json
@@ -157,6 +166,7 @@ class ResetTask extends OTask {
 	 * Run the task
 	 *
 	 * @return void
+	 * @throws \RuntimeException If a required directory or file cannot be created.
 	 */
 	public function run(array $options = []): void {
 		$tmp_file = $this->getConfig()->getDir('ofw_tmp') . 'reset.json';

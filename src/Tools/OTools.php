@@ -649,21 +649,38 @@ class OTools {
 	}
 
 	/**
-	 * Checks if "ofw" dir exists, creates otherwise, and checks if given subdir exists
+	 * Checks if the "ofw" directory and the requested subdirectory exist,
+	 * creating them when necessary.
 	 *
-	 * @param string $name Check of the subfolder to be checked
+	 * @param string $name Name of the OFW subdirectory to be checked.
 	 *
 	 * @return void
+	 *
+	 * @throws \RuntimeException If a required directory cannot be created.
 	 */
 	public static function checkOfw(string $name): void {
 		global $core;
+
 		$ofw_path = $core->config->getDir('ofw');
-		if (!is_dir($ofw_path)) {
-			mkdir($ofw_path);
+
+		if (
+			!is_dir($ofw_path) &&
+			!mkdir($ofw_path, 0755, true)
+		) {
+			throw new \RuntimeException(
+				"Could not create OFW directory '{$ofw_path}'."
+			);
 		}
+
 		$check_path = $core->config->getDir('ofw_' . $name);
-		if (!is_dir($check_path)) {
-			mkdir($check_path);
+
+		if (
+			!is_dir($check_path) &&
+			!mkdir($check_path, 0755, true)
+		) {
+			throw new \RuntimeException(
+				"Could not create OFW directory '{$check_path}'."
+			);
 		}
 	}
 

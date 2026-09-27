@@ -151,7 +151,7 @@ class OBuild {
 		}
 
 		// Create action's folder
-		mkdir($values['action_folder'], 0777, true);
+		mkdir($values['action_folder'], 0755, true);
 
 		// New action's content
 		$str_template = OTools::getMessage('TASK_ADD_ACTION_TEMPLATE', [$values['action_name']]);
@@ -189,7 +189,7 @@ class OBuild {
 
 		// If services folder does not exist I create it before doing anything else
 		if (!is_dir($core->config->getDir('app_service'))) {
-			mkdir($core->config->getDir('app_service'));
+			mkdir($core->config->getDir('app_service'), 0755, true);
 		}
 
 		$service_file = $core->config->getDir('app_service') . ucfirst($name) . 'Service.php';
@@ -221,7 +221,7 @@ class OBuild {
 		// If tasks folder does not exist I create it before doing anything else
 		$tasks_path = $core->config->getDir('app_task');
 		if (!is_dir($tasks_path)) {
-			mkdir($tasks_path);
+			mkdir($tasks_path, 0755, true);
 		}
 
 		$task_file = $tasks_path . ucfirst($name) . 'Task.php';
@@ -373,7 +373,7 @@ class OBuild {
 
 		// If components folder does not exist I create it before doing anything else
 		if (!is_dir($core->config->getDir('app_component'))) {
-			mkdir($core->config->getDir('app_component'));
+			mkdir($core->config->getDir('app_component'), 0755, true);
 		}
 
 		// Check if component already exists
@@ -382,7 +382,7 @@ class OBuild {
 		}
 
 		// Create component's folder recursively
-		mkdir($values['path'], 0777, true);
+		mkdir($values['path'], 0755, true);
 
 		$template_path = $core->config->getDir('ofw_template') . 'add/componentTemplate.tpl';
 		$str_component = OTools::getTemplate($template_path, '', [
@@ -408,7 +408,7 @@ class OBuild {
 
 		// If filters folder does not exist I create it before doing anything else
 		if (!is_dir($core->config->getDir('app_filter'))) {
-			mkdir($core->config->getDir('app_filter'));
+			mkdir($core->config->getDir('app_filter'), 0755, true);
 		}
 
 		// Check if component already exists

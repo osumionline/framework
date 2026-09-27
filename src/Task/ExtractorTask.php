@@ -157,7 +157,7 @@ class ExtractorTask extends OTask {
 		$str .= "echo \"" . OTools::getMessage('TASK_EXTRACTOR_CREATE_FOLDERS') . " (\".count($" . "folders).\")\\n\";\n";
 		$str .= "foreach ($" . "folders as $" . "i => $" . "folder){\n";
 		$str .= "	echo \"  \".($" . "i+1).\"/\".count($" . "folders).\" - \".$" . "folder.\"\\n\";\n";
-		$str .= "	mkdir($" . "basedir.\"/\".$" . "folder);\n";
+		$str .= "	mkdir($" . "basedir.\"/\".$" . "folder, 0755, true);\n";
 		$str .= "}\n\n";
 
 		$str .= "echo \"" . OTools::getMessage('TASK_EXTRACTOR_CREATE_FILES') . " (\".count($" . "files).\")\\n\";\n";

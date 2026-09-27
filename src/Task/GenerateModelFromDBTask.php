@@ -257,6 +257,7 @@ class GenerateModelFromDBTask extends OTask {
 	 * Run the task
 	 *
 	 * @return void Echoes generated model files and creates them on the Model folder
+	 * @throws \RuntimeException If the model directory cannot be created.
 	 */
 	public function run(array $options = []): void {
 		$db_name = $this->getConfig()->getDB('name');
@@ -280,8 +281,13 @@ class GenerateModelFromDBTask extends OTask {
 		$models = $this->getRefs($models);
 
 		$model_path = $this->getConfig()->getDir('app_model');
-		if (!file_exists($model_path)) {
-			mkdir($model_path, 0755);
+		if (
+			!is_dir($model_path) &&
+			!mkdir($model_path, 0755, true)
+		) {
+			throw new \RuntimeException(
+				"Could not create model directory '{$model_path}'."
+			);
 		}
 		foreach ($models as $model) {
 			$this->generateTable($model);
