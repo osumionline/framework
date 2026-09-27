@@ -111,10 +111,8 @@ class OCore {
 			$this->db_container = new ODBContainer();
 		}
 
-		if (!$from_cli) {
-			session_start();
-			$this->session = new OSession();
-			$this->config->setUseSession(!$from_cli);
+		if (!$from_cli && $this->config->getUseSession()) {
+			$this->startSession();
 		}
 
 		// Set up an empty cache container
@@ -321,6 +319,52 @@ class OCore {
 			$this->db_container->closeAllConnections();
 		}
 		header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->getHttpStatus());
+	}
+
+	/**
+	 * Configure and start a secure PHP session.
+	 *
+	 * @return void
+	 *
+	 * @throws \RuntimeException If a session configuration option cannot be changed
+	 *                           or the session cannot be started.
+	 */
+	private function startSession(): void {
+		$session_settings = [
+			'session.use_cookies'      => '1',
+			'session.use_only_cookies' => '1',
+			'session.use_strict_mode'  => '1',
+			'session.use_trans_sid'    => '0'
+		];
+
+		foreach ($session_settings as $key => $value) {
+			if (ini_set($key, $value) === false) {
+				throw new \RuntimeException(
+					"Could not configure PHP session option '{$key}'."
+				);
+			}
+		}
+
+		if (!session_set_cookie_params([
+			'lifetime' => 0,
+			'path'     => $this->config->getCookiePath(),
+			'domain'   => $this->config->getCookieUrl(),
+			'secure'   => $this->config->getCookieSecure(),
+			'httponly' => $this->config->getCookieHttpOnly(),
+			'samesite' => $this->config->getCookieSameSite()
+		])) {
+			throw new \RuntimeException(
+				'Could not configure PHP session cookie parameters.'
+			);
+		}
+
+		if (!session_start()) {
+			throw new \RuntimeException(
+				'Could not start PHP session.'
+			);
+		}
+
+		$this->session = new OSession();
 	}
 
 	/**

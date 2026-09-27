@@ -68,9 +68,8 @@ class OCookie {
 	 * @return void
 	 */
 	public function add(string $key, string $value): void {
-		global $core;
 		$this->cookie_list[$key] = $value;
-		setcookie($core->config->getCookiePrefix() . '[' . $key . ']', $value, time() + (3600 * 24 * 31), '/', $core->config->getCookieUrl());
+		$this->setCookie($key, $value, time() + (3600 * 24 * 31));
 	}
 
 	/**
@@ -112,6 +111,32 @@ class OCookie {
 	}
 
 	/**
+	 * Send a cookie to the client.
+	 *
+	 * @param string $key Cookie key.
+	 * @param string $value Cookie value.
+	 * @param int $expires Unix timestamp when the cookie expires.
+	 *
+	 * @return void
+	 */
+	private function setCookie(string $key, string $value, int $expires): void {
+		global $core;
+
+		setcookie(
+			$core->config->getCookiePrefix() . '[' . $key . ']',
+			$value,
+			[
+				'expires'  => $expires,
+				'path'     => $core->config->getCookiePath(),
+				'domain'   => $core->config->getCookieUrl(),
+				'secure'   => $core->config->getCookieSecure(),
+				'httponly' => $core->config->getCookieHttpOnly(),
+				'samesite' => $core->config->getCookieSameSite()
+			]
+		);
+	}
+
+	/**
 	 * Store all the values in the list into the user's cookies.
 	 *
 	 * @return void
@@ -123,13 +148,7 @@ class OCookie {
 		$this->log(var_export($this->cookie_list, true));
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie(
-				$core->config->getCookiePrefix() . '[' . $key . ']',
-				$value,
-				time() + (3600 * 24 * 31),
-				'/',
-				$core->config->getCookieUrl()
-			);
+			$this->setCookie($key, $value, time() + (3600 * 24 * 31));
 		}
 	}
 
@@ -144,13 +163,7 @@ class OCookie {
 		$this->log('clean - Cookies removed');
 
 		foreach ($this->cookie_list as $key => $value) {
-			setcookie(
-				$core->config->getCookiePrefix() . '[' . $key . ']',
-				$value,
-				1,
-				'/',
-				$core->config->getCookieUrl()
-			);
+			$this->setCookie($key, '', 1);
 		}
 
 		$this->cookie_list = [];

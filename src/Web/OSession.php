@@ -10,29 +10,48 @@ use Osumi\OsumiFramework\Log\OLog;
  * OSession - Class with methods to get/set information into the users session
  */
 class OSession {
-	private bool  $debug   = false;
-	private OLog | null $l = null;
-	private array $params  = [];
+	private bool        $debug  = false;
+	private OLog | null $l      = null;
+	private array       $params = [];
 
 	/**
-	 * Load on startup the session information
+	 * Load session information on startup.
 	 */
-	function __construct() {
+	public function __construct() {
 		global $core;
+
 		$this->debug = ($core->config->getLog('level') == 'ALL');
+
 		if ($this->debug) {
 			$this->l = new OLog('OSession');
 		}
 
-		if (isset($_SESSION['params'])) {
-			$this->params = unserialize($_SESSION['params']);
+		$params = $_SESSION['params'] ?? [];
+
+		if (!is_array($params)) {
+			unset($_SESSION['params']);
+			return;
 		}
+
+		foreach ($params as $value) {
+			if (
+				!is_string($value) &&
+				!is_int($value) &&
+				!is_float($value) &&
+				!is_bool($value)
+			) {
+				unset($_SESSION['params']);
+				return;
+			}
+		}
+
+		$this->params = $params;
 	}
 
 	/**
-	 * Logs internal information of the class
+	 * Logs internal information of the class.
 	 *
-	 * @param string $str String to be logged
+	 * @param string $str String to be logged.
 	 *
 	 * @return void
 	 */
@@ -43,57 +62,77 @@ class OSession {
 	}
 
 	/**
-	 * Save given parameter list into memory and into session
+	 * Save the given parameter list into memory and the user session.
 	 *
-	 * @param array $p Array of key / value pairs
+	 * @param array $p Array of key/value pairs.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a session parameter contains an unsupported value.
 	 */
 	public function setParams(array $p): void {
+		foreach ($p as $value) {
+			if (
+				!is_string($value) &&
+				!is_int($value) &&
+				!is_float($value) &&
+				!is_bool($value)
+			) {
+				throw new \InvalidArgumentException(
+					'Session parameters only support string, int, float and bool values.'
+				);
+			}
+		}
+
 		$this->log('setParams - Params:');
 		$this->log(var_export($p, true));
+
 		$this->params = $p;
-		$_SESSION['params'] = serialize($p);
+		$_SESSION['params'] = $p;
 	}
 
 	/**
-	 * Get parameter list
+	 * Get the parameter list.
 	 *
-	 * @return array Array of key / value pairs
+	 * @return array Array of key/value pairs.
 	 */
 	public function getParams(): array {
 		return $this->params;
 	}
 
 	/**
-	 * Adds a new key / value parameter into memory and into session
+	 * Add a new key/value parameter into memory and the user session.
 	 *
-	 * @param string $key Key code of the parameter
-	 *
-	 * @param string|int|float|bool $value Value of the parameter
+	 * @param string $key Key code of the parameter.
+	 * @param string|int|float|bool $value Value of the parameter.
 	 *
 	 * @return void
 	 */
-	public function addParam(string $key, $value): void {
+	public function addParam(
+		string $key,
+		string | int | float | bool $value
+	): void {
 		$this->params[$key] = $value;
 		$this->setParams($this->params);
 	}
 
 	/**
-	 * Get a parameter from the previously loaded list
+	 * Get a parameter from the previously loaded list.
 	 *
-	 * @param string $key Key code of the parameter
+	 * @param string $key Key code of the parameter.
 	 *
-	 * @return string | int | float | bool | null Value of the parameter or null if not found
+	 * @return string|int|float|bool|null Value of the parameter or null if not found.
 	 */
 	public function getParam(string $key): string | int | float | bool | null {
-		return array_key_exists($key, $this->params) ? $this->params[$key] : null;
+		return array_key_exists($key, $this->params)
+			? $this->params[$key]
+			: null;
 	}
 
 	/**
-	 * Removes a parameter from the list and the users session
+	 * Remove a parameter from the list and the user session.
 	 *
-	 * @param string $key Key code of the parameter
+	 * @param string $key Key code of the parameter.
 	 *
 	 * @return void
 	 */
@@ -103,12 +142,37 @@ class OSession {
 	}
 
 	/**
-	 * Removes all parameters from users session and resets the list
+	 * Remove all parameters from the user session and reset the internal list.
 	 *
 	 * @return void
 	 */
 	public function cleanSession(): void {
+		$this->params = [];
 		unset($_SESSION['params']);
-		$this->setParams([]);
+	}
+
+	/**
+	 * Regenerate the current PHP session identifier.
+	 *
+	 * The current session data is preserved and the previous session data is not
+	 * immediately deleted to avoid race conditions with concurrent requests.
+	 *
+	 * @return void
+	 *
+	 * @throws \RuntimeException If there is no active session or the session
+	 *                           identifier cannot be regenerated.
+	 */
+	public function regenerateId(): void {
+		if (session_status() !== PHP_SESSION_ACTIVE) {
+			throw new \RuntimeException(
+				'Cannot regenerate the session identifier because there is no active session.'
+			);
+		}
+
+		if (!session_regenerate_id(false)) {
+			throw new \RuntimeException(
+				'Could not regenerate the session identifier.'
+			);
+		}
 	}
 }

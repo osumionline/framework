@@ -35,8 +35,12 @@ class OConfig {
 
 	private array $plugin_config = [];
 
-	private string $cookie_prefix = '';
-	private string $cookie_url    = '';
+	private string $cookie_prefix    = '';
+	private string $cookie_url       = '';
+	private string $cookie_path      = '/';
+	private bool   $cookie_secure    = true;
+	private bool   $cookie_http_only = true;
+	private string $cookie_same_site = 'Lax';
 
 	private array | null $url_list = null;
 
@@ -61,6 +65,7 @@ class OConfig {
 	 *
 	 * @param string $bd Base directory of the application.
 	 *
+	 * @throws \InvalidArgumentException If the application configuration contains invalid values.
 	 * @throws \JsonException If a configuration file contains invalid JSON.
 	 * @throws \RuntimeException If a configuration file cannot be read.
 	 */
@@ -108,6 +113,8 @@ class OConfig {
 				$this->loadConfig($config_env);
 			}
 		}
+
+		$this->validateCookieConfig();
 	}
 
 	/**
@@ -141,6 +148,18 @@ class OConfig {
 			}
 			if (array_key_exists('url', $config['cookies'])) {
 				$this->setCookieUrl($config['cookies']['url']);
+			}
+			if (array_key_exists('path', $config['cookies'])) {
+				$this->setCookiePath($config['cookies']['path']);
+			}
+			if (array_key_exists('secure', $config['cookies'])) {
+				$this->setCookieSecure($config['cookies']['secure']);
+			}
+			if (array_key_exists('http_only', $config['cookies'])) {
+				$this->setCookieHttpOnly($config['cookies']['http_only']);
+			}
+			if (array_key_exists('same_site', $config['cookies'])) {
+				$this->setCookieSameSite($config['cookies']['same_site']);
 			}
 		}
 		if (array_key_exists('log_level', $config)) {
@@ -207,6 +226,24 @@ class OConfig {
 		}
 		if (array_key_exists('libs', $config)) {
 			$this->setLibs($config['libs']);
+		}
+	}
+
+	/**
+	 * Validate cookie configuration.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the cookie configuration is invalid.
+	 */
+	private function validateCookieConfig(): void {
+		if (
+			$this->cookie_same_site === 'None' &&
+			!$this->cookie_secure
+		) {
+			throw new \InvalidArgumentException(
+				'Cookies configured with SameSite=None must also use the Secure attribute.'
+			);
 		}
 	}
 
@@ -484,6 +521,96 @@ class OConfig {
 	 */
 	public function getCookieUrl(): string {
 		return $this->cookie_url;
+	}
+
+	/**
+	 * Set the SameSite policy used for cookies.
+	 *
+	 * @param string $same_site SameSite policy (Strict, Lax or None).
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the SameSite policy is invalid.
+	 */
+	public function setCookieSameSite(string $same_site): void {
+		$allowed_values = ['Strict', 'Lax', 'None'];
+
+		if (!in_array($same_site, $allowed_values, true)) {
+			throw new \InvalidArgumentException(
+				'Invalid cookie SameSite policy. Allowed values are Strict, Lax and None.'
+			);
+		}
+
+		$this->cookie_same_site = $same_site;
+	}
+
+	/**
+	 * Get the configured SameSite cookie policy.
+	 *
+	 * @return string SameSite policy.
+	 */
+	public function getCookieSameSite(): string {
+		return $this->cookie_same_site;
+	}
+
+	/**
+	 * Set the path to be used for cookies.
+	 *
+	 * @param string $path Cookie path.
+	 *
+	 * @return void
+	 */
+	public function setCookiePath(string $path): void {
+		$this->cookie_path = $path;
+	}
+
+	/**
+	 * Get the configured cookie path.
+	 *
+	 * @return string Cookie path.
+	 */
+	public function getCookiePath(): string {
+		return $this->cookie_path;
+	}
+
+	/**
+	 * Set whether cookies must only be sent over secure HTTPS connections.
+	 *
+	 * @param bool $secure Whether cookies must use the Secure attribute.
+	 *
+	 * @return void
+	 */
+	public function setCookieSecure(bool $secure): void {
+		$this->cookie_secure = $secure;
+	}
+
+	/**
+	 * Get whether cookies are configured to use the Secure attribute.
+	 *
+	 * @return bool Whether cookies must only be sent over secure HTTPS connections.
+	 */
+	public function getCookieSecure(): bool {
+		return $this->cookie_secure;
+	}
+
+	/**
+	 * Set whether cookies must be inaccessible to client-side scripts.
+	 *
+	 * @param bool $http_only Whether cookies must use the HttpOnly attribute.
+	 *
+	 * @return void
+	 */
+	public function setCookieHttpOnly(bool $http_only): void {
+		$this->cookie_http_only = $http_only;
+	}
+
+	/**
+	 * Get whether cookies are configured to use the HttpOnly attribute.
+	 *
+	 * @return bool Whether cookies are inaccessible to client-side scripts.
+	 */
+	public function getCookieHttpOnly(): bool {
+		return $this->cookie_http_only;
 	}
 
 	/**
