@@ -443,11 +443,32 @@ class OBuild {
 	}
 
 	/**
-	 * Creates a model class
+	 * Create a model class.
 	 *
-	 * @param array $values Information about the class that has to be created
+	 * @param array{
+	 *     table_name: string,
+	 *     class_file: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         comment?: string,
+	 *         visible?: bool,
+	 *         ref?: string,
+	 *         incr?: bool
+	 *     }>,
+	 *     refs: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * } $values Model class definition.
 	 *
-	 * @return string Status of the operation
+	 * @return string Generation status.
 	 */
 	public static function addModelClass(array $values): string {
 		global $core;

@@ -22,7 +22,7 @@ class GenerateModelFromDBTask extends OTask {
 	/**
 	 * Get the list of tables from the configured database.
 	 *
-	 * @return array List of database tables.
+	 * @return list<array{table_name: string}> Database tables.
 	 */
 	private function getTables(): array {
 		$sql = "SELECT
@@ -50,7 +50,17 @@ class GenerateModelFromDBTask extends OTask {
 	 *
 	 * @param string $table_name Table name.
 	 *
-	 * @return array List of column definitions.
+	 * @return list<array{
+	 *     name: string,
+	 *     decorator: string,
+	 *     comment: string,
+	 *     attribute_type?: string,
+	 *     type?: string,
+	 *     nullable?: bool,
+	 *     default?: string|int|float|bool|null,
+	 *     max?: int,
+	 *     ref?: string
+	 * }> Column definitions.
 	 */
 	private function getColumns(string $table_name): array {
 		$sql = "SELECT
@@ -139,7 +149,7 @@ class GenerateModelFromDBTask extends OTask {
 				// String
 				if ($res['DATA_TYPE'] === 'varchar' || $res['DATA_TYPE'] === 'char') {
 					$field['decorator'] = 'OField';
-					$field['max'] = $res['CHARACTER_MAXIMUM_LENGTH'];
+					$field['max'] = (int) $res['CHARACTER_MAXIMUM_LENGTH'];
 					$field['attribute_type'] = 'string';
 					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
 						? ($field['nullable'] ? null : '')
@@ -165,9 +175,45 @@ class GenerateModelFromDBTask extends OTask {
 	/**
 	 * Apply primary key information to a model definition.
 	 *
-	 * @param array $model Model definition.
+	 * @param array{
+	 *     name: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         comment: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         ref?: string
+	 *     }>,
+	 *     refs?: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * } $model Model definition.
 	 *
-	 * @return array Updated model definition.
+	 * @return array{
+	 *     name: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         comment: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         ref?: string
+	 *     }>,
+	 *     refs?: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * } Updated model definition.
 	 */
 	private function getPK(array $model): array {
 		$sql = "SELECT
@@ -209,9 +255,45 @@ class GenerateModelFromDBTask extends OTask {
 	/**
 	 * Apply foreign key relationship information to model definitions.
 	 *
-	 * @param array $models Model definitions.
+	 * @param list<array{
+	 *     name: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         comment: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         ref?: string
+	 *     }>,
+	 *     refs?: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * }> $models Model definitions.
 	 *
-	 * @return array Updated model definitions.
+	 * @return list<array{
+	 *     name: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         comment: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         ref?: string
+	 *     }>,
+	 *     refs?: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * }> Updated model definitions.
 	 */
 	private function getRefs(array $models): array {
 		$sql = "SELECT
@@ -269,9 +351,27 @@ class GenerateModelFromDBTask extends OTask {
 	}
 
 	/**
-	 * Generate a table
+	 * Generate a model class from a table definition.
 	 *
-	 * @param array $table Data of a table
+	 * @param array{
+	 *     name: string,
+	 *     fields: list<array{
+	 *         name: string,
+	 *         decorator: string,
+	 *         comment: string,
+	 *         attribute_type?: string,
+	 *         type?: string,
+	 *         nullable?: bool,
+	 *         default?: string|int|float|bool|null,
+	 *         max?: int,
+	 *         ref?: string
+	 *     }>,
+	 *     refs?: list<array{
+	 *         to: string,
+	 *         field_from: string,
+	 *         field_to: string
+	 *     }>
+	 * } $table Table definition.
 	 *
 	 * @return void
 	 */

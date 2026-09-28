@@ -36,7 +36,7 @@ class GenerateModelFromTask extends OTask {
   /**
    * Validate a model field definition.
    *
-   * @param array $field Field definition.
+   * @param array<array-key, mixed> $field Field definition to validate.
    *
    * @return void
    *
@@ -237,7 +237,7 @@ class GenerateModelFromTask extends OTask {
   /**
    * Validate a model reference definition.
    *
-   * @param array $ref Reference definition.
+   * @param array<array-key, mixed> $ref Reference definition to validate.
    *
    * @return void
    *
@@ -278,7 +278,7 @@ class GenerateModelFromTask extends OTask {
   /**
    * Validate a model table definition.
    *
-   * @param array $table Table definition.
+   * @param array<array-key, mixed> $table Table definition to validate.
    *
    * @return void
    *
@@ -408,9 +408,29 @@ class GenerateModelFromTask extends OTask {
   }
 
   /**
-   * Generate a table.
+   * Generate a model class from a validated table definition.
    *
-   * @param array $table Data of a table.
+   * @param array{
+   *     name: string,
+   *     fields: list<array{
+   *         name: string,
+   *         decorator: string,
+   *         attribute_type?: string,
+   *         type?: string,
+   *         nullable?: bool,
+   *         default?: string|int|float|bool|null,
+   *         max?: int,
+   *         comment?: string,
+   *         visible?: bool,
+   *         ref?: string,
+   *         incr?: bool
+   *     }>,
+   *     refs?: list<array{
+   *         to: string,
+   *         field_from: string,
+   *         field_to: string
+   *     }>
+   * } $table Validated table definition.
    *
    * @return void
    */

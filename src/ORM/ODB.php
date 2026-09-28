@@ -19,6 +19,9 @@ class ODB {
     private ?string $connection_index = null;
     public ?PDO $link = null;
     private ?PDOStatement $stmt = null;
+    /**
+     * @var array<int, array<string, mixed>>
+     */
     private array $result = [];
     private int $result_index = 0;
 
@@ -95,13 +98,14 @@ class ODB {
     }
 
     /**
-     * Method to run directly SQL commands against a database.
+     * Run a SQL command against the database.
      *
-     * @param string $sql SQL Command to be executed
+     * @param string $sql SQL command to execute.
+     * @param array<array-key, mixed> $params Parameters bound to the SQL command.
      *
-     * @param array $params Parameters to be bound to the SQL command
+     * @return bool Result of the operation.
      *
-     * @return bool Result of the operation
+     * @throws \Exception If the query cannot be executed.
      */
     public function query(string $sql, array $params = []): bool {
         try {
@@ -125,9 +129,9 @@ class ODB {
     }
 
     /**
-     * Method to go through the results one by one
+     * Get the next result row.
      *
-     * @return ?array Retrieves next item of the results or null if finished
+     * @return array<string, mixed>|null Next result row or null when exhausted.
      */
     public function next(): ?array {
         if ($this->result_index < count($this->result)) {
@@ -137,9 +141,9 @@ class ODB {
     }
 
     /**
-     * Returns the results array
+     * Get all result rows.
      *
-     * @return array Results array
+     * @return array<int, array<string, mixed>> Result rows.
      */
     public function all(): array {
         return $this->result;
