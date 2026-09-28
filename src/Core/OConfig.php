@@ -82,18 +82,31 @@ class OConfig {
 				);
 			}
 
-			$config = json_decode(
+			$config_data = json_decode(
 				$config_content,
 				true,
 				512,
 				JSON_THROW_ON_ERROR
 			);
+
+			if (!is_array($config_data)) {
+				throw new \InvalidArgumentException(
+					'Application configuration root must be an object.'
+				);
+			}
+
+			$config = $config_data;
 		}
 		$this->loadConfig($config);
 		if (array_key_exists('environment', $config)) {
-			$this->setEnvironment($config['environment']);
+			$environment = $this->getConfigString($config, 'environment');
 
-			$json_env_file = $this->getDir('app_config') . 'Config_' . $config['environment'] . '.json';
+			$this->setEnvironment($environment);
+
+			$json_env_file = $this->getDir('app_config')
+				. 'Config_'
+				. $environment
+				. '.json';
 			if (file_exists($json_env_file)) {
 				$config_env_content = file_get_contents($json_env_file);
 
@@ -103,14 +116,20 @@ class OConfig {
 					);
 				}
 
-				$config_env = json_decode(
+				$config_env_data = json_decode(
 					$config_env_content,
 					true,
 					512,
 					JSON_THROW_ON_ERROR
 				);
 
-				$this->loadConfig($config_env);
+				if (!is_array($config_env_data)) {
+					throw new \InvalidArgumentException(
+						'Environment configuration root must be an object.'
+					);
+				}
+
+				$this->loadConfig($config_env_data);
 			}
 		}
 
@@ -118,73 +137,207 @@ class OConfig {
 	}
 
 	/**
-	 * Load a specific configuration file
+	 * Get and validate a string configuration value.
 	 *
-	 * @param array $config Key / Value pairs with the configuration of the application
+	 * @param array $config Configuration source.
+	 * @param string $key Key to retrieve.
+	 * @param string|null $field Full field name used in error messages.
+	 *
+	 * @return string Configuration value.
+	 *
+	 * @throws \InvalidArgumentException If the value is not a string.
+	 */
+	private function getConfigString(array $config, string $key, ?string $field = null): string {
+		$value = $config[$key];
+		$field ??= $key;
+
+		if (!is_string($value)) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}' must be a string."
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Get and validate a boolean configuration value.
+	 *
+	 * @param array $config Configuration source.
+	 * @param string $key Key to retrieve.
+	 * @param string|null $field Full field name used in error messages.
+	 *
+	 * @return bool Configuration value.
+	 *
+	 * @throws \InvalidArgumentException If the value is not a boolean.
+	 */
+	private function getConfigBool(array $config, string $key, ?string $field = null): bool {
+		$value = $config[$key];
+		$field ??= $key;
+
+		if (!is_bool($value)) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}' must be a boolean."
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Get and validate an integer configuration value.
+	 *
+	 * @param array $config Configuration source.
+	 * @param string $key Key to retrieve.
+	 * @param string|null $field Full field name used in error messages.
+	 *
+	 * @return int Configuration value.
+	 *
+	 * @throws \InvalidArgumentException If the value is not an integer.
+	 */
+	private function getConfigInt(array $config, string $key, ?string $field = null): int {
+		$value = $config[$key];
+		$field ??= $key;
+
+		if (!is_int($value)) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}' must be an integer."
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Get and validate an array configuration value.
+	 *
+	 * @param array $config Configuration source.
+	 * @param string $key Key to retrieve.
+	 * @param string|null $field Full field name used in error messages.
+	 *
+	 * @return array Configuration value.
+	 *
+	 * @throws \InvalidArgumentException If the value is not an array.
+	 */
+	private function getConfigArray(
+		array $config,
+		string $key,
+		?string $field = null
+	): array {
+		$value = $config[$key];
+		$field ??= $key;
+
+		if (!is_array($value)) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}' must be an object or array."
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Load a specific configuration array.
+	 *
+	 * @param array $config Application configuration values.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a configuration value has an invalid type.
 	 */
 	private function loadConfig(array $config): void {
 		if (array_key_exists('name', $config)) {
-			$this->setName($config['name']);
+			$this->setName($this->getConfigString($config, 'name'));
 		}
+
 		if (array_key_exists('use-session', $config)) {
-			$this->setUseSession($config['use-session']);
+			$this->setUseSession($this->getConfigBool($config, 'use-session'));
 		}
+
 		if (array_key_exists('allow-cross-origin', $config)) {
-			$this->setAllowCrossOrigin($config['allow-cross-origin']);
+			$this->setAllowCrossOrigin($this->getConfigBool($config, 'allow-cross-origin'));
 		}
+
 		if (array_key_exists('db', $config)) {
-			$db_fields = ['driver', 'host', 'user', 'pass', 'name', 'charset', 'collate'];
+			$db = $this->getConfigArray($config, 'db');
+
+			$db_fields = [
+				'driver',
+				'host',
+				'user',
+				'pass',
+				'name',
+				'charset',
+				'collate'
+			];
+
 			foreach ($db_fields as $db_field) {
-				if (array_key_exists($db_field, $config['db'])) {
-					$this->setDB($db_field, $config['db'][$db_field]);
+				if (array_key_exists($db_field, $db)) {
+					$this->setDB($db_field, $this->getConfigString($db, $db_field, 'db.' . $db_field));
 				}
 			}
 		}
+
 		if (array_key_exists('cookies', $config)) {
-			if (array_key_exists('prefix', $config['cookies'])) {
-				$this->setCookiePrefix($config['cookies']['prefix']);
+			$cookies = $this->getConfigArray($config, 'cookies');
+
+			if (array_key_exists('prefix', $cookies)) {
+				$this->setCookiePrefix($this->getConfigString($cookies, 'prefix', 'cookies.prefix'));
 			}
-			if (array_key_exists('url', $config['cookies'])) {
-				$this->setCookieUrl($config['cookies']['url']);
+
+			if (array_key_exists('url', $cookies)) {
+				$this->setCookieUrl($this->getConfigString($cookies, 'url', 'cookies.url'));
 			}
-			if (array_key_exists('path', $config['cookies'])) {
-				$this->setCookiePath($config['cookies']['path']);
+
+			if (array_key_exists('path', $cookies)) {
+				$this->setCookiePath($this->getConfigString($cookies, 'path', 'cookies.path'));
 			}
-			if (array_key_exists('secure', $config['cookies'])) {
-				$this->setCookieSecure($config['cookies']['secure']);
+
+			if (array_key_exists('secure', $cookies)) {
+				$this->setCookieSecure($this->getConfigBool($cookies, 'secure', 'cookies.secure'));
 			}
-			if (array_key_exists('http_only', $config['cookies'])) {
-				$this->setCookieHttpOnly($config['cookies']['http_only']);
+
+			if (array_key_exists('http_only', $cookies)) {
+				$this->setCookieHttpOnly($this->getConfigBool($cookies, 'http_only', 'cookies.http_only'));
 			}
-			if (array_key_exists('same_site', $config['cookies'])) {
-				$this->setCookieSameSite($config['cookies']['same_site']);
+
+			if (array_key_exists('same_site', $cookies)) {
+				$this->setCookieSameSite($this->getConfigString($cookies, 'same_site', 'cookies.same_site'));
 			}
 		}
+
 		if (array_key_exists('log_level', $config)) {
-			$this->setLog('level', $config['log_level']);
+			$this->setLog('level', $this->getConfigString($config, 'log_level'));
 		}
+
 		if (array_key_exists('log', $config)) {
-			if (array_key_exists('name', $config['log'])) {
-				$this->setLog('name', $config['log']['name']);
+			$log = $this->getConfigArray($config, 'log');
+
+			if (array_key_exists('name', $log)) {
+				$this->setLog('name', $this->getConfigString($log, 'name', 'log.name'));
 			}
-			if (array_key_exists('max_file_size', $config['log'])) {
-				$this->setLog('max_file_size', $config['log']['max_file_size']);
+
+			if (array_key_exists('max_file_size', $log)) {
+				$this->setLog('max_file_size', $this->getConfigInt($log, 'max_file_size', 'log.max_file_size'));
 			}
-			if (array_key_exists('max_num_files', $config['log'])) {
-				$this->setLog('max_num_files', $config['log']['max_num_files']);
+
+			if (array_key_exists('max_num_files', $log)) {
+				$this->setLog('max_num_files', $this->getConfigInt($log, 'max_num_files', 'log.max_num_files'));
 			}
 		}
+
 		if (array_key_exists('base_url', $config)) {
-			$this->setUrl('base', $config['base_url']);
+			$this->setUrl('base', $this->getConfigString($config, 'base_url'));
 		}
+
 		if (array_key_exists('default_title', $config)) {
-			$this->setDefaultTitle($config['default_title']);
+			$this->setDefaultTitle($this->getConfigString($config, 'default_title'));
 		}
+
 		if (array_key_exists('lang', $config)) {
-			$this->setLang($config['lang']);
+			$this->setLang($this->getConfigString($config, 'lang'));
 		}
+
 		if (array_key_exists('plugins', $config)) {
 			foreach ($config['plugins'] as $key => $plugin_conf) {
 				$this->setPluginConfig($key, $plugin_conf);
