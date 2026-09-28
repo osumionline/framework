@@ -89,14 +89,15 @@ class ExtractorTask extends OTask {
 	/**
 	 * Run the task.
 	 *
-	 * @param array $params Task parameters. The "silent" option suppresses
-	 *                      informational output when set to "true".
+	 * @param array<string, string|false> $params Task options. The "silent" option
+	 *                                            suppresses informational output
+	 *                                            when set to "true".
 	 *
 	 * @return void
 	 *
 	 * @throws \RuntimeException If a source file cannot be read, a directory
-	 *                           cannot be scanned or the extractor file cannot
-	 *                           be generated.
+	 *                           cannot be scanned or the extractor file cannot be
+	 *                           generated.
 	 */
 	public function run(array $params = []): void {
 		$silent = (

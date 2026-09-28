@@ -12,8 +12,16 @@ use Osumi\OsumiFramework\Tools\OColors;
  * Class to handle CLI tools and tasks (internal and user defined)
  */
 class CLI {
+  /**
+   * @var string[]
+   */
   private array $ofw_task_list = [];
+
+  /**
+   * @var string[]
+   */
   private array $app_task_list = [];
+
   private ?OColors $colors = null;
 
   public function __construct() {
@@ -26,11 +34,15 @@ class CLI {
   }
 
   /**
-   * Parse CLI arguments and return them in an array
+   * Parse CLI arguments.
    *
-   * @param array $argv List of parameters passed to the CLI
+   * Named options are returned using their option name as key. Options without
+   * an explicit value use false. Positional arguments are stored using
+   * "param_N" keys.
    *
-   * @return array List of parsed parameters
+   * @param string[] $argv Command line arguments.
+   *
+   * @return array<string, string|false> Parsed task options.
    */
   private function parseArguments(array $argv): array {
     // Remove script name and command (first two elements)
@@ -131,11 +143,10 @@ class CLI {
   }
 
   /**
-   * Run selected task
+   * Run the selected task.
    *
-   * @param string $task_name Full name of the task to be run
-   *
-   * @param array $options List of parameters passed to the task
+   * @param class-string $task_name Fully qualified task class name.
+   * @param array<string, string|false> $options Task options.
    *
    * @return void
    */
@@ -146,9 +157,9 @@ class CLI {
   }
 
   /**
-   * Runs CLI
+   * Run the command line interface.
    *
-   * @param array $argv List of options passed in the command line
+   * @param string[] $argv Command line arguments.
    *
    * @return void
    */

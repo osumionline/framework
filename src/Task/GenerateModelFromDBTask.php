@@ -310,9 +310,12 @@ class GenerateModelFromDBTask extends OTask {
 	}
 
 	/**
-	 * Run the task
+	 * Run the task.
 	 *
-	 * @return void Echoes generated model files and creates them on the Model folder
+	 * @param array<string, string|false> $options Task options.
+	 *
+	 * @return void
+	 *
 	 * @throws \RuntimeException If the model directory cannot be created.
 	 */
 	public function run(array $options = []): void {

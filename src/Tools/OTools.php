@@ -1092,16 +1092,12 @@ class OTools {
 	/**
 	 * Run a user-defined application task.
 	 *
-	 * @param string $task_name Name of the task.
-	 * @param array $params Parameters passed to the task.
+	 * @param string $task_name Task name.
+	 * @param array<array-key, mixed> $params Parameters passed to the task.
 	 *
-	 * @return bool True if the task was executed or false if it does not exist
-	 *              or its name is invalid.
+	 * @return bool True if the task was executed, false otherwise.
 	 */
-	public static function runTask(
-		string $task_name,
-		array $params = []
-	): bool {
+	public static function runTask(string $task_name, array $params = []): bool {
 		global $core;
 
 		if (!self::isValidTaskName($task_name)) {
@@ -1142,8 +1138,8 @@ class OTools {
 	/**
 	 * Run a Framework task.
 	 *
-	 * @param string $task_name Name of the task.
-	 * @param array $params Parameters passed to the task.
+	 * @param string $task_name Task name.
+	 * @param array<string, string|false> $params Parameters passed to the task.
 	 * @param bool $return Whether task output should be captured and returned.
 	 *
 	 * @return array{
@@ -1151,11 +1147,7 @@ class OTools {
 	 *     return: string
 	 * } Task execution result.
 	 */
-	public static function runOFWTask(
-		string $task_name,
-		array $params = [],
-		bool $return = false
-	): array {
+	public static function runOFWTask(string $task_name, array $params = [], bool $return = false): array {
 		global $core;
 
 		$ret = [

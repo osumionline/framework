@@ -260,7 +260,8 @@ class ResetTask extends OTask {
 	/**
 	 * Run the reset task.
 	 *
-	 * @param array $options Reset task options.
+	 * @param array<string, string|false> $options Reset task options. The "key"
+	 *                                             option contains the reset token.
 	 *
 	 * @return void
 	 *

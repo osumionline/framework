@@ -35,12 +35,18 @@ class BackupDBTask extends OTask {
 	/**
 	 * Run the task.
 	 *
-	 * @param array $params If $params has one item and is true, generates the backup silently, otherwise it echoes information messages.
+	 * Supported options:
+	 * - silent: "true" suppresses informational output.
+	 * - from_all: "true" indicates execution from BackupAllTask.
 	 *
-	 * @return void Echoes messages generated while performing the backup.
+	 * @param array<string, string|false> $params Task options.
 	 *
-	 * @throws \RuntimeException If a database backup or temporary credentials file operation fails.
-	 * @throws \Random\RandomException If a secure temporary filename cannot be generated.
+	 * @return void
+	 *
+	 * @throws \RuntimeException If a database backup or temporary credentials file
+	 *                           operation fails.
+	 * @throws \Random\RandomException If a secure temporary filename cannot be
+	 *                                 generated.
 	 */
 	public function run(array $params = []): void {
 		$silent = false;

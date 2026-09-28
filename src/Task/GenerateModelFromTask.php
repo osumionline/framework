@@ -488,12 +488,14 @@ class GenerateModelFromTask extends OTask {
   /**
    * Run the task.
    *
-   * @param array $options Task options.
+   * @param array<string, string|false> $options Task options. The "file" option
+   *                                             contains the model definition
+   *                                             file path.
    *
    * @return void
    *
-   * @throws \InvalidArgumentException If the model file or its definitions
-   *                                   are unsafe or invalid.
+   * @throws \InvalidArgumentException If the model file or its definitions are
+   *                                   unsafe or invalid.
    * @throws \JsonException If the model file contains invalid JSON.
    * @throws \RuntimeException If the model definition file cannot be read.
    */

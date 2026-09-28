@@ -9,5 +9,12 @@ class {{uc_name}}Task extends OTask {
 		return {{task_description}};
 	}
 
+	/**
+	 * Run the task.
+	 *
+	 * @param array<string, string|false> $options Task options.
+	 *
+	 * @return void
+	 */
 	public function run(array $options = []): void {}
 }

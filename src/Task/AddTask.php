@@ -464,11 +464,11 @@ class AddTask extends OTask {
 	}
 
 	/**
-	 * Run the task
+	 * Run the task.
 	 *
-	 * @param array Command line parameters: option and name
+	 * @param array<string, string|false> $params Command line options.
 	 *
-	 * @return void Echoes framework information
+	 * @return void
 	 */
 	public function run(array $params): void {
 		$available_options = ['action', 'service', 'task', 'modelComponent', 'component', 'filter'];
