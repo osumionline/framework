@@ -208,8 +208,31 @@ class OConfig {
 			$this->setHeadElements($config['head_elements']);
 		}
 		if (array_key_exists('extra', $config)) {
+			if (!is_array($config['extra'])) {
+				throw new \InvalidArgumentException(
+					"Configuration field 'extra' must be an object."
+				);
+			}
+
 			foreach ($config['extra'] as $key => $value) {
-				$this->setExtra($key, $value);
+				if (
+					!is_string($key) ||
+					(
+						!is_string($value) &&
+						!is_int($value) &&
+						!is_float($value) &&
+						!is_bool($value)
+					)
+				) {
+					throw new \InvalidArgumentException(
+						"Configuration extra '{$key}' must be a string, integer, float or boolean."
+					);
+				}
+
+				$this->setExtra(
+					$key,
+					$value
+				);
 			}
 		}
 		if (array_key_exists('dir', $config)) {
@@ -391,17 +414,24 @@ class OConfig {
 	 *
 	 * @param string|null $dir Directory name or null to return all directories.
 	 *
-	 * @return string|array|null Requested directory path, complete directory list
-	 *                           or null if the directory does not exist.
+	 * @return string|array Requested directory path or complete directory list.
+	 *
+	 * @throws \OutOfBoundsException If the requested directory does not exist.
 	 */
-	public function getDir(?string $dir = null): string | array | null {
+	public function getDir(
+		?string $dir = null
+	): string | array {
 		if ($dir === null) {
 			return $this->dirs;
 		}
 
-		return array_key_exists($dir, $this->dirs)
-			? $this->dirs[$dir]
-			: null;
+		if (!array_key_exists($dir, $this->dirs)) {
+			throw new \OutOfBoundsException(
+				"Directory '{$dir}' is not configured."
+			);
+		}
+
+		return $this->dirs[$dir];
 	}
 
 	/**
@@ -849,27 +879,31 @@ class OConfig {
 	}
 
 	/**
-	 * Set a customized key / value pair (eg encryption secret, custom token...)
+	 * Set a customized configuration value.
 	 *
-	 * @param string $key Key of the item to be stored
-	 *
-	 * @param string|int|float|bool $value Value of the stored item
+	 * @param string $key Key of the item to store.
+	 * @param string | int | float | bool $value Value to store.
 	 *
 	 * @return void
 	 */
-	public function setExtra(string $key, $value): void {
+	public function setExtra(string $key, string | int | float | bool $value): void {
 		$this->extras[$key] = $value;
 	}
 
 	/**
-	 * Get the value of the stored item
+	 * Get a customized configuration value.
 	 *
-	 * @param string $key Key of the item to be retrieved
+	 * @param string $key Key of the item to retrieve.
 	 *
-	 * @return string | int | float | bool | null Value of the stored item or null if not found
+	 * @return string | int | float | bool | null Stored value or null if the key does not exist.
 	 */
 	public function getExtra(string $key): string | int | float | bool | null {
-		return array_key_exists($key, $this->extras) ? $this->extras[$key] : null;
+		return array_key_exists(
+			$key,
+			$this->extras
+		)
+			? $this->extras[$key]
+			: null;
 	}
 
 	/**
