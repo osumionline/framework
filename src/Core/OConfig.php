@@ -237,6 +237,83 @@ class OConfig {
 	}
 
 	/**
+	 * Validate that an array is a list of strings.
+	 *
+	 * @param array $values Values to validate.
+	 * @param string $field Field name used in error messages.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the value is not a list of strings.
+	 */
+	private function validateStringList(array $values, string $field): void {
+		if (!array_is_list($values)) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}' must be a list."
+			);
+		}
+
+		foreach ($values as $value) {
+			if (!is_string($value)) {
+				throw new \InvalidArgumentException(
+					"Configuration field '{$field}' must contain only strings."
+				);
+			}
+		}
+	}
+
+	/**
+	 * Validate a head element definition.
+	 *
+	 * @param array $item Head element definition.
+	 * @param string $field Field name used in error messages.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the head element definition is invalid.
+	 */
+	private function validateHeadElement(array $item, string $field): void {
+		if (
+			!array_key_exists('item', $item) ||
+			!is_string($item['item']) ||
+			$item['item'] === ''
+		) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}.item' must be a non-empty string."
+			);
+		}
+
+		if (
+			!array_key_exists('attributes', $item) ||
+			!is_array($item['attributes'])
+		) {
+			throw new \InvalidArgumentException(
+				"Configuration field '{$field}.attributes' must be an object."
+			);
+		}
+
+		foreach ($item['attributes'] as $key => $value) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					"Configuration field '{$field}.attributes' must use string keys."
+				);
+			}
+
+			if (
+				!is_string($value) &&
+				!is_int($value) &&
+				!is_float($value) &&
+				!is_bool($value) &&
+				$value !== null
+			) {
+				throw new \InvalidArgumentException(
+					"Configuration attribute '{$field}.attributes.{$key}' has an invalid value type."
+				);
+			}
+		}
+	}
+
+	/**
 	 * Load a specific configuration array.
 	 *
 	 * @param array $config Application configuration values.
@@ -339,27 +416,58 @@ class OConfig {
 		}
 
 		if (array_key_exists('plugins', $config)) {
-			foreach ($config['plugins'] as $key => $plugin_conf) {
+			$plugins = $this->getConfigArray($config, 'plugins');
+
+			foreach ($plugins as $key => $plugin_conf) {
+				if (
+					!is_string($key) ||
+					!is_array($plugin_conf)
+				) {
+					throw new \InvalidArgumentException(
+						"Configuration field 'plugins' must contain plugin-name to object mappings."
+					);
+				}
+
 				$this->setPluginConfig($key, $plugin_conf);
 			}
 		}
+
 		if (array_key_exists('error_pages', $config)) {
-			$error_fields = ['404', '403', '500'];
-			foreach ($error_fields as $error_field) {
-				if (array_key_exists($error_field, $config['error_pages'])) {
-					$this->setErrorPage($error_field, $config['error_pages'][$error_field]);
+			$error_pages = $this->getConfigArray($config, 'error_pages');
+
+			foreach ($error_pages as $status => $url) {
+				if (
+					!is_string($status) ||
+					(
+						!is_string($url) &&
+						$url !== null
+					)
+				) {
+					throw new \InvalidArgumentException(
+						"Configuration field 'error_pages' must contain status to string-or-null mappings."
+					);
 				}
+
+				$this->setErrorPage($status, $url);
 			}
 		}
+
 		if (array_key_exists('css', $config)) {
-			$this->setCssList($config['css']);
+			$this->setCssList($this->getConfigArray($config, 'css'));
 		}
+
 		if (array_key_exists('js', $config)) {
-			$this->setJsList($config['js']);
+			$this->setJsList($this->getConfigArray($config, 'js'));
 		}
+
+		if (array_key_exists('libs', $config)) {
+			$this->setLibs($this->getConfigArray($config, 'libs'));
+		}
+
 		if (array_key_exists('head_elements', $config)) {
-			$this->setHeadElements($config['head_elements']);
+			$this->setHeadElements($this->getConfigArray($config, 'head_elements'));
 		}
+
 		if (array_key_exists('extra', $config)) {
 			if (!is_array($config['extra'])) {
 				throw new \InvalidArgumentException(
@@ -382,24 +490,36 @@ class OConfig {
 					);
 				}
 
-				$this->setExtra(
-					$key,
-					$value
-				);
+				$this->setExtra($key, $value);
 			}
 		}
+
 		if (array_key_exists('dir', $config)) {
+			$dirs = $this->getConfigArray($config, 'dir');
+
 			$dir_list = $this->getDir();
 			$dir_from = [];
 			$dir_to = [];
+
 			foreach ($dir_list as $key => $value) {
 				$dir_from[] = '{{' . $key . '}}';
 				$dir_to[] = $value;
 			}
-			foreach ($config['dir'] as $key => $value) {
+
+			foreach ($dirs as $key => $value) {
+				if (
+					!is_string($key) ||
+					!is_string($value)
+				) {
+					throw new \InvalidArgumentException(
+						"Configuration field 'dir' must contain directory-name to string-path mappings."
+					);
+				}
+
 				$this->setDir($key, str_ireplace($dir_from, $dir_to, $value));
 			}
 		}
+
 		if (array_key_exists('libs', $config)) {
 			$this->setLibs($config['libs']);
 		}
@@ -884,15 +1004,24 @@ class OConfig {
 	}
 
 	/**
-	 * Set up a customized URL for a given error status (403, 404, 500)
+	 * Configure a custom error page URL.
 	 *
-	 * @param string $status Status code where user has to be redirected (403, 404, 500)
+	 * A null value removes the custom error page for the status.
 	 *
-	 * @param string $url URL where the user has to be redirected
+	 * @param string $status HTTP status code.
+	 * @param string|null $url Custom error page URL or null.
 	 *
 	 * @return void
+	 *
+	 * @throws \OutOfBoundsException If the status code is unsupported.
 	 */
-	public function setErrorPage(string $status, string $url): void {
+	public function setErrorPage(string $status, ?string $url): void {
+		if (!array_key_exists($status, $this->error_pages)) {
+			throw new \OutOfBoundsException(
+				"Error page status '{$status}' is not supported."
+			);
+		}
+
 		$this->error_pages[$status] = $url;
 	}
 
@@ -911,13 +1040,17 @@ class OConfig {
 	}
 
 	/**
-	 * Set array of CSS files to be used in the application
+	 * Set CSS files to include in the application.
 	 *
-	 * @param string[] $cl Array of CSS file names to be included
+	 * @param string[] $cl CSS file names.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the value is not a list of strings.
 	 */
 	public function setCssList(array $cl): void {
+		$this->validateStringList($cl, 'css');
+
 		$this->css_list = $cl;
 	}
 
@@ -942,13 +1075,31 @@ class OConfig {
 	}
 
 	/**
-	 * Set array of elements to be included in the <head> tag of the application
+	 * Set elements to include in the document head.
 	 *
-	 * @param string[] $he Array of elements to be included in the <head> tag of the application
+	 * @param array $he Head element definitions.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a head element definition is invalid.
 	 */
 	public function setHeadElements(array $he): void {
+		if (!array_is_list($he)) {
+			throw new \InvalidArgumentException(
+				"Configuration field 'head_elements' must be a list."
+			);
+		}
+
+		foreach ($he as $index => $item) {
+			if (!is_array($item)) {
+				throw new \InvalidArgumentException(
+					"Configuration field 'head_elements.{$index}' must be an object."
+				);
+			}
+
+			$this->validateHeadElement($item, 'head_elements.' . $index);
+		}
+
 		$this->head_elements = $he;
 	}
 
@@ -962,24 +1113,32 @@ class OConfig {
 	}
 
 	/**
-	 * Adds a single item to the array of elements to be included in the <head> tag of the application
+	 * Add an element to the document head.
 	 *
-	 * @param array $item Element to be included in the <head> tag of the application
+	 * @param array $item Head element definition.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the head element definition is invalid.
 	 */
 	public function addHeadElement(array $item): void {
+		$this->validateHeadElement($item, 'head_element');
+
 		$this->head_elements[] = $item;
 	}
 
 	/**
-	 * Set array of JS files to be used in the application
+	 * Set JavaScript files to include in the application.
 	 *
-	 * @param string[] $jl Array of JS file names to be included
+	 * @param string[] $jl JavaScript file names.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the value is not a list of strings.
 	 */
 	public function setJsList(array $jl): void {
+		$this->validateStringList($jl, 'js');
+
 		$this->js_list = $jl;
 	}
 
@@ -1064,13 +1223,17 @@ class OConfig {
 	}
 
 	/**
-	 * Set up the list of third-party libraries to be loaded into the application
+	 * Set third-party libraries to load.
 	 *
-	 * @param string[] $l Array of third-party library names
+	 * @param string[] $l Library names.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the value is not a list of strings.
 	 */
 	public function setLibs(array $l): void {
+		$this->validateStringList($l, 'libs');
+
 		$this->libs = $l;
 	}
 
