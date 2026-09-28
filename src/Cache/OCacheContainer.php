@@ -11,6 +11,9 @@ use Osumi\OsumiFramework\Tools\OTools;
  */
 class OCacheContainer {
 	private ?string $cache_folder = null;
+	/**
+	 * @var array<string, OCache>
+	 */
 	private array $list = [];
 
 	/**
@@ -75,7 +78,7 @@ class OCacheContainer {
 	/**
 	 * Get the cache item list.
 	 *
-	 * @return array Cache item list
+	 * @return array<string, OCache> Cache items indexed by cache key.
 	 */
 	public function getItems(): array {
 		return $this->list;
@@ -131,19 +134,37 @@ class OCacheContainer {
 	}
 
 	/**
-	 * Deletes a list of cache items.
+	 * Delete a list of cache items.
 	 *
-	 * @param array $keys List of cache item keys.
+	 * @param string[] $keys Cache item keys.
 	 *
-	 * @return bool True if the cache items were successfully deleted, false otherwise.
+	 * @return bool True if all requested cache items were successfully deleted.
+	 *
+	 * @throws \InvalidArgumentException If the supplied value is not a list of string keys.
 	 */
 	public function deleteItems(array $keys): bool {
+		if (!array_is_list($keys)) {
+			throw new \InvalidArgumentException(
+				'Cache item keys must be provided as a list.'
+			);
+		}
+
+		foreach ($keys as $key) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					'Cache item keys must be strings.'
+				);
+			}
+		}
+
 		$ret = true;
-		foreach ($keys as $item) {
-			if (!$this->deleteItem($item)) {
+
+		foreach ($keys as $key) {
+			if (!$this->deleteItem($key)) {
 				$ret = false;
 			}
 		}
+
 		return $ret;
 	}
 

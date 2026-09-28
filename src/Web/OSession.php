@@ -12,7 +12,10 @@ use Osumi\OsumiFramework\Log\OLog;
 class OSession {
 	private bool        $debug  = false;
 	private OLog | null $l      = null;
-	private array       $params = [];
+	/**
+	 * @var array<string, string|int|float|bool>
+	 */
+	private array $params = [];
 
 	/**
 	 * Load session information on startup.
@@ -33,14 +36,18 @@ class OSession {
 			return;
 		}
 
-		foreach ($params as $value) {
+		foreach ($params as $key => $value) {
 			if (
-				!is_string($value) &&
-				!is_int($value) &&
-				!is_float($value) &&
-				!is_bool($value)
+				!is_string($key) ||
+				(
+					!is_string($value) &&
+					!is_int($value) &&
+					!is_float($value) &&
+					!is_bool($value)
+				)
 			) {
 				unset($_SESSION['params']);
+
 				return;
 			}
 		}
@@ -64,14 +71,21 @@ class OSession {
 	/**
 	 * Save the given parameter list into memory and the user session.
 	 *
-	 * @param array $p Array of key/value pairs.
+	 * @param array<string, string|int|float|bool> $p Parameter list.
 	 *
 	 * @return void
 	 *
-	 * @throws \InvalidArgumentException If a session parameter contains an unsupported value.
+	 * @throws \InvalidArgumentException If a session parameter key or value is
+	 *                                   unsupported.
 	 */
 	public function setParams(array $p): void {
-		foreach ($p as $value) {
+		foreach ($p as $key => $value) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					'Session parameter keys must be strings.'
+				);
+			}
+
 			if (
 				!is_string($value) &&
 				!is_int($value) &&
@@ -94,7 +108,7 @@ class OSession {
 	/**
 	 * Get the parameter list.
 	 *
-	 * @return array Array of key/value pairs.
+	 * @return array<string, string|int|float|bool> Parameter list.
 	 */
 	public function getParams(): array {
 		return $this->params;
