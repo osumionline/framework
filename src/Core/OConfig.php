@@ -309,27 +309,60 @@ class OConfig {
 	}
 
 	/**
-	 * Set information for the logging tools
+	 * Set a logging configuration value.
 	 *
-	 * @param string $key "dir" -log directory- of "level" -logging importance level-
-	 *
-	 * @param string | int $value Value of the logging configuration
+	 * @param string $key Logging configuration key.
+	 * @param string|int $value Configuration value.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the value type does not match the
+	 *                                   requested configuration key.
+	 * @throws \OutOfBoundsException If the logging configuration key is invalid.
 	 */
 	public function setLog(string $key, string | int $value): void {
+		if (!array_key_exists($key, $this->log)) {
+			throw new \OutOfBoundsException(
+				"Logging configuration key '{$key}' does not exist."
+			);
+		}
+
+		$valid = match ($key) {
+			'name',
+			'level' => is_string($value),
+
+			'max_file_size',
+			'max_num_files' => is_int($value),
+
+			default => false
+		};
+
+		if (!$valid) {
+			throw new \InvalidArgumentException(
+				"Invalid value type for logging configuration key '{$key}'."
+			);
+		}
+
 		$this->log[$key] = $value;
 	}
 
 	/**
-	 * Get value of the logging configuration
+	 * Get a logging configuration value.
 	 *
-	 * @param string $key "dir" -log directory- of "level" -logging importance level-
+	 * @param string $key Logging configuration key.
 	 *
-	 * @return string | int | null Value of the logging configuration
+	 * @return string|int|null Configuration value.
+	 *
+	 * @throws \OutOfBoundsException If the logging configuration key is invalid.
 	 */
 	public function getLog(string $key): string | int | null {
-		return array_key_exists($key, $this->log) ? $this->log[$key] : null;
+		if (!array_key_exists($key, $this->log)) {
+			throw new \OutOfBoundsException(
+				"Logging configuration key '{$key}' does not exist."
+			);
+		}
+
+		return $this->log[$key];
 	}
 
 	/**
@@ -470,51 +503,81 @@ class OConfig {
 	}
 
 	/**
-	 * Set database configuration values
+	 * Set a database configuration value.
 	 *
-	 * @param string $key Database configuration key (driver, user, pass, host, name, charset or collate)
-	 *
-	 * @param string $value Configuration value
+	 * @param string $key Database configuration key.
+	 * @param string $value Configuration value.
 	 *
 	 * @return void
+	 *
+	 * @throws \OutOfBoundsException If the database configuration key is invalid.
 	 */
 	public function setDB(string $key, string $value): void {
+		if (!array_key_exists($key, $this->db)) {
+			throw new \OutOfBoundsException(
+				"Database configuration key '{$key}' does not exist."
+			);
+		}
+
 		$this->db[$key] = $value;
 	}
 
 	/**
-	 * Get database configuration value
+	 * Get a database configuration value.
 	 *
-	 * @param string $key Database configuration key (driver, user, pass, host, name, charset or collate)
+	 * @param string $key Database configuration key.
 	 *
-	 * @return string Configuration value
+	 * @return string Configuration value.
+	 *
+	 * @throws \OutOfBoundsException If the database configuration key is invalid.
 	 */
-	public function getDB(string $key): string | null {
-		return array_key_exists($key, $this->db) ? $this->db[$key] : null;
+	public function getDB(string $key): string {
+		if (!array_key_exists($key, $this->db)) {
+			throw new \OutOfBoundsException(
+				"Database configuration key '{$key}' does not exist."
+			);
+		}
+
+		return $this->db[$key];
 	}
 
 	/**
-	 * Set up a URL with a key
+	 * Set a configured URL.
 	 *
-	 * @param string $key Key code of a URL
-	 *
-	 * @param string $url URL to be stored
+	 * @param string $key URL configuration key.
+	 * @param string $url URL value.
 	 *
 	 * @return void
+	 *
+	 * @throws \OutOfBoundsException If the URL configuration key is invalid.
 	 */
 	public function setUrl(string $key, string $url): void {
+		if (!array_key_exists($key, $this->urls)) {
+			throw new \OutOfBoundsException(
+				"URL configuration key '{$key}' does not exist."
+			);
+		}
+
 		$this->urls[$key] = $url;
 	}
 
 	/**
-	 * Get a stored URL based on a key
+	 * Get a configured URL.
 	 *
-	 * @param string $key Key code of the URL to be retrieved
+	 * @param string $key URL configuration key.
 	 *
-	 * @return string | null Stored URL or null if key doesn't exist
+	 * @return string URL value.
+	 *
+	 * @throws \OutOfBoundsException If the URL configuration key is invalid.
 	 */
-	public function getUrl(string $key): string | null {
-		return array_key_exists($key, $this->urls) ? $this->urls[$key] : null;
+	public function getUrl(string $key): string {
+		if (!array_key_exists($key, $this->urls)) {
+			throw new \OutOfBoundsException(
+				"URL configuration key '{$key}' does not exist."
+			);
+		}
+
+		return $this->urls[$key];
 	}
 
 	/**
