@@ -386,63 +386,112 @@ class OTranslate {
 	}
 
 	/**
-	 * Save current loaded translations and headers into a file
+	 * Save the current translations and headers to a PO file.
 	 *
-	 * @param string | null $path Path of the file
+	 * If a path is provided, it becomes the current PO file path after a
+	 * successful write.
 	 *
-	 * @return bool Returns if save operation was successful or not
+	 * @param string|null $path Destination path or null to use the current path.
+	 *
+	 * @return bool True if the file was saved, false if no path is available.
+	 *
+	 * @throws \RuntimeException If the PO file cannot be written.
 	 */
-	public function save(string | null $path = null): bool {
-		if (is_null($path)) {
-			$path = $this->path;
-		}
-		if (is_null($path)) {
+	public function save(?string $path = null): bool {
+		$target_path = $path ?? $this->path;
+
+		if ($target_path === null) {
 			return false;
 		}
 
-		$str = "msgid \"\"\n";
-		$str .= "msgstr \"\"\n";
+		$content = "msgid \"\"\n";
+		$content .= "msgstr \"\"\n";
+
 		foreach ($this->headers as $key => $value) {
-			$str .= "\"" . $key . ": " . $value . "\"\n";
-		}
-		$str .= "\n";
-		foreach ($this->translations as $key => $value) {
-			$str .= "msgid ";
-			foreach (explode("\n", $key) as $key_part) {
-				$str .= "\"" . $key_part . "\"\n";
-			}
-			$str .= "msgstr ";
-			foreach (explode("\n", $value) as $value_part) {
-				$str .= "\"" . $value_part . "\"\n";
-			}
-			$str .= "\n";
+			$content .= '"'
+				. $key
+				. ': '
+				. $value
+				. "\\n\"\n";
 		}
 
-		if (file_exists($path)) {
-			unlink($path);
+		$content .= "\n";
+
+		foreach ($this->translations as $key => $value) {
+			$key = (string) $key;
+
+			$content .= 'msgid ';
+
+			foreach (
+				explode(
+					"\n",
+					$key
+				) as $key_part
+			) {
+				$content .= '"'
+					. $key_part
+					. "\"\n";
+			}
+
+			$content .= 'msgstr ';
+
+			foreach (
+				explode(
+					"\n",
+					$value
+				) as $value_part
+			) {
+				$content .= '"'
+					. $value_part
+					. "\"\n";
+			}
+
+			$content .= "\n";
 		}
-		file_put_contents($path, $str);
+
+		if (
+			file_put_contents(
+				$target_path,
+				$content,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Unable to write PO file '{$target_path}'."
+			);
+		}
+
+		$this->path = $target_path;
+
 		return true;
 	}
 
 	/**
-	 * Create a new PO file
+	 * Initialize a new PO document.
 	 *
-	 * @param string | null $path Path to the new PO file
+	 * The method resets the current translations and creates the standard PO
+	 * headers for the requested language.
 	 *
-	 * @param string $lang Language code of the new PO file (eg: en/es/eu)
+	 * @param string|null $path Path of the new PO file or null to reuse the current
+	 *                          path.
+	 * @param string $lang Language code of the PO file.
 	 *
-	 * @return bool Returns if create operation was successful or not
+	 * @return bool True if the document was initialized, false if no path is
+	 *              available.
 	 */
-	public function new(string | null $path = null, string $lang = 'en'): bool {
-		if (is_null($path)) {
-			$path = $this->path;
-		}
-		if (is_null($path)) {
+	public function new(
+		?string $path = null,
+		string $lang = 'en'
+	): bool {
+		$target_path = $path ?? $this->path;
+
+		if ($target_path === null) {
 			return false;
 		}
-		$this->path = $path;
+
+		$this->path = $target_path;
 		$this->lang = $lang;
+		$this->translations = [];
 
 		$this->headers = [
 			'Project-Id-Version' => '',
@@ -450,10 +499,10 @@ class OTranslate {
 			'PO-Revision-Date' => '',
 			'Last-Translator' => '',
 			'Language-Team' => '',
-			'Language' => $this->lang,
-			'MIME-Version: 1.0' => '',
-			'Content-Type: text/plain; charset=UTF-8' => '',
-			'Content-Transfer-Encoding: 8bit' => ''
+			'Language' => $lang,
+			'MIME-Version' => '1.0',
+			'Content-Type' => 'text/plain; charset=UTF-8',
+			'Content-Transfer-Encoding' => '8bit'
 		];
 
 		return true;
