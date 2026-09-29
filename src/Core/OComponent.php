@@ -372,28 +372,64 @@ class OComponent {
   }
 
   /**
-   * PHP template files need to be executed instead of interpolated
+   * Render a PHP component template.
    *
-   * @return string Return resulting string
+   * Public component properties are exposed as local variables to the PHP
+   * template before it is executed.
+   *
+   * @return string Rendered component content.
+   *
+   * @throws \RuntimeException If the component template cannot be read or
+   *                           output buffering cannot be used.
    */
   private function renderPHP(): string {
-    ob_start();
-    $reflection = new ReflectionClass($this);
-    // Get component's public property list
-    $public_properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
+    $template_name = $this->component_info['template_name'];
 
-    // Put component variables into simple variables
-    foreach ($public_properties as $property) {
-      $property_name = $property->getName();
-      $$property_name = $this->$property_name;
+    if (!is_readable($template_name)) {
+      throw new \RuntimeException(
+        "Component template '{$template_name}' is not readable."
+      );
     }
 
-    // Include template file so it get's executed and mixed with previously created variables
-    include($this->component_info['template_name']);
-    $content = ob_get_clean();
+    $buffer_level = ob_get_level();
 
-    // Apply substitutions
-    return $this->applyTemplateSubstitutions($content);
+    if (!ob_start()) {
+      throw new \RuntimeException(
+        "Could not start output buffering for component template '{$template_name}'."
+      );
+    }
+
+    try {
+      $reflection = new ReflectionClass($this);
+
+      // Put component public properties into local variables
+      $public_properties = $reflection->getProperties(
+        ReflectionProperty::IS_PUBLIC
+      );
+
+      foreach ($public_properties as $property) {
+        $property_name = $property->getName();
+        $$property_name = $this->$property_name;
+      }
+
+      include $template_name;
+
+      $content = ob_get_contents();
+
+      if ($content === false) {
+        throw new \RuntimeException(
+          "Could not retrieve rendered component template '{$template_name}'."
+        );
+      }
+    } finally {
+      while (ob_get_level() > $buffer_level) {
+        ob_end_clean();
+      }
+    }
+
+    return $this->applyTemplateSubstitutions(
+      $content
+    );
   }
 
   /**
