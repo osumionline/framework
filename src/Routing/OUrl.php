@@ -4,104 +4,226 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Routing;
 
-use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Routing\ORoute;
 
 /**
  * OUrl - Class with methods to check required URL, get its data, generate new URLs or redirect the user to a new one
  */
 class OUrl {
-	private OConfig | null $config = null;
-	private array | null   $urls   = null;
-	private string   $check_url    = '';
-	private array    $url_params   = [];
-	private string   $method       = '';
+	/**
+	 * @var array<int, array<string, mixed>>
+	 */
+	private array $urls = [];
+
+	private string $check_url = '';
 
 	/**
-	 * Loads user defined urls, used method to access and URL and path to the routing library
-	 *
-	 * @param string $method Method used to access the URL (get / post / delete)
+	 * @var array<string, mixed>
 	 */
-	function __construct(string $method) {
-		global $core;
-		$this->config = $core->config;
+	private array $url_params = [];
+
+	private string $method = '';
+
+	/**
+	 * Create a URL processor for the given HTTP method.
+	 *
+	 * @param string $method HTTP method.
+	 */
+	public function __construct(string $method) {
 		$this->method = strtoupper($method);
-		$this->urls   = ORoute::$routes;
+		$this->urls = ORoute::$routes;
 	}
 
 	/**
-	 * Sets URL to be checked and loads all passed parameters (get / post / files / document body)
+	 * Add request parameters from a specific source.
 	 *
-	 * @param string $check_url URL to be checked
-	 *
-	 * @param array | null $get Array of parameters passed by GET method
-	 *
-	 * @param array | null $post Array of parameters passed by POST method
-	 *
-	 * @param array | null $files Array of files submitted by a form (multipart/form-data)
+	 * @param array<array-key, mixed> $params Parameters to add.
+	 * @param string $source Parameter source used in error messages.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a parameter key is not a string.
 	 */
-	public function setCheckUrl(string $check_url, array | null $get = null, array | null $post = null, array | null $files = null): void {
-		$this->check_url = $check_url;
-		$check_params = stripos($check_url, '?');
-
-		if ($check_params !== false) {
-			$this->check_url = substr($check_url, 0, $check_params);
-		}
-
-		if (!is_null($get)) {
-			foreach ($get as $key => $value) {
-				$this->url_params[$key] = $value;
-			}
-		}
-
-		if (!is_null($post)) {
-			foreach ($post as $key => $value) {
-				$this->url_params[$key] = $value;
-			}
-		}
-
-		if (!is_null($files)) {
-			foreach ($files as $key => $value) {
-				$this->url_params[$key] = $value;
-			}
-		}
-
-		$raw_input = file_get_contents('php://input');
-
-		if ($raw_input === false) {
-			throw new \RuntimeException('Unable to read the request body.');
-		}
-
-		if ($raw_input !== '') {
-			try {
-				$input = json_decode(
-					$raw_input,
-					true,
-					512,
-					JSON_THROW_ON_ERROR
+	private function addParams(
+		array $params,
+		string $source
+	): void {
+		foreach ($params as $key => $value) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					"{$source} parameter keys must be strings."
 				);
-
-				if (is_array($input)) {
-					foreach ($input as $key => $value) {
-						$this->url_params[$key] = $value;
-					}
-				}
-			} catch (\JsonException) {
-				// The request body is not JSON, so it is ignored.
 			}
+
+			$this->url_params[$key] = $value;
 		}
 	}
 
 	/**
-	 * Process the given URL checking it against user defined URLs and get its configuration information if found
+	 * Get the HTTP request headers.
 	 *
-	 * @param string | null $url URL to be checked
+	 * @return array<string, string> HTTP request headers.
 	 *
-	 * @return array Array of configuration information
+	 * @throws \UnexpectedValueException If a header name or value has an invalid
+	 *                                   type.
 	 */
-	public function process(string | null $url = null): array {
+	private function getRequestHeaders(): array {
+		if (!function_exists('getallheaders')) {
+			return [];
+		}
+
+		$headers = getallheaders();
+
+		if ($headers === false) {
+			return [];
+		}
+
+		foreach ($headers as $key => $value) {
+			if (
+				!is_string($key) ||
+				!is_string($value)
+			) {
+				throw new \UnexpectedValueException(
+					'HTTP headers must contain string names and string values.'
+				);
+			}
+		}
+
+		return $headers;
+	}
+
+	/**
+	 * Set the URL to process and load request parameters.
+	 *
+	 * Parameters are merged in this order:
+	 * GET, POST, uploaded files and JSON body. Later sources overwrite earlier
+	 * values using the same key.
+	 *
+	 * @param string $check_url URL to process.
+	 * @param array<string, mixed>|null $get GET parameters.
+	 * @param array<string, mixed>|null $post POST parameters.
+	 * @param array<string, mixed>|null $files Uploaded files.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a parameter key is invalid or a JSON
+	 *                                   request body does not contain an object at
+	 *                                   its root.
+	 * @throws \RuntimeException If the request body cannot be read.
+	 */
+	public function setCheckUrl(
+		string $check_url,
+		?array $get = null,
+		?array $post = null,
+		?array $files = null
+	): void {
+		$this->check_url = $check_url;
+		$this->url_params = [];
+
+		$check_params = stripos(
+			$check_url,
+			'?'
+		);
+
+		if ($check_params !== false) {
+			$this->check_url = substr(
+				$check_url,
+				0,
+				$check_params
+			);
+		}
+
+		if ($get !== null) {
+			$this->addParams(
+				$get,
+				'GET'
+			);
+		}
+
+		if ($post !== null) {
+			$this->addParams(
+				$post,
+				'POST'
+			);
+		}
+
+		if ($files !== null) {
+			$this->addParams(
+				$files,
+				'FILES'
+			);
+		}
+
+		$raw_input = file_get_contents(
+			'php://input'
+		);
+
+		if ($raw_input === false) {
+			throw new \RuntimeException(
+				'Unable to read the request body.'
+			);
+		}
+
+		if ($raw_input === '') {
+			return;
+		}
+
+		try {
+			$input = json_decode(
+				$raw_input,
+				true,
+				512,
+				JSON_THROW_ON_ERROR
+			);
+		} catch (\JsonException) {
+			/*
+		 * The request body is not JSON. It may belong to another supported
+		 * content type, so it is ignored here.
+		 */
+			return;
+		}
+
+		$trimmed_input = ltrim($raw_input);
+
+		if (
+			$trimmed_input === '' ||
+			$trimmed_input[0] !== '{' ||
+			!is_array($input)
+		) {
+			throw new \InvalidArgumentException(
+				'JSON request body must contain an object at the root level.'
+			);
+		}
+
+		$this->addParams(
+			$input,
+			'JSON request body'
+		);
+	}
+
+	/**
+	 * Process the requested URL against the configured routes.
+	 *
+	 * @param string|null $url URL to process or null to use the currently loaded
+	 *                         URL.
+	 *
+	 * @return array{
+	 *     component: string|null,
+	 *     filters: array,
+	 *     layout: string|null,
+	 *     type: string,
+	 *     params: array<string, mixed>,
+	 *     headers: array<string, string>,
+	 *     method: string,
+	 *     component_method: string,
+	 *     is_view: bool,
+	 *     res: bool
+	 * } Processed route information.
+	 *
+	 * @throws \InvalidArgumentException If a route parameter key is invalid.
+	 * @throws \UnexpectedValueException If HTTP headers have an invalid structure.
+	 */
+	public function process(?string $url = null): array {
 		if (!is_null($url)) {
 			$this->check_url = $url;
 		}
@@ -114,7 +236,7 @@ class OUrl {
 			'layout'           => null,
 			'type'             => 'html',
 			'params'           => [],
-			'headers'          => getallheaders(),
+			'headers'          => $this->getRequestHeaders(),
 			'method'           => $this->method,
 			'component_method' => '',
 			'is_view'          => false,
@@ -140,7 +262,15 @@ class OUrl {
 					$ret['layout'] = $this->urls[$i]['layout'];
 				}
 
-				$ret['params'] = $chk;
+				foreach ($chk as $key => $value) {
+					if (!is_string($key)) {
+						throw new \InvalidArgumentException(
+							'Route parameter keys must be strings.'
+						);
+					}
+
+					$ret['params'][$key] = $value;
+				}
 
 				foreach ($this->url_params as $key => $value) {
 					$ret['params'][$key] = $value;
