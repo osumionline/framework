@@ -14,12 +14,46 @@ abstract class OModel {
   // Class properties
   protected bool $initialized = false;
   protected bool $is_new_record = true;
+  /**
+   * @var array<string, mixed>
+   */
   protected array $original_values = [];
+  /**
+   * @var array<class-string, array{
+   *     table_name: string,
+   *     fields: array<string, array{
+   *         name: string,
+   *         type: string,
+   *         nullable: bool,
+   *         default: mixed,
+   *         max: int|null,
+   *         comment: string,
+   *         visible: bool,
+   *         ref: string|null,
+   *         primary?: bool,
+   *         auto_increment?: bool
+   *     }>,
+   *     primary_key: list<string>,
+   *     created_at: string|null,
+   *     updated_at: string|null,
+   *     deleted_at: string|null
+   * }>
+   */
   protected static array $schema_cache = [];
+  /**
+   * @var array<class-string, bool>
+   */
   protected static array $model_validated = [];
+  /**
+   * @var array<string, OModel|list<OModel>|null>
+   */
   protected static array $results_cache = [];
 
-  // Constructor
+  /**
+   * Create a model instance.
+   *
+   * @param array<string, mixed> $data Initial field values.
+   */
   public function __construct(array $data = []) {
     $this->validateModel();
     $this->initializeModel();
@@ -293,9 +327,9 @@ abstract class OModel {
   }
 
   /**
-   * Assign values on instantiation
+   * Assign field values to the model.
    *
-   * @param array Data to be assigned to the object
+   * @param array<string, mixed> $data Field values.
    *
    * @return void
    */
@@ -361,9 +395,9 @@ abstract class OModel {
   }
 
   /**
-   * Get list of primary keys
+   * Get the model primary key fields.
    *
-   * @return array List of primary key fields
+   * @return list<string> Primary key field names.
    */
   protected static function getPrimaryKey(): array {
     $schema = self::$schema_cache[static::class];
@@ -435,9 +469,9 @@ abstract class OModel {
    * Generate a cache key for an ORM query.
    *
    * @param string $table Table name.
-   * @param string $method Method that originated the cache item.
-   * @param array $conditions Conditions used on the query.
-   * @param array $options Query options.
+   * @param string $method Query method.
+   * @param array<string, mixed> $conditions Query conditions.
+   * @param array<string, mixed> $options Query options.
    *
    * @return string Generated cache key.
    *
@@ -515,11 +549,16 @@ abstract class OModel {
   }
 
   /**
-   * Build a WHERE clause and its parameters from a conditions array.
+   * Build a WHERE clause and its bound parameters.
    *
-   * @param array $conditions List of conditions to be applied on the query
+   * @param array<string, mixed> $conditions Query conditions indexed by field.
    *
-   * @return array Built SQL clause and parameters
+   * @return array{
+   *     clause: string,
+   *     params: array<string, mixed>
+   * } Built WHERE clause and parameters.
+   *
+   * @throws \Exception If a field name is invalid.
    */
   protected static function buildWhereClause(array $conditions): array {
     $params = [];
@@ -627,22 +666,22 @@ abstract class OModel {
   }
 
   /**
-   * Return a new instance of the model class based on given data
+   * Create a new model instance.
    *
-   * @param array $data Initial data for the instance
+   * @param array<string, mixed> $data Initial field values.
    *
-   * @return New instance of the model class
+   * @return static New model instance.
    */
   public static function create(array $data = []): static {
     return new static($data);
   }
 
   /**
-   * Return a new instance of the model class based on previously loaded data
+   * Create a model instance representing an existing record.
    *
-   * @param array $data Data to be loaded into the new instance
+   * @param array<string, mixed> $data Previously loaded field values.
    *
-   * @return New instance of the model class
+   * @return static Model instance.
    */
   public static function from(array $data): static {
     $instance = new static($data);
@@ -651,11 +690,11 @@ abstract class OModel {
   }
 
   /**
-   * Performs a query and returns only one result
+   * Find one record matching the given conditions.
    *
-   * @param array $conditions conditions to be applied on the query
+   * @param array<string, mixed> $conditions Query conditions.
    *
-   * @return New instance of the model class, if successful
+   * @return static|null Matching model or null.
    */
   public static function findOne(array $conditions): ?static {
     // Generate cache key
@@ -677,13 +716,12 @@ abstract class OModel {
   }
 
   /**
-   * Performs a query based on conditions (['field' => 'value']) and optional options ('orderBy', 'limit' or 'offset')
+   * Find records matching the given conditions.
    *
-   * @param array $conditions List of conditions to be applied on the query
+   * @param array<string, mixed> $conditions Query conditions.
+   * @param array<string, mixed> $options Query options.
    *
-   * @param array $options List of options (order, limit or offset) to be applied on the query
-   *
-   * @return array Returns an array of model class objects with found values
+   * @return list<static> Matching model instances.
    */
   public static function where(array $conditions, array $options = []): array {
     // Generate cache key
@@ -722,11 +760,11 @@ abstract class OModel {
   }
 
   /**
-   * Return all records of a table with optional options ('orderBy', 'limit' or 'offset')
+   * Get all model records.
    *
-   * @param array $options List of options (order, limit or offset) to be applied on the query
+   * @param array<string, mixed> $options Query options.
    *
-   * @return array Returns an array of model class objects with found values
+   * @return list<static> Model instances.
    */
   public static function all(array $options = []): array {
     // Generate cache key
@@ -760,11 +798,11 @@ abstract class OModel {
   }
 
   /**
-   * Returns a count of all records of a table with given conditions
+   * Count records matching the given conditions.
    *
-   * @param array $conditions List of conditions to be applied on the query
+   * @param array<string, mixed> $conditions Query conditions.
    *
-   * @return int Result count
+   * @return int Number of matching records.
    */
   public static function count(array $conditions = []): int {
     $table_name = self::getTableName();
@@ -995,24 +1033,47 @@ abstract class OModel {
   }
 
   /**
-   * Get model schema definition
+   * Get the model schema definition.
    *
-   * @return array Model schema definition
+   * @return array{
+   *     table_name: string,
+   *     fields: array<string, array{
+   *         name: string,
+   *         type: string,
+   *         nullable: bool,
+   *         default: mixed,
+   *         max: int|null,
+   *         comment: string,
+   *         visible: bool,
+   *         ref: string|null,
+   *         primary?: bool,
+   *         auto_increment?: bool
+   *     }>,
+   *     primary_key: list<string>,
+   *     created_at: string|null,
+   *     updated_at: string|null,
+   *     deleted_at: string|null
+   * } Model schema.
+   *
+   * @throws \Exception If the model schema has not been initialized.
    */
   public function getModel(): array {
     $class_name = static::class;
-
     if (!isset(self::$schema_cache[$class_name])) {
-      throw new Exception("The model schema '{$class_name}' has not been initialized.");
+      throw new Exception(
+        "Model schema '{$class_name}' has not been initialized."
+      );
     }
 
     return self::$schema_cache[$class_name];
   }
 
   /**
-   * Return an array representation of the model class data
+   * Return the model data as an array.
    *
-   * @return array Array representation of the model class data
+   * Only fields marked as visible are included.
+   *
+   * @return array<string, mixed> Model field values.
    */
   public function toArray(): array {
     $schema = self::$schema_cache[static::class];
