@@ -194,14 +194,27 @@ class ResetTask extends OTask {
 
 		// Generate default index file
 		$default_index = "<" . "?php\n\n";
+		$default_index .= "declare(strict_types=1);\n\n";
 		$default_index .= "require_once __DIR__ . '/../vendor/autoload.php';\n\n";
 		$default_index .= "use Osumi\OsumiFramework\Core\OCore;\n\n";
-		$default_index .= "$" . "core = new OCore();\n";
-		$default_index .= "$" . "core->load();\n\n";
-		$default_index .= "set_exception_handler([$" . "core, 'errorHandler']);\n\n";
+		$default_index .= "$" . "core = new OCore();\n\n";
+		$default_index .= "set_exception_handler(\n";
+		$default_index .= "	[$" . "core, 'errorHandler']\n";
+		$default_index .= ");\n\n";
+		$default_index .= "$" . "core->load();\n";
 		$default_index .= "$" . "core->run();\n";
 		$index_file = $this->getConfig()->getDir('public') . 'index.php';
-		file_put_contents($index_file, $default_index);
+		if (
+			file_put_contents(
+				$index_file,
+				$default_index,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not create default index file '{$index_file}'."
+			);
+		}
 	}
 
 	/**
