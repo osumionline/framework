@@ -83,23 +83,54 @@ abstract class OModel {
 
     foreach ($properties as $property) {
       $attributes = $property->getAttributes();
+      $orm_attribute_count = 0;
+
       foreach ($attributes as $attribute) {
         $attr_instance = $attribute->newInstance();
 
         if ($attr_instance instanceof OPK) {
+          $orm_attribute_count++;
           $has_primary_key = true;
-        } elseif ($attr_instance instanceof OCreatedAt) {
-          $has_created_at++;
-        } elseif ($attr_instance instanceof OUpdatedAt) {
-          $has_updated_at++;
-        } elseif ($attr_instance instanceof ODeletedAt) {
-          $has_deleted_at++;
-        }
 
-        // Validate field types
-        if ($attr_instance instanceof OField) {
-          $this->validateFieldType($property, $attr_instance);
+          $this->validateFieldType(
+            $property,
+            $attr_instance
+          );
+        } elseif ($attr_instance instanceof OField) {
+          $orm_attribute_count++;
+
+          $this->validateFieldType(
+            $property,
+            $attr_instance
+          );
+        } elseif ($attr_instance instanceof OCreatedAt) {
+          $orm_attribute_count++;
+          $has_created_at++;
+
+          $this->validateTimestampFieldType(
+            $property
+          );
+        } elseif ($attr_instance instanceof OUpdatedAt) {
+          $orm_attribute_count++;
+          $has_updated_at++;
+
+          $this->validateTimestampFieldType(
+            $property
+          );
+        } elseif ($attr_instance instanceof ODeletedAt) {
+          $orm_attribute_count++;
+          $has_deleted_at++;
+
+          $this->validateTimestampFieldType(
+            $property
+          );
         }
+      }
+
+      if ($orm_attribute_count > 1) {
+        throw new Exception(
+          "Model property '{$property->getName()}' cannot define more than one ORM field attribute."
+        );
       }
     }
 
@@ -130,79 +161,140 @@ abstract class OModel {
   }
 
   /**
-   * Method to validate field types matching definitions
+   * Validate that an ORM field definition matches its PHP property type.
    *
-   * @param ReflectionProperty $property Property from the class
+   * Model properties must use nullable built-in scalar types because model
+   * instances may temporarily contain null before being persisted.
    *
-   * @param OField $field Field definition
+   * @param ReflectionProperty $property Model property.
+   * @param OField|OPK $field Field definition.
    *
    * @return void
+   *
+   * @throws Exception If the property type or ORM field type is invalid.
    */
-  protected function validateFieldType(ReflectionProperty $property, OField $field): void {
+  protected function validateFieldType(
+    ReflectionProperty $property,
+    OField|OPK $field
+  ): void {
     $field_name = $property->getName();
     $property_type = $property->getType();
 
-    if (!$property_type instanceof ReflectionNamedType) {
-      throw new Exception("The type of the property '{$field_name}' could not be determined.");
+    if (
+      !$property_type instanceof ReflectionNamedType ||
+      !$property_type->isBuiltin()
+    ) {
+      throw new Exception(
+        "The property '{$field_name}' must have a supported built-in type."
+      );
+    }
+
+    if (!$property_type->allowsNull()) {
+      throw new Exception(
+        "The property '{$field_name}' must be nullable."
+      );
     }
 
     $property_type_name = $property_type->getName();
 
-    // If the type has not been defined in the OField decorator, automatically assign according to the property type
-    if ($field->type === null) {
-      switch ($property_type_name) {
-        case 'string':
-          $field->type = OField::TEXT;
-          break;
-        case 'int':
-          $field->type = OField::NUMBER;
-          break;
-        case 'float':
-          $field->type = OField::FLOAT;
-          break;
-        case 'bool':
-          $field->type = OField::BOOL;
-          break;
-        default:
-          throw new Exception("Unsupported type for property '{$field_name}': {$property_type_name}.");
-      }
+    if (
+      $field instanceof OField &&
+      $field->type === null
+    ) {
+      $field->type = match ($property_type_name) {
+        'string' => OField::TEXT,
+        'int' => OField::NUMBER,
+        'float' => OField::FLOAT,
+        'bool' => OField::BOOL,
+        default => throw new Exception(
+          "Unsupported type for property '{$field_name}': {$property_type_name}."
+        )
+      };
     }
 
-    // Validate that the property type matches the expected type
     $type = $field->type;
 
     switch ($type) {
       case OField::NUMBER:
         if ($property_type_name !== 'int') {
-          throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type '{$type}'."
+          );
         }
         break;
+
       case OField::FLOAT:
-        if (!in_array($property_type_name, ['int', 'float'])) {
-          throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
+        if (
+          $property_type_name !== 'int' &&
+          $property_type_name !== 'float'
+        ) {
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type '{$type}'."
+          );
         }
         break;
+
       case OField::TEXT:
       case OField::LONGTEXT:
         if ($property_type_name !== 'string') {
-          throw new Exception("The type of the property '{$field_name}' does not match the expected type '{$type}'.");
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type '{$type}'."
+          );
         }
         break;
+
       case OField::BOOL:
         if ($property_type_name !== 'bool') {
-          throw new Exception("The type of the property '{$field_name}' does not match the expected type 'bool'.");
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type 'bool'."
+          );
         }
         break;
+
       case OField::DATE:
         if ($property_type_name !== 'string') {
-          throw new Exception("The type of the property '{$field_name}' does not match the expected type 'string' for dates.");
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type 'string' for dates."
+          );
         }
         break;
+
       default:
-        throw new Exception("Unknown property type for '{$field_name}'.");
+        throw new Exception(
+          "Unknown ORM field type '{$type}' for property '{$field_name}'."
+        );
     }
   }
 
+  /**
+   * Validate an automatic timestamp property.
+   *
+   * Timestamp fields must be nullable strings because their values are managed
+   * automatically by the ORM.
+   *
+   * @param ReflectionProperty $property Timestamp property.
+   *
+   * @return void
+   *
+   * @throws Exception If the property is not declared as a nullable string.
+   */
+  protected function validateTimestampFieldType(
+    ReflectionProperty $property
+  ): void {
+    $field_name = $property->getName();
+    $property_type = $property->getType();
+
+    if (
+      !$property_type instanceof ReflectionNamedType ||
+      !$property_type->isBuiltin() ||
+      $property_type->getName() !== 'string' ||
+      !$property_type->allowsNull()
+    ) {
+      throw new Exception(
+        "The timestamp property '{$field_name}' must be declared as ?string."
+      );
+    }
+  }
 
   /**
    * Initialize model class schema and properties
@@ -249,33 +341,36 @@ abstract class OModel {
           $attr_instance = $attribute->newInstance();
 
           if ($attr_instance instanceof OPK) {
-            // Primary key
-            $field_schema['type'] = $attr_instance->type ?? null;  // Type might not be defined
+            $field_schema['type'] = $attr_instance->type;
             $field_schema['nullable'] = $attr_instance->nullable;
             $field_schema['default'] = $attr_instance->default;
             $field_schema['primary'] = true;
             $field_schema['auto_increment'] = $attr_instance->incr;
             $field_schema['ref'] = $attr_instance->ref;
+            $field_schema['comment'] = $attr_instance->comment;
+
             $schema['primary_key'][] = $field_name;
           } elseif ($attr_instance instanceof OField) {
-            // Regular field
-            $field_schema['type'] = $attr_instance->type ?? null;  // Type might not be defined
+            $field_schema['type'] = $attr_instance->type;
             $field_schema['nullable'] = $attr_instance->nullable;
             $field_schema['default'] = $attr_instance->default;
             $field_schema['max'] = $attr_instance->max;
             $field_schema['visible'] = $attr_instance->visible;
             $field_schema['ref'] = $attr_instance->ref;
+            $field_schema['comment'] = $attr_instance->comment;
           } elseif ($attr_instance instanceof OCreatedAt) {
             $field_schema['type'] = OField::DATE;
+            $field_schema['comment'] = $attr_instance->comment;
             $schema['created_at'] = $field_name;
           } elseif ($attr_instance instanceof OUpdatedAt) {
             $field_schema['type'] = OField::DATE;
+            $field_schema['comment'] = $attr_instance->comment;
             $schema['updated_at'] = $field_name;
           } elseif ($attr_instance instanceof ODeletedAt) {
             $field_schema['type'] = OField::DATE;
+            $field_schema['comment'] = $attr_instance->comment;
             $schema['deleted_at'] = $field_name;
           }
-          $field_schema['comment'] = $attr_instance->comment;
         }
 
         // Get the type of the field if it is not defined in the attribute
