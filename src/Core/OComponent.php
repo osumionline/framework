@@ -70,7 +70,7 @@ class OComponent {
       $template_path = dirname($component_file) . '/' . $template_name;
 
       // Check if file exists
-      if (file_exists($template_path)) {
+      if (is_file($template_path)) {
         $this->component_info['template_name'] = $template_path;
         $this->component_info['template_type'] = $extension;
         break;
@@ -331,6 +331,8 @@ class OComponent {
    * @param mixed $data Data to be passed to the run method, if any.
    *
    * @return string Resulting rendered content.
+   *
+   * @throws \RuntimeException If the component template cannot be read.
    */
   public function render(mixed $data = null): string {
     // Check if component has a "run" method
@@ -346,11 +348,27 @@ class OComponent {
       return $this->renderPHP();
     }
 
-    // Get template file's content
-    $template_content = file_get_contents($this->component_info['template_name']);
+    $template_name = $this->component_info['template_name'];
 
-    // Apply substitutions
-    return $this->applyTemplateSubstitutions($template_content);
+    if (!is_readable($template_name)) {
+      throw new \RuntimeException(
+        "Component template '{$template_name}' is not readable."
+      );
+    }
+
+    $template_content = file_get_contents(
+      $template_name
+    );
+
+    if ($template_content === false) {
+      throw new \RuntimeException(
+        "Unable to read component template '{$template_name}'."
+      );
+    }
+
+    return $this->applyTemplateSubstitutions(
+      $template_content
+    );
   }
 
   /**
