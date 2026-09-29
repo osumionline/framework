@@ -979,24 +979,45 @@ abstract class OModel {
   /**
    * Create a new model instance.
    *
+   * The model is always marked as a new record regardless of whether primary
+   * key values are provided in the initial data.
+   *
    * @param array<string, mixed> $data Initial field values.
    *
    * @return static New model instance.
    */
   public static function create(array $data = []): static {
-    return new static($data);
+    $instance = new static($data);
+    $instance->is_new_record = true;
+
+    return $instance;
   }
 
   /**
-   * Create a model instance representing an existing record.
+   * Create a model instance representing an existing persisted record.
    *
-   * @param array<string, mixed> $data Previously loaded field values.
+   * Every primary key field must have a value.
+   *
+   * @param array<string, mixed> $data Persisted record values.
    *
    * @return static Model instance.
+   *
+   * @throws \InvalidArgumentException If any primary key value is missing.
    */
   public static function from(array $data): static {
     $instance = new static($data);
+    $schema = self::$schema_cache[static::class];
+
+    foreach ($schema['primary_key'] as $primary_key) {
+      if ($instance->$primary_key === null) {
+        throw new \InvalidArgumentException(
+          "Cannot create an existing model instance without primary key field '{$primary_key}'."
+        );
+      }
+    }
+
     $instance->is_new_record = false;
+
     return $instance;
   }
 
@@ -1067,9 +1088,7 @@ abstract class OModel {
 
     $results = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $instance = new static($row);
-      $instance->is_new_record = false;
-      $results[] = $instance;
+      $results[] = static::from($row);
     }
 
     // Store results on cache
@@ -1115,7 +1134,7 @@ abstract class OModel {
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $instances = [];
     foreach ($results as $row) {
-      $instances[] = new static($row);
+      $instances[] = static::from($row);
     }
 
     // Store results on cache
@@ -1216,6 +1235,7 @@ abstract class OModel {
       $this->is_new_record = false;
     } else {
       // UPDATE
+      $this->assertPersisted();
       $updates = [];
       $params = [];
       $updated_at_field = $schema['updated_at'];
@@ -1272,6 +1292,8 @@ abstract class OModel {
    * @return bool Result of the operation
    */
   public function delete(): bool {
+    $this->assertPersisted();
+
     // Empty cache
     self::clearResultsCache();
 
@@ -1411,6 +1433,32 @@ abstract class OModel {
     }
 
     return $value;
+  }
+
+  /**
+   * Ensure that the model represents a persisted record with a complete primary
+   * key.
+   *
+   * @return void
+   *
+   * @throws \LogicException If the model is new or its primary key is incomplete.
+   */
+  protected function assertPersisted(): void {
+    if ($this->is_new_record) {
+      throw new \LogicException(
+        'The operation requires an existing persisted model.'
+      );
+    }
+
+    $schema = self::$schema_cache[static::class];
+
+    foreach ($schema['primary_key'] as $primary_key) {
+      if ($this->$primary_key === null) {
+        throw new \LogicException(
+          "Persisted model primary key field '{$primary_key}' cannot be null."
+        );
+      }
+    }
   }
 
   /**
