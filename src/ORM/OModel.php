@@ -161,6 +161,126 @@ abstract class OModel {
   }
 
   /**
+   * Normalize a value before assigning it to a model property.
+   *
+   * Database drivers may return numeric and boolean values using different
+   * scalar representations. This method converts supported representations to
+   * the PHP type defined by the ORM schema.
+   *
+   * @param string $field_name Field name.
+   * @param string $field_type ORM field type.
+   * @param mixed $value Raw field value.
+   *
+   * @return string|int|float|bool|null Normalized field value.
+   *
+   * @throws \UnexpectedValueException If the value cannot be converted to the
+   *                                   expected ORM field type.
+   */
+  protected function normalizeModelValue(
+    string $field_name,
+    string $field_type,
+    mixed $value
+  ): string|int|float|bool|null {
+    if ($value === null) {
+      return null;
+    }
+
+    switch ($field_type) {
+      case OField::NUMBER:
+        if (is_int($value)) {
+          return $value;
+        }
+
+        if (
+          is_string($value) &&
+          preg_match(
+            '/^[+-]?\d+$/D',
+            $value
+          ) === 1
+        ) {
+          $normalized = filter_var(
+            $value,
+            FILTER_VALIDATE_INT
+          );
+
+          if ($normalized !== false) {
+            return $normalized;
+          }
+        }
+
+        break;
+
+      case OField::FLOAT:
+        if (is_int($value)) {
+          return (float) $value;
+        }
+
+        if (
+          is_float($value) &&
+          is_finite($value)
+        ) {
+          return $value;
+        }
+
+        if (is_string($value)) {
+          $normalized = filter_var(
+            $value,
+            FILTER_VALIDATE_FLOAT
+          );
+
+          if (
+            $normalized !== false &&
+            is_finite((float) $normalized)
+          ) {
+            return (float) $normalized;
+          }
+        }
+
+        break;
+
+      case OField::BOOL:
+        if (is_bool($value)) {
+          return $value;
+        }
+
+        if (
+          is_int($value) ||
+          is_string($value)
+        ) {
+          $normalized = filter_var(
+            $value,
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE
+          );
+
+          if ($normalized !== null) {
+            return $normalized;
+          }
+        }
+
+        break;
+
+      case OField::TEXT:
+      case OField::LONGTEXT:
+      case OField::DATE:
+        if (is_string($value)) {
+          return $value;
+        }
+
+        break;
+
+      default:
+        throw new \UnexpectedValueException(
+          "Unknown ORM field type '{$field_type}' for field '{$field_name}'."
+        );
+    }
+
+    throw new \UnexpectedValueException(
+      "Value for field '{$field_name}' cannot be converted to ORM type '{$field_type}'."
+    );
+  }
+
+  /**
    * Validate that an ORM field definition matches its PHP property type.
    *
    * Model properties must use nullable built-in scalar types because model
@@ -224,10 +344,7 @@ abstract class OModel {
         break;
 
       case OField::FLOAT:
-        if (
-          $property_type_name !== 'int' &&
-          $property_type_name !== 'float'
-        ) {
+        if ($property_type_name !== 'float') {
           throw new Exception(
             "The type of the property '{$field_name}' does not match the expected type '{$type}'."
           );
@@ -424,54 +541,44 @@ abstract class OModel {
   /**
    * Assign field values to the model.
    *
+   * Input values are normalized according to the ORM schema before being
+   * assigned to their typed PHP properties.
+   *
    * @param array<string, mixed> $data Field values.
    *
    * @return void
+   *
+   * @throws \UnexpectedValueException If a field value cannot be converted to
+   *                                   its ORM type.
    */
   protected function assignValues(array $data): void {
-    $reflection = new ReflectionClass($this);
-    $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
+    $schema = self::$schema_cache[static::class];
 
-    // Check every property
-    foreach ($properties as $property) {
-      $property_name = $property->getName();
-      $property_type = $property->getType();
+    foreach ($schema['fields'] as $field_name => $field) {
+      $value = array_key_exists(
+        $field_name,
+        $data
+      )
+        ? $this->normalizeModelValue(
+          $field_name,
+          $field['type'],
+          $data[$field_name]
+        )
+        : null;
 
-      if (!$property_type instanceof ReflectionNamedType) {
-        throw new Exception("The type of the property '{$property_name}' could not be determined.");
-      }
-
-      $property_type_name = $property_type->getName();
-
-      // If the field is in the data, assign the provided value
-      if (array_key_exists($property_name, $data)) {
-        if ($data[$property_name] === null) {
-          $this->$property_name = null;
-          $this->original_values[$property_name] = null;
-        } elseif ($property_type_name === 'bool') {
-          $this->$property_name = (bool) $data[$property_name];
-          $this->original_values[$property_name] = (bool) $data[$property_name];
-        } else {
-          $this->$property_name = $data[$property_name];
-          $this->original_values[$property_name] = $data[$property_name];
-        }
-      }
-      // If the field is not in the data, initialize it to null
-      else {
-        $this->$property_name = null;
-        $this->original_values[$property_name] = null;
-      }
+      $this->$field_name = $value;
+      $this->original_values[$field_name] = $value;
     }
 
-    // Check if all primary keys are set to determine if it is an existing record
-    $primary_keys = self::$schema_cache[static::class]['primary_key'];
     $is_existing_record = true;
-    foreach ($primary_keys as $primary_key) {
-      if (!isset($this->$primary_key) || $this->$primary_key === null) {
+
+    foreach ($schema['primary_key'] as $primary_key) {
+      if ($this->$primary_key === null) {
         $is_existing_record = false;
         break;
       }
     }
+
     $this->is_new_record = !$is_existing_record;
   }
 
