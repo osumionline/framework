@@ -471,7 +471,11 @@ abstract class OModel {
    * @param string $table Table name.
    * @param string $method Query method.
    * @param array<string, mixed> $conditions Query conditions.
-   * @param array<string, mixed> $options Query options.
+   * @param array{
+   *     order_by?: string,
+   *     limit?: int|string,
+   *     offset?: int|string
+   * } $options Query options.
    *
    * @return string Generated cache key.
    *
@@ -588,20 +592,40 @@ abstract class OModel {
   /**
    * Apply supported SQL query options.
    *
-   * @param string $sql Base SQL query
+   * @param string $sql Base SQL query.
+   * @param array{
+   *     order_by?: string,
+   *     limit?: int|string,
+   *     offset?: int|string
+   * } $options Query options.
    *
-   * @param array $options List of options to be applied on the query
+   * @return string SQL query with applied options.
    *
-   * @return string SQL query with applied options
+   * @throws \Exception If an option contains an invalid SQL identifier or
+   *                    numeric value.
+   * @throws \InvalidArgumentException If an unsupported option or value type is
+   *                                   supplied.
    */
   protected static function applyQueryOptions(string $sql, array $options): string {
+    self::validateQueryOptions($options);
+
     if (isset($options['order_by'])) {
-      // Splits the value of "order_by" into field and direction if it contains '#'
-      list($field, $direction) = array_pad(explode('#', (string) $options['order_by']), 2, 'ASC');
+      [
+        $field,
+        $direction
+      ] = array_pad(
+        explode(
+          '#',
+          $options['order_by']
+        ),
+        2,
+        'ASC'
+      );
+
       $field = self::validateSqlIdentifier(trim($field), 'order field');
 
-      // Checks if the direction is valid, otherwise sets 'ASC' by default
       $direction = strtoupper(trim($direction));
+
       if ($direction !== 'ASC' && $direction !== 'DESC') {
         $direction = 'ASC';
       }
@@ -610,32 +634,56 @@ abstract class OModel {
     }
 
     $has_limit = isset($options['limit']);
+
     if ($has_limit) {
-      if (is_int($options['limit']) || (is_string($options['limit']) && preg_match('/^\d+$/', $options['limit']))) {
+      if (
+        is_int($options['limit']) ||
+        (
+          is_string($options['limit']) &&
+          preg_match(
+            '/^\d+$/',
+            $options['limit']
+          )
+        )
+      ) {
         $count = null;
+
         $start = self::parseNonNegativeInteger($options['limit'], 'limit');
       } else {
-        // Splits the value of "limit" into start and amount if it contains '#'
-        list($start, $count) = array_pad(explode('#', (string) $options['limit']), 2, null);
+        [
+          $start,
+          $count
+        ] = array_pad(
+          explode(
+            '#',
+            $options['limit']
+          ),
+          2,
+          null
+        );
+
         $start = self::parseNonNegativeInteger($start, 'limit start');
+
         $count = self::parseNonNegativeInteger($count, 'limit count');
       }
 
-      // Constructs the LIMIT clause according to the format provided
       if ($count !== null) {
-        // If both start and amount are specified
         $sql .= " LIMIT {$start}, {$count}";
       } else {
-        // If only one limit value is specified
         $sql .= " LIMIT {$start}";
       }
     }
 
     if (isset($options['offset'])) {
-      $offset = self::parseNonNegativeInteger($options['offset'], 'offset');
+      $offset = self::parseNonNegativeInteger(
+        $options['offset'],
+        'offset'
+      );
+
       if (!$has_limit) {
-        $sql .= " LIMIT 18446744073709551615";
+        $sql .= ' LIMIT 18446744073709551615';
       }
+
       $sql .= " OFFSET {$offset}";
     }
 
@@ -663,6 +711,67 @@ abstract class OModel {
     }
 
     return "'" . str_replace("'", "''", (string) $value) . "'";
+  }
+
+  /**
+   * Validate ORM query options.
+   *
+   * Supported options:
+   * - order_by: Field and optional direction using "field#ASC" or "field#DESC".
+   * - limit: Maximum number of rows or "start#count".
+   * - offset: Number of rows to skip.
+   *
+   * @param array<array-key, mixed> $options Query options to validate.
+   *
+   * @return void
+   *
+   * @throws \InvalidArgumentException If an option name or value type is invalid.
+   */
+  protected static function validateQueryOptions(
+    array $options
+  ): void {
+    $allowed_options = [
+      'order_by',
+      'limit',
+      'offset'
+    ];
+
+    foreach ($options as $key => $value) {
+      if (
+        !is_string($key) ||
+        !in_array(
+          $key,
+          $allowed_options,
+          true
+        )
+      ) {
+        throw new \InvalidArgumentException(
+          "Unsupported ORM query option '{$key}'."
+        );
+      }
+
+      if (
+        $key === 'order_by' &&
+        !is_string($value)
+      ) {
+        throw new \InvalidArgumentException(
+          "ORM query option 'order_by' must be a string."
+        );
+      }
+
+      if (
+        (
+          $key === 'limit' ||
+          $key === 'offset'
+        ) &&
+        !is_int($value) &&
+        !is_string($value)
+      ) {
+        throw new \InvalidArgumentException(
+          "ORM query option '{$key}' must be an integer or string."
+        );
+      }
+    }
   }
 
   /**
@@ -719,11 +828,19 @@ abstract class OModel {
    * Find records matching the given conditions.
    *
    * @param array<string, mixed> $conditions Query conditions.
-   * @param array<string, mixed> $options Query options.
+   * @param array{
+   *     order_by?: string,
+   *     limit?: int|string,
+   *     offset?: int|string
+   * } $options Query options.
    *
    * @return list<static> Matching model instances.
+   *
+   * @throws \InvalidArgumentException If query options are invalid.
    */
   public static function where(array $conditions, array $options = []): array {
+    self::validateQueryOptions($options);
+
     // Generate cache key
     $table_name = self::getTableName();
     $cache_key = self::generateCacheKey($table_name, 'where', $conditions, $options);
@@ -762,11 +879,19 @@ abstract class OModel {
   /**
    * Get all model records.
    *
-   * @param array<string, mixed> $options Query options.
+   * @param array{
+   *     order_by?: string,
+   *     limit?: int|string,
+   *     offset?: int|string
+   * } $options Query options.
    *
    * @return list<static> Model instances.
+   *
+   * @throws \InvalidArgumentException If query options are invalid.
    */
   public static function all(array $options = []): array {
+    self::validateQueryOptions($options);
+
     // Generate cache key
     $table_name = self::getTableName();
     $cache_key = self::generateCacheKey($table_name, 'all', [], $options);
