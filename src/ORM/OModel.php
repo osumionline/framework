@@ -1113,18 +1113,35 @@ abstract class OModel {
   }
 
   /**
-   * Function to apply transformations to date or float field types
+   * Get a field value, optionally applying type-specific formatting.
    *
-   * @param string $field Name of the field
+   * Date fields require a date format as the first additional parameter.
+   * Float fields require the number of decimals, decimal separator and
+   * thousands separator as the first three additional parameters.
    *
-   * @param $params Date mask for date type fields or number format fields for float type fields
+   * Additional parameters are ignored for field types that do not require
+   * formatting.
+   *
+   * @param string $field Field name.
+   * @param mixed ...$params Type-specific formatting parameters.
+   *
+   * @return string|int|float|bool|null Field value or formatted value.
+   *
+   * @throws \Exception If the requested field does not exist.
+   * @throws \InvalidArgumentException If formatting parameters are missing or
+   *                                   have invalid types.
+   * @throws \UnexpectedValueException If a date field contains an invalid value.
    */
-  public function get(string $field, ...$params) {
+  public function get(
+    string $field,
+    mixed ...$params
+  ): string | int | float | bool | null {
     $schema = self::$schema_cache[static::class];
 
-    // Check if the field exists in the schema
     if (!array_key_exists($field, $schema['fields'])) {
-      throw new Exception("The field '{$field}' does not exist in the model.");
+      throw new Exception(
+        "The field '{$field}' does not exist in the model."
+      );
     }
 
     $field_schema = $schema['fields'][$field];
@@ -1134,26 +1151,63 @@ abstract class OModel {
       return null;
     }
 
-    // Case for date type fields
     if ($field_schema['type'] === OField::DATE) {
-      if (empty($params) || !isset($params[0])) {
-        throw new Exception("A format must be provided for the date field.");
+      if (
+        !array_key_exists(0, $params) ||
+        !is_string($params[0])
+      ) {
+        throw new \InvalidArgumentException(
+          "A string format must be provided for date field '{$field}'."
+        );
       }
-      $format = $params[0];
+
       $timestamp = strtotime($value);
-      return date($format, $timestamp);
+
+      if ($timestamp === false) {
+        throw new \UnexpectedValueException(
+          "Field '{$field}' contains an invalid date value."
+        );
+      }
+
+      return date(
+        $params[0],
+        $timestamp
+      );
     }
 
-    // Case for float type fields
     if ($field_schema['type'] === OField::FLOAT) {
       if (count($params) < 3) {
-        throw new Exception("For a float field, 3 parameters must be provided: decimals, decimal separator, and thousands separator.");
+        throw new \InvalidArgumentException(
+          "Float field '{$field}' requires decimals, decimal separator and thousands separator."
+        );
       }
-      [$decimals, $dec_point, $thousands_sep] = $params;
-      return number_format($value, $decimals, $dec_point, $thousands_sep);
+
+      if (!is_int($params[0])) {
+        throw new \InvalidArgumentException(
+          "The decimals parameter for float field '{$field}' must be an integer."
+        );
+      }
+
+      if (!is_string($params[1])) {
+        throw new \InvalidArgumentException(
+          "The decimal separator for float field '{$field}' must be a string."
+        );
+      }
+
+      if (!is_string($params[2])) {
+        throw new \InvalidArgumentException(
+          "The thousands separator for float field '{$field}' must be a string."
+        );
+      }
+
+      return number_format(
+        $value,
+        $params[0],
+        $params[1],
+        $params[2]
+      );
     }
 
-    // If it is not date or float, return the original value
     return $value;
   }
 
