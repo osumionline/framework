@@ -420,6 +420,10 @@ class OConfig {
 			$this->setTimezone($this->getConfigString($config, 'timezone'));
 		}
 
+		if (array_key_exists('mailing_from', $config)) {
+			$this->setMailingFrom($this->getConfigString($config, 'mailing_from'));
+		}
+
 		if (array_key_exists('plugins', $config)) {
 			$plugins = $this->getConfigArray($config, 'plugins');
 
