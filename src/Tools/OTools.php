@@ -100,13 +100,18 @@ class OTools {
 	 * When a file path is provided, its contents replace the template string
 	 * before applying the supplied values.
 	 *
+	 * Scalar replacement values are converted to their PHP string
+	 * representation. Null values are rendered as an empty string.
+	 *
 	 * @param string $path Path to the template file or an empty string to use
 	 *                     the provided template string.
 	 * @param string $html Template string.
-	 * @param array $values Values to replace in the template.
+	 * @param array<array-key, string|int|float|bool|null> $values Values to replace
+	 *                                                               in the template.
 	 *
 	 * @return string Rendered template.
 	 *
+	 * @throws \InvalidArgumentException If a replacement value is not scalar or null.
 	 * @throws \RuntimeException If the template file does not exist, is not
 	 *                           readable or cannot be read.
 	 */
@@ -140,9 +145,18 @@ class OTools {
 		}
 
 		foreach ($values as $key => $value) {
+			if (
+				!is_scalar($value) &&
+				$value !== null
+			) {
+				throw new \InvalidArgumentException(
+					"Template value '{$key}' must be a scalar value or null."
+				);
+			}
+
 			$html = str_ireplace(
-				'{{' . $key . '}}',
-				$value,
+				'{{' . (string) $key . '}}',
+				(string) $value,
 				$html
 			);
 		}
