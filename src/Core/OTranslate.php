@@ -139,71 +139,215 @@ class OTranslate {
 	}
 
 	/**
-	 * Load translations from required PO file
+	 * Load translations from a PO file.
 	 *
-	 * @param string $path Path to the PO file
+	 * The file must contain the standard PO header followed by translation
+	 * entries. Header values are split only on the first colon so values may
+	 * contain additional colons.
+	 *
+	 * @param string $path Path to the PO file.
 	 *
 	 * @return void
+	 *
+	 * @throws \RuntimeException If the PO file does not exist or cannot be read.
+	 * @throws \UnexpectedValueException If the PO file has an invalid structure.
 	 */
 	public function load(string $path): void {
+		if (!is_file($path)) {
+			throw new \RuntimeException(
+				"PO file '{$path}' does not exist."
+			);
+		}
+
+		$po = file(
+			$path,
+			FILE_IGNORE_NEW_LINES
+		);
+
+		if ($po === false) {
+			throw new \RuntimeException(
+				"Unable to read PO file '{$path}'."
+			);
+		}
+
+		if (
+			count($po) < 2 ||
+			trim($po[0]) !== 'msgid ""' ||
+			trim($po[1]) !== 'msgstr ""'
+		) {
+			throw new \UnexpectedValueException(
+				"PO file '{$path}' has an invalid header."
+			);
+		}
+
+		$this->path = $path;
+
 		$translations = [];
 		$headers = [];
-		if (file_exists($path)) {
-			$this->path  = $path;
-			$po = file($this->path);
-			$first_msgid = array_shift($po);
-			$first_msgstr = array_shift($po);
-			$current = [];
-			$doing_keys = false;
-			$doing_translations = false;
-			foreach ($po as $i => $line) {
-				if (trim($line) === '') {
-					continue;
-				}
-				if (substr($line, 0, 1) === '#') {
-					continue;
-				}
-				if (substr($line, 0, 1) === '"') {
-					if ($doing_keys) {
-						$current[] = trim(substr(trim($line), 1, -1));
-					} elseif ($doing_translations) {
-						$translation[] = trim(substr(trim($line), 1, -1));
-					} else {
-						$header = explode(':', trim(substr(trim($line), 1, -1)));
-						$header[1] = str_ireplace("\\n", "", $header[1]);
-						$headers[$header[0]] = trim($header[1]);
-						if ($header[0] === 'Language') {
-							$this->lang = trim($header[1]);
-						}
-					}
-				}
-				if (substr($line, 0, 5) === 'msgid') {
-					if (count($current) != 0 && count($translation) != 0) {
-						$translations[implode("\n", $current)] = implode("\n", $translation);
-					}
-					$doing_keys = true;
-					$doing_translations = false;
-					$key = trim(substr(trim(substr($line, 5)), 1, -1));
-					$current = [];
-					if ($key !== '') {
-						$current[] = $key;
-					}
-				}
-				if (substr($line, 0, 6) === 'msgstr') {
-					$doing_keys = false;
-					$doing_translations = true;
-					$value = trim(substr(trim(substr($line, 6)), 1, -1));
-					$translation = [];
-					if ($value !== '') {
-						$translation[] = $value;
-					}
-				}
+		$current = [];
+		$translation = [];
+		$doing_keys = false;
+		$doing_translations = false;
+
+		foreach (
+			array_slice(
+				$po,
+				2
+			) as $line
+		) {
+			$trimmed_line = trim($line);
+
+			if ($trimmed_line === '') {
+				continue;
 			}
 
-			if (count($current) != 0 && count($translation) != 0) {
-				$translations[implode("\n", $current)] = implode("\n", $translation);
+			if (str_starts_with(
+				$trimmed_line,
+				'#'
+			)) {
+				continue;
+			}
+
+			if (str_starts_with(
+				$trimmed_line,
+				'"'
+			)) {
+				$value = substr(
+					$trimmed_line,
+					1,
+					-1
+				);
+
+				if ($doing_keys) {
+					$current[] = $value;
+
+					continue;
+				}
+
+				if ($doing_translations) {
+					$translation[] = $value;
+
+					continue;
+				}
+
+				$header = explode(
+					':',
+					$value,
+					2
+				);
+
+				if (count($header) !== 2) {
+					throw new \UnexpectedValueException(
+						"Invalid PO header line '{$value}' in '{$path}'."
+					);
+				}
+
+				$header_name = trim($header[0]);
+				$header_value = trim(
+					str_replace(
+						'\\n',
+						'',
+						$header[1]
+					)
+				);
+
+				if ($header_name === '') {
+					throw new \UnexpectedValueException(
+						"PO file '{$path}' contains an empty header name."
+					);
+				}
+
+				$headers[$header_name] = $header_value;
+
+				if ($header_name === 'Language') {
+					$this->lang = $header_value;
+				}
+
+				continue;
+			}
+
+			if (str_starts_with(
+				$trimmed_line,
+				'msgid'
+			)) {
+				if (
+					$current !== [] &&
+					$translation !== []
+				) {
+					$translations[implode(
+						"\n",
+						$current
+					)] = implode(
+						"\n",
+						$translation
+					);
+				}
+
+				$doing_keys = true;
+				$doing_translations = false;
+
+				$key = trim(
+					substr(
+						$trimmed_line,
+						5
+					)
+				);
+
+				$key = trim(
+					$key,
+					'"'
+				);
+
+				$current = [];
+				$translation = [];
+
+				if ($key !== '') {
+					$current[] = $key;
+				}
+
+				continue;
+			}
+
+			if (str_starts_with(
+				$trimmed_line,
+				'msgstr'
+			)) {
+				$doing_keys = false;
+				$doing_translations = true;
+
+				$value = trim(
+					substr(
+						$trimmed_line,
+						6
+					)
+				);
+
+				$value = trim(
+					$value,
+					'"'
+				);
+
+				$translation = [];
+
+				if ($value !== '') {
+					$translation[] = $value;
+				}
 			}
 		}
+
+		if (
+			$current !== [] &&
+			$translation !== []
+		) {
+			$translations[implode(
+				"\n",
+				$current
+			)] = implode(
+				"\n",
+				$translation
+			);
+		}
+
 		$this->translations = $translations;
 		$this->headers = $headers;
 	}
