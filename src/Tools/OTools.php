@@ -165,24 +165,58 @@ class OTools {
 	}
 
 	/**
-	 * Interprets and renders a template from a file with given parameters
+	 * Render a PHP partial with the provided values.
 	 *
-	 * @param string $path Path to a template file
+	 * Values are available to the included partial through the local $values
+	 * variable.
 	 *
-	 * @param array $values Key / value pair array to be rendered
+	 * @param string $path Path to the partial file.
+	 * @param array<array-key, mixed> $values Values available to the partial.
 	 *
-	 * @return string Loaded template with rendered parameters
+	 * @return string|null Rendered partial or null if the file does not exist.
+	 *
+	 * @throws \RuntimeException If the partial cannot be read or output buffering
+	 *                           cannot be used.
 	 */
-	public static function getPartial(string $path, array $values): string | null {
-		if (file_exists($path)) {
-			ob_start();
-			include($path);
+	public static function getPartial(
+		string $path,
+		array $values
+	): ?string {
+		if (!is_file($path)) {
+			return null;
+		}
+
+		if (!is_readable($path)) {
+			throw new \RuntimeException(
+				"Partial file '{$path}' is not readable."
+			);
+		}
+
+		$buffer_level = ob_get_level();
+
+		if (!ob_start()) {
+			throw new \RuntimeException(
+				"Could not start output buffering for partial '{$path}'."
+			);
+		}
+
+		try {
+			include $path;
+
 			$output = ob_get_contents();
-			ob_end_clean();
+
+			if ($output === false) {
+				throw new \RuntimeException(
+					"Could not retrieve rendered partial '{$path}'."
+				);
+			}
 
 			return $output;
+		} finally {
+			while (ob_get_level() > $buffer_level) {
+				ob_end_clean();
+			}
 		}
-		return null;
 	}
 
 	/**
