@@ -125,7 +125,10 @@ class ODTO {
               $filter_values
             )
           ) {
-            $value = $filter_values[$field_definition->filterProperty];
+            $value = $this->normalizeFieldValue(
+              $filter_values[$field_definition->filterProperty],
+              $field_types[$property_name]
+            );
 
             $this->$property_name = $value;
             $field_values[$property_name] = $value;
@@ -138,8 +141,11 @@ class ODTO {
 			 * Get value from an HTTP header if configured.
 			 */
         if ($field_definition->header !== null) {
-          $value = $req->getHeader(
-            $field_definition->header
+          $value = $this->normalizeFieldValue(
+            $req->getHeader(
+              $field_definition->header
+            ),
+            $field_types[$property_name]
           );
 
           $this->$property_name = $value;
@@ -201,17 +207,116 @@ class ODTO {
 
         if ($field_definition->requiredIf !== null) {
           $dependency = $field_definition->requiredIf;
+          $property_name = $property->getName();
 
-          if (
-            ($field_values[$dependency] ?? null) !== null &&
-            ($field_values[$property_name] ?? null) === null
-          ) {
-            $this->validation_errors[] =
-              "The property '{$property_name}' is required because '{$dependency}' is set.";
+          if ($dependency === $property_name) {
+            throw new \InvalidArgumentException(
+              "DTO property '{$property_name}' cannot use itself as requiredIf dependency."
+            );
+          }
+
+          if (!array_key_exists(
+            $dependency,
+            $field_names
+          )) {
+            throw new \InvalidArgumentException(
+              "DTO property '{$property_name}' references unknown requiredIf field '{$dependency}'."
+            );
           }
         }
       }
     }
+  }
+
+  /**
+   * Normalize a raw value according to a supported DTO field type.
+   *
+   * Invalid values are converted to null so DTO validation can handle them
+   * consistently with request parameter getters.
+   *
+   * @param mixed $value Raw value.
+   * @param string $type DTO field type.
+   *
+   * @return string|int|float|bool|array|null Normalized value.
+   */
+  private function normalizeFieldValue(
+    mixed $value,
+    string $type
+  ): string|int|float|bool|array|null {
+    if ($value === null) {
+      return null;
+    }
+
+    switch ($type) {
+      case 'int':
+        if (is_int($value)) {
+          return $value;
+        }
+
+        if (
+          !is_string($value) ||
+          preg_match(
+            '/^[+-]?\d+$/D',
+            $value
+          ) !== 1
+        ) {
+          return null;
+        }
+
+        $normalized = filter_var(
+          $value,
+          FILTER_VALIDATE_INT
+        );
+
+        return $normalized === false
+          ? null
+          : $normalized;
+
+      case 'float':
+        if (is_float($value)) {
+          return $value;
+        }
+
+        if (is_int($value)) {
+          return (float) $value;
+        }
+
+        if (!is_string($value)) {
+          return null;
+        }
+
+        $normalized = filter_var(
+          $value,
+          FILTER_VALIDATE_FLOAT
+        );
+
+        return $normalized === false
+          ? null
+          : (float) $normalized;
+
+      case 'bool':
+        if (!is_scalar($value)) {
+          return null;
+        }
+
+        return filter_var(
+          $value,
+          FILTER_VALIDATE_BOOLEAN,
+          FILTER_NULL_ON_FAILURE
+        );
+
+      case 'string':
+        return is_scalar($value)
+          ? (string) $value
+          : null;
+
+      case 'array':
+        return is_array($value)
+          ? $value
+          : null;
+    }
+
+    return null;
   }
 
   /**
