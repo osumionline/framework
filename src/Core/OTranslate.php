@@ -55,12 +55,21 @@ class OTranslate {
 	}
 
 	/**
-	 * Get required translation
+	 * Get a translation by key.
 	 *
-	 * @return string $key Key of the required translation or null if not found
+	 * @param string $key Translation key.
+	 *
+	 * @return ?string Translation value or null if the key does not exist.
 	 */
 	public function getTranslation(string $key): ?string {
-		return array_key_exists($key, $this->translations) ? $this->translations[trim($key)] : null;
+		$key = trim($key);
+
+		return array_key_exists(
+			$key,
+			$this->translations
+		)
+			? $this->translations[$key]
+			: null;
 	}
 
 	/**
