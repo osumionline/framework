@@ -436,19 +436,21 @@ class OConfig {
 			$error_pages = $this->getConfigArray($config, 'error_pages');
 
 			foreach ($error_pages as $status => $url) {
+				$status = (string) $status;
+
 				if (
-					!is_string($status) ||
-					(
-						!is_string($url) &&
-						$url !== null
-					)
+					!is_string($url) &&
+					$url !== null
 				) {
 					throw new \InvalidArgumentException(
-						"Configuration field 'error_pages' must contain status to string-or-null mappings."
+						"Configuration field 'error_pages.{$status}' must be a string or null."
 					);
 				}
 
-				$this->setErrorPage($status, $url);
+				$this->setErrorPage(
+					$status,
+					$url
+				);
 			}
 		}
 
