@@ -10,7 +10,16 @@ namespace Osumi\OsumiFramework\Core;
 class OTranslate {
 	private ?string $path = null;
 	private ?string $lang = null;
+	/**
+	 * @var array<string, string>
+	 */
 	private array $headers = [];
+
+	/**
+	 * PHP may convert numeric string keys to integer array keys.
+	 *
+	 * @var array<array-key, string>
+	 */
 	private array $translations = [];
 
 	/**
@@ -25,11 +34,11 @@ class OTranslate {
 	}
 
 	/**
-	 * Get path to the PO file
+	 * Get the path of the current PO file.
 	 *
-	 * @return string Path to the PO file
+	 * @return string|null PO file path or null if no file has been configured.
 	 */
-	public function getPath(): string {
+	public function getPath(): ?string {
 		return $this->path;
 	}
 
@@ -46,11 +55,11 @@ class OTranslate {
 	}
 
 	/**
-	 * Get language code of the PO file
+	 * Get the language code of the current PO file.
 	 *
-	 * @return string Language code of the PO file (eg: en/es/eu)
+	 * @return string|null Language code or null if it has not been defined.
 	 */
-	public function getLang(): string {
+	public function getLang(): ?string {
 		return $this->lang;
 	}
 
@@ -73,40 +82,63 @@ class OTranslate {
 	}
 
 	/**
-	 * Set list of translations strings
+	 * Set the translation map.
 	 *
-	 * @param array $t List of translation strings
+	 * @param array<array-key, string> $translations Translation map.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a translation value is not a string.
 	 */
-	public function setTranslations(array $t): void {
-		$this->translations = $t;
+	public function setTranslations(array $translations): void {
+		foreach ($translations as $value) {
+			if (!is_string($value)) {
+				throw new \InvalidArgumentException(
+					'Translation values must be strings.'
+				);
+			}
+		}
+
+		$this->translations = $translations;
 	}
 
 	/**
-	 * Get list of translation strings
+	 * Get all translations.
 	 *
-	 * @return array List of translation strings
+	 * @return array<array-key, string> Translation map.
 	 */
 	public function getTranslations(): array {
 		return $this->translations;
 	}
 
 	/**
-	 * Set list of PO file headers
+	 * Set the PO file headers.
 	 *
-	 * @param array $h List of headers
+	 * @param array<string, string> $headers PO header map.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a header name or value is not a string.
 	 */
-	public function setHeaders(array $h): void {
-		$this->headers = $h;
+	public function setHeaders(array $headers): void {
+		foreach ($headers as $key => $value) {
+			if (
+				!is_string($key) ||
+				!is_string($value)
+			) {
+				throw new \InvalidArgumentException(
+					'PO headers must contain string names and string values.'
+				);
+			}
+		}
+
+		$this->headers = $headers;
 	}
 
 	/**
-	 * Get list of PO file headers
+	 * Get all PO file headers.
 	 *
-	 * @return array List of headers
+	 * @return array<string, string> PO header map.
 	 */
 	public function getHeaders(): array {
 		return $this->headers;
@@ -180,10 +212,9 @@ class OTranslate {
 			);
 		}
 
-		$this->path = $path;
-
 		$translations = [];
 		$headers = [];
+		$lang = null;
 		$current = [];
 		$translation = [];
 		$doing_keys = false;
@@ -260,7 +291,7 @@ class OTranslate {
 				$headers[$header_name] = $header_value;
 
 				if ($header_name === 'Language') {
-					$this->lang = $header_value;
+					$lang = $header_value;
 				}
 
 				continue;
@@ -348,6 +379,8 @@ class OTranslate {
 			);
 		}
 
+		$this->path = $path;
+		$this->lang = $lang;
 		$this->translations = $translations;
 		$this->headers = $headers;
 	}
