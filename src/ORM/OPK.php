@@ -16,15 +16,16 @@ class OPK {
     public mixed $default;
 
     /**
-     * OPK constructor
+     * Create a primary key field definition.
      *
-     * @param string $type Field type. Default is OField::NUMBER.
-     *
-     * @param bool $incr Indicates whether it is auto-incremental. Default is true.
-     *
-     * @param string $comment Comment for the column.
-     *
-     * @param string $ref Reference to another table and field. Default is empty string.
+     * @param string $type Field type. Defaults to OField::NUMBER.
+     * @param bool $incr Whether the field is auto-incremental.
+     * @param string $comment Database column comment.
+     * @param string $ref Foreign key reference.
+     * @param bool $nullable Whether the field accepts null values.
+     * @param mixed $default Default value applied to new records when the field is
+     *                       null. Also used when generating the SQL column
+     *                       definition.
      */
     public function __construct(
         string $type = OField::NUMBER,

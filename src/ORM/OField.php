@@ -31,7 +31,9 @@ class OField {
      *
      * @param bool $nullable Indicates whether the field can be null. Default is true.
      *
-     * @param mixed $default Default value if null or undefined. Defaults to null.
+     * @param mixed $default Default value applied to new records when the field is
+     *                       null. Also used when generating the SQL column definition.
+     *                       Defaults to null.
      *
      * @param int $max Maximum field size. Default is 50.
      *
