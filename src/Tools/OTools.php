@@ -636,11 +636,10 @@ class OTools {
 	}
 
 	/**
-	 * Show an error page instead of template (403 / 404 / 500 errors) if user hasn't defined a custom ones
+	 * Show the framework error page if no custom page has been configured.
 	 *
-	 * @param array $res Array containing information about the error
-	 *
-	 * @param string $mode Error mode (403 / 404 / 405 / 500 / action / view)
+	 * @param array<string, mixed> $res Information about the error.
+	 * @param string $mode Error mode (403, 404, 405, 500, general or view).
 	 *
 	 * @return void
 	 */

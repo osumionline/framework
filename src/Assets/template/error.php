@@ -118,7 +118,7 @@ use Osumi\OsumiFramework\Tools\OTools; ?>
 	</header>
 	<section>
 		<?php
-		if (in_array($values['mode'], ['403', '404', '405', '500', 'general'])) {
+		if (in_array($values['mode'], ['403', '404', '405', '500', 'general', 'view'], true)) {
 			if ($values['mode'] === '403') {
 		?>
 				<svg height="487pt" viewBox="0 0 487 487.95208" width="487pt" xmlns="http://www.w3.org/2000/svg">
