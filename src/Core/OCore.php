@@ -138,13 +138,55 @@ class OCore {
 		$this->cache_container = new OCacheContainer();
 
 		// Load routes
-		$routes_path = $this->config->getDir('app_routes');
+		$routes_path = rtrim(
+			$this->config->getDir('app_routes'),
+			'/\\'
+		);
+
+		if (!is_dir($routes_path)) {
+			throw new \RuntimeException(
+				"Routes directory '{$routes_path}' does not exist."
+			);
+		}
+
+		if (!is_readable($routes_path)) {
+			throw new \RuntimeException(
+				"Routes directory '{$routes_path}' is not readable."
+			);
+		}
+
 		$files = scandir($routes_path);
+
+		if ($files === false) {
+			throw new \RuntimeException(
+				"Could not scan routes directory '{$routes_path}'."
+			);
+		}
+
 		foreach ($files as $file) {
-			if ($file === '.' || $file === '..') {
+			$route_file = $routes_path
+				. DIRECTORY_SEPARATOR
+				. $file;
+
+			if (
+				!is_file($route_file) ||
+				strtolower(
+					pathinfo(
+						$route_file,
+						PATHINFO_EXTENSION
+					)
+				) !== 'php'
+			) {
 				continue;
 			}
-			require_once $routes_path . $file;
+
+			if (!is_readable($route_file)) {
+				throw new \RuntimeException(
+					"Route file '{$route_file}' is not readable."
+				);
+			}
+
+			require_once $route_file;
 		}
 
 		// Load global functions
