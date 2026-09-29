@@ -80,9 +80,13 @@ class OCore {
 	 * @return void
 	 */
 	public function load(bool $from_cli = false): void {
-		date_default_timezone_set('Europe/Madrid');
-
 		$this->config = new OConfig($this->getBaseDir());
+
+		if (!date_default_timezone_set($this->config->getTimezone())) {
+			throw new \RuntimeException(
+				"Could not configure application timezone '{$this->config->getTimezone()}'."
+			);
+		}
 
 		// Check locale file
 		$locale_file = $this->config->getDir('ofw_locale') . $this->config->getLang() . '.po';

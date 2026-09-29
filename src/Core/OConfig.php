@@ -56,6 +56,7 @@ class OConfig {
 	private string $default_title = '';
 	private string $mailing_from  = '';
 	private string $lang          = 'es';
+	private string $timezone      = 'Europe/Madrid';
 
 	private array $libs   = [];
 	private array $extras = [];
@@ -413,6 +414,10 @@ class OConfig {
 
 		if (array_key_exists('lang', $config)) {
 			$this->setLang($this->getConfigString($config, 'lang'));
+		}
+
+		if (array_key_exists('timezone', $config)) {
+			$this->setTimezone($this->getConfigString($config, 'timezone'));
 		}
 
 		if (array_key_exists('plugins', $config)) {
@@ -1202,6 +1207,38 @@ class OConfig {
 	 */
 	public function getLang(): string {
 		return $this->lang;
+	}
+
+	/**
+	 * Set the application timezone.
+	 *
+	 * @param string $timezone Valid PHP timezone identifier.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If the timezone identifier is invalid.
+	 */
+	public function setTimezone(string $timezone): void {
+		try {
+			new \DateTimeZone($timezone);
+		} catch (\Exception $e) {
+			throw new \InvalidArgumentException(
+				"Invalid timezone '{$timezone}'.",
+				0,
+				$e
+			);
+		}
+
+		$this->timezone = $timezone;
+	}
+
+	/**
+	 * Get the application timezone.
+	 *
+	 * @return string Application timezone identifier.
+	 */
+	public function getTimezone(): string {
+		return $this->timezone;
 	}
 
 	/**
