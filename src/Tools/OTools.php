@@ -95,27 +95,56 @@ class OTools {
 	}
 
 	/**
-	 * Render a template from a file or a given template with given parameters
+	 * Render a template from a file or a provided template string.
 	 *
-	 * @param string $path Path to a template file
+	 * When a file path is provided, its contents replace the template string
+	 * before applying the supplied values.
 	 *
-	 * @param string $html Template as a string
+	 * @param string $path Path to the template file or an empty string to use
+	 *                     the provided template string.
+	 * @param string $html Template string.
+	 * @param array $values Values to replace in the template.
 	 *
-	 * @param array $values Key / value pair array to be rendered
+	 * @return string Rendered template.
 	 *
-	 * @return string Loaded template with rendered parameters
+	 * @throws \RuntimeException If the template file does not exist, is not
+	 *                           readable or cannot be read.
 	 */
-	public static function getTemplate(string $path, string $html, array $values): ?string {
-		if ($path != '') {
-			if (file_exists($path)) {
-				$html = file_get_contents($path);
-			} else {
-				return null;
+	public static function getTemplate(
+		string $path,
+		string $html,
+		array $values
+	): string {
+		if ($path !== '') {
+			if (!is_file($path)) {
+				throw new \RuntimeException(
+					"Template file '{$path}' does not exist."
+				);
 			}
+
+			if (!is_readable($path)) {
+				throw new \RuntimeException(
+					"Template file '{$path}' is not readable."
+				);
+			}
+
+			$template = file_get_contents($path);
+
+			if ($template === false) {
+				throw new \RuntimeException(
+					"Unable to read template file '{$path}'."
+				);
+			}
+
+			$html = $template;
 		}
 
 		foreach ($values as $key => $value) {
-			$html = str_ireplace('{{' . $key . '}}', $value, $html);
+			$html = str_ireplace(
+				'{{' . $key . '}}',
+				$value,
+				$html
+			);
 		}
 
 		return $html;
