@@ -73,11 +73,13 @@ class OCore {
 	}
 
 	/**
-	 * Include required files for the framework and start up some components like configuration, cache container or database connection container
+	 * Load and initialize the framework.
 	 *
-	 * @param bool $from_cli Marks if the core is being loaded for use in web application or CLI application
+	 * @param bool $from_cli Whether the framework is being loaded from the CLI.
 	 *
 	 * @return void
+	 *
+	 * @throws \RuntimeException If the framework cannot be initialized.
 	 */
 	public function load(bool $from_cli = false): void {
 		$this->config = new OConfig($this->getBaseDir());
@@ -89,10 +91,14 @@ class OCore {
 		}
 
 		// Check locale file
-		$locale_file = $this->config->getDir('ofw_locale') . $this->config->getLang() . '.po';
-		if (!file_exists($locale_file)) {
-			echo "ERROR: locale file " . $this->config->getLang() . " not found.";
-			exit;
+		$locale_file = $this->config->getDir('ofw_locale')
+			. $this->config->getLang()
+			. '.po';
+
+		if (!is_file($locale_file)) {
+			throw new \RuntimeException(
+				"Locale file '{$locale_file}' was not found."
+			);
 		}
 
 		// Due to a circular dependancy, check name of the log file after core loading
@@ -107,9 +113,18 @@ class OCore {
 		// If there is a DB connection configured, check drivers and load required classes
 		if ($this->config->getDB('user') !== '' || $this->config->getDB('pass') !== '' || $this->config->getDB('host') !== '' || $this->config->getDB('name') !== '') {
 			$pdo_drivers = PDO::getAvailableDrivers();
-			if (!in_array($this->config->getDB('driver'), $pdo_drivers)) {
-				echo "ERROR: El sistema no dispone del driver " . $this->config->getDB('driver') . " solicitado para realizar la conexión a la base de datos.\n";
-				exit;
+			$db_driver = $this->config->getDB('driver');
+
+			if (
+				!in_array(
+					$db_driver,
+					$pdo_drivers,
+					true
+				)
+			) {
+				throw new \RuntimeException(
+					"PDO driver '{$db_driver}' is not available."
+				);
 			}
 
 			$this->db_container = new ODBContainer();
