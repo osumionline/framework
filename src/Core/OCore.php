@@ -543,27 +543,69 @@ class OCore {
 	/**
 	 * Handle an uncaught exception.
 	 *
-	 * Full exception details are written to the application log but are never
-	 * exposed in the HTTP response.
+	 * Full exception details are logged whenever the framework logging system is
+	 * already available. If the framework is only partially initialized, PHP's
+	 * native error log is used as a fallback.
+	 *
+	 * Exception details are never exposed in an HTTP response.
 	 *
 	 * @param Throwable $ex Exception to handle.
 	 *
 	 * @return void
 	 */
 	public function errorHandler(Throwable $ex): void {
-		$log = new OLog(
-			get_class($this)
-		);
+		$exception_details = (string) $ex;
+		$logged = false;
 
-		$log->error(
-			(string) $ex
-		);
+		if (
+			$this->config !== null &&
+			$this->config->getLog('name') !== null
+		) {
+			try {
+				$log = new OLog(
+					get_class($this)
+				);
+
+				$logged = $log->error(
+					$exception_details
+				);
+			} catch (Throwable) {
+				// The framework may still be partially initialized.
+			}
+		}
+
+		if (!$logged) {
+			error_log(
+				$exception_details
+			);
+		}
 
 		$this->setHttpStatus(500);
 
-		OTools::showErrorPage(
-			[],
-			'500'
-		);
+		if (
+			$this->config !== null &&
+			$this->translate !== null
+		) {
+			try {
+				OTools::showErrorPage(
+					[],
+					'500'
+				);
+			} catch (Throwable $handler_error) {
+				error_log(
+					(string) $handler_error
+				);
+			}
+		}
+
+		if (!headers_sent()) {
+			http_response_code(500);
+
+			header(
+				'Content-Type: text/plain; charset=UTF-8'
+			);
+		}
+
+		echo 'Internal Server Error';
 	}
 }
