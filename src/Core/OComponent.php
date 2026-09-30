@@ -11,7 +11,6 @@ use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
 use ReflectionClass;
 use ReflectionProperty;
-use Exception;
 
 /**
  * Base class for components.
@@ -31,72 +30,110 @@ class OComponent {
   ];
 
   /**
-   * Loads component's properties and initializes data
+   * Initialize the component with the provided values.
+   *
+   * @param array<array-key, mixed> $vars Values to map to public component
+   *                                      properties.
+   *
+   * @throws \RuntimeException If the component file or template cannot be
+   *                           resolved.
    */
   public function __construct(array $vars = []) {
     $this->load($vars);
   }
 
   /**
-   * Component initializer. Finds component's template file and it's type.
-   * Adds received key/value pairs into component's public variables.
+   * Initialize the component.
    *
-   * @param array $vars List of variables to be mapped into component's public variables.
+   * The component template is resolved from the component class filename and
+   * the provided values are mapped to matching public properties.
+   *
+   * @param array<array-key, mixed> $vars Values to map to public component
+   *                                      properties.
+   *
+   * @return void
+   *
+   * @throws \RuntimeException If the component file or template cannot be
+   *                           resolved.
    */
   public function load(array $vars = []): void {
     if ($this->component_info['initialized']) {
-      return; // Already initialized
+      return;
     }
 
-    // Get name of the class extending OComponent
     $component_class = get_class($this);
 
-    // Create a log for the component
-    $this->log = new OLog($component_class);
+    $this->log = new OLog(
+      $component_class
+    );
 
-    // Use ReflectionClass to get file path
-    $reflection = new ReflectionClass($component_class);
-    $component_file = $reflection->getFileName(); // Full file path of the PHP file containing the class
+    $reflection = new ReflectionClass(
+      $component_class
+    );
 
-    // Store the base directory of the component
-    $this->component_info['component_base'] = dirname($component_file) . '/';
+    $component_file = $reflection->getFileName();
+    if ($component_file === false) {
+      throw new \RuntimeException(
+        "Could not resolve component file for '{$component_class}'."
+      );
+    }
 
-    // Get base name of the component's file (without extension)
-    $base_name = str_ireplace('Component', '', pathinfo($component_file, PATHINFO_FILENAME));
+    $this->component_info['component_base'] = dirname(
+      $component_file
+    ) . '/';
 
-    // Build template's name
+    $base_name = str_ireplace(
+      'Component',
+      '',
+      pathinfo(
+        $component_file,
+        PATHINFO_FILENAME
+      )
+    );
+
     foreach ($this->allowed_extensions as $extension) {
-      $template_name = $base_name . 'Template.' . $extension;
-      $template_path = dirname($component_file) . '/' . $template_name;
+      $template_name = $base_name
+        . 'Template.'
+        . $extension;
 
-      // Check if file exists
+      $template_path = dirname(
+        $component_file
+      ) . '/' . $template_name;
+
       if (is_file($template_path)) {
         $this->component_info['template_name'] = $template_path;
         $this->component_info['template_type'] = $extension;
+
         break;
       }
     }
 
-    // Check if template has been found
     if ($this->component_info['template_name'] === '') {
-      throw new Exception("No valid template file found for the component: " . $component_class);
+      throw new \RuntimeException(
+        "No valid template file found for component '{$component_class}'."
+      );
     }
 
     foreach ($vars as $key => $value) {
-      // Verify if child class has a property with the same name
-      if ($reflection->hasProperty($key)) {
-        $property = $reflection->getProperty($key);
+      if (!is_string($key)) {
+        continue;
+      }
 
-        // Check if the property is public
-        if ($property->isPublic()) {
-          $this->$key = $value;
-        }
+      if (!$reflection->hasProperty($key)) {
+        continue;
+      }
+
+      $property = $reflection->getProperty(
+        $key
+      );
+      if ($property->isPublic()) {
+        $this->$key = $value;
       }
     }
 
-    // Set component as initialized
     $this->component_info['initialized'] = true;
   }
+
 
   /**
    * Get the application configuration (shortcut to $core->config)
