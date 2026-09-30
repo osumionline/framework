@@ -439,12 +439,11 @@ class OComponent {
    */
   public function __toString(): string {
     if (!$this->component_info['initialized']) {
-      throw new Exception("Component hasn't been initialized.");
+      throw new \RuntimeException(
+        "Component hasn't been initialized."
+      );
     }
-    try {
-      return $this->render();
-    } catch (Exception $e) {
-      return "Error rendering component: " . $e->getMessage();
-    }
+
+    return $this->render();
   }
 }
