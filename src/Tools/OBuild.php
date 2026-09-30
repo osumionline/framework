@@ -38,6 +38,7 @@ class OBuild {
 	 * Generates a SQL file to build the database based on models defined by the user
 	 *
 	 * @return string SQL string to build all the tables in the database (also written to ofw/export/model.sql)
+	 * @throws \RuntimeException If the generated SQL file cannot be written.
 	 */
 	public static function generateModel(): string {
 		global $core;
@@ -54,11 +55,17 @@ class OBuild {
 
 		OTools::checkOfw('export');
 		$sql_file = $core->config->getDir('ofw_export') . 'model.sql';
-		if (file_exists($sql_file)) {
-			unlink($sql_file);
+		if (
+			file_put_contents(
+				$sql_file,
+				$sql,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not write generated model SQL file '{$sql_file}'."
+			);
 		}
-
-		file_put_contents($sql_file, $sql);
 
 		return $sql;
 	}
@@ -469,6 +476,7 @@ class OBuild {
 	 * } $values Model class definition.
 	 *
 	 * @return string Generation status.
+	 * @throws \RuntimeException If the generated model class cannot be written.
 	 */
 	public static function addModelClass(array $values): string {
 		global $core;
@@ -496,7 +504,7 @@ class OBuild {
 				$has_updated_at = true;
 			}
 
-			if (in_array($field['decorator'], ['OCreatedAt', 'OUpdatedAt'])) {
+			if (in_array($field['decorator'], ['OCreatedAt', 'OUpdatedAt', 'ODeletedAt'])) {
 				$field['attribute_type'] = 'string';
 			}
 			if ($field['decorator'] === 'OPK' && !array_key_exists('attribute_type', $field)) {
@@ -559,7 +567,17 @@ class OBuild {
 			'table_name' => $values['table_name'],
 			'fields'     => $fields
 		]);
-		file_put_contents($values['class_file'], $str_component);
+		if (
+			file_put_contents(
+				$values['class_file'],
+				$str_component,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not write model class '{$values['class_file']}'."
+			);
+		}
 
 		return 'ok';
 	}

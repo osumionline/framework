@@ -45,7 +45,9 @@ abstract class OModel {
    */
   protected static array $model_validated = [];
   /**
-   * @var array<string, OModel|list<OModel>|null>
+   * Cached database result rows indexed by query cache key.
+   *
+   * @var array<string, list<array<string, mixed>>>
    */
   protected static array $results_cache = [];
 
@@ -781,6 +783,27 @@ abstract class OModel {
   }
 
   /**
+   * Hydrate database rows into model instances.
+   *
+   * @param list<array<string, mixed>> $rows Database rows.
+   *
+   * @return list<static> Hydrated model instances.
+   */
+  protected static function hydrateRows(
+    array $rows
+  ): array {
+    $instances = [];
+
+    foreach ($rows as $row) {
+      $instances[] = static::from(
+        $row
+      );
+    }
+
+    return $instances;
+  }
+
+  /**
    * Clear results cache
    *
    * @return void
@@ -1112,21 +1135,15 @@ abstract class OModel {
    *
    * @return static|null Matching model or null.
    */
-  public static function findOne(array $conditions): ?static {
-    // Generate cache key
-    $table_name = self::getTableName();
-    $cache_key = self::generateCacheKey($table_name, 'findOne', $conditions);
-
-    // If results are cached, return them
-    if (isset(self::$results_cache[$cache_key])) {
-      return self::$results_cache[$cache_key];
-    }
-
-    // Execute query with a limit of one
-    $results = self::where($conditions, ['limit' => 1]);
-
-    // Store results on cache
-    self::$results_cache[$cache_key] = $results[0] ?? null;
+  public static function findOne(
+    array $conditions
+  ): ?static {
+    $results = static::where(
+      $conditions,
+      [
+        'limit' => 1
+      ]
+    );
 
     return $results[0] ?? null;
   }
@@ -1145,40 +1162,70 @@ abstract class OModel {
    *
    * @throws \InvalidArgumentException If query options are invalid.
    */
-  public static function where(array $conditions, array $options = []): array {
-    self::validateQueryOptions($options);
+  public static function where(
+    array $conditions,
+    array $options = []
+  ): array {
+    self::validateQueryOptions(
+      $options
+    );
 
-    // Generate cache key
+    if ($conditions === []) {
+      return static::all(
+        $options
+      );
+    }
+
     $table_name = self::getTableName();
-    $cache_key = self::generateCacheKey($table_name, 'where', $conditions, $options);
 
-    // If results are cached, return them
-    if (isset(self::$results_cache[$cache_key])) {
-      return self::$results_cache[$cache_key];
+    $cache_key = self::generateCacheKey(
+      $table_name,
+      'where',
+      $conditions,
+      $options
+    );
+
+    if (array_key_exists(
+      $cache_key,
+      self::$results_cache
+    )) {
+      return static::hydrateRows(
+        self::$results_cache[$cache_key]
+      );
     }
 
-    if (empty($conditions)) {
-      return self::all($options);
-    }
+    $where = self::buildWhereClause(
+      $conditions
+    );
 
-    $where = self::buildWhereClause($conditions);
-    $sql = "SELECT * FROM `{$table_name}` WHERE " . $where['clause'];
-    $sql = self::applyQueryOptions($sql, $options);
-    $params = $where['params'];
+    $sql = "SELECT * FROM `{$table_name}` WHERE "
+      . $where['clause'];
+
+    $sql = self::applyQueryOptions(
+      $sql,
+      $options
+    );
 
     $db = ODB::getInstance();
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
 
-    $results = [];
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $results[] = static::from($row);
-    }
+    $stmt = $db->prepare(
+      $sql
+    );
 
-    // Store results on cache
-    self::$results_cache[$cache_key] = $results;
+    $stmt->execute(
+      $where['params']
+    );
 
-    return $results;
+    /** @var list<array<string, mixed>> $rows */
+    $rows = $stmt->fetchAll(
+      PDO::FETCH_ASSOC
+    );
+
+    self::$results_cache[$cache_key] = $rows;
+
+    return static::hydrateRows(
+      $rows
+    );
   }
 
   /**
@@ -1194,37 +1241,56 @@ abstract class OModel {
    *
    * @throws \InvalidArgumentException If query options are invalid.
    */
-  public static function all(array $options = []): array {
-    self::validateQueryOptions($options);
+  public static function all(
+    array $options = []
+  ): array {
+    self::validateQueryOptions(
+      $options
+    );
 
-    // Generate cache key
     $table_name = self::getTableName();
-    $cache_key = self::generateCacheKey($table_name, 'all', [], $options);
 
-    // If results are cached, return them
-    if (isset(self::$results_cache[$cache_key])) {
-      return self::$results_cache[$cache_key];
+    $cache_key = self::generateCacheKey(
+      $table_name,
+      'all',
+      [],
+      $options
+    );
+
+    if (array_key_exists(
+      $cache_key,
+      self::$results_cache
+    )) {
+      return static::hydrateRows(
+        self::$results_cache[$cache_key]
+      );
     }
 
     $sql = "SELECT * FROM `{$table_name}`";
 
-    // Aditional options (order_by, limit, offset)
-    $sql = self::applyQueryOptions($sql, $options);
+    $sql = self::applyQueryOptions(
+      $sql,
+      $options
+    );
 
     $db = ODB::getInstance();
-    $stmt = $db->prepare($sql);
+
+    $stmt = $db->prepare(
+      $sql
+    );
+
     $stmt->execute();
 
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $instances = [];
-    foreach ($results as $row) {
-      $instances[] = static::from($row);
-    }
+    /** @var list<array<string, mixed>> $rows */
+    $rows = $stmt->fetchAll(
+      PDO::FETCH_ASSOC
+    );
 
-    // Store results on cache
-    self::$results_cache[$cache_key] = $instances;
+    self::$results_cache[$cache_key] = $rows;
 
-    return $instances;
+    return static::hydrateRows(
+      $rows
+    );
   }
 
   /**
@@ -1289,7 +1355,7 @@ abstract class OModel {
         if (
           in_array(
             $field_name,
-            $schema['primarykey'],
+            $schema['primary_key'],
             true
           ) && !empty($field['auto_increment'])
         ) {
@@ -1378,7 +1444,7 @@ abstract class OModel {
       if (
         in_array(
           $field_name,
-          $schema['primarykey'],
+          $schema['primary_key'],
           true
         )
       ) continue;

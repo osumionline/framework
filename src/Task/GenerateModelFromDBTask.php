@@ -104,6 +104,8 @@ class GenerateModelFromDBTask extends OTask {
 			// Updated At
 			elseif ($field['name'] === 'updated_at') {
 				$field['decorator'] = 'OUpdatedAt';
+			} elseif ($field['name'] === 'deleted_at') {
+				$field['decorator'] = 'ODeletedAt';
 			} else {
 				$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
 
@@ -195,58 +197,91 @@ class GenerateModelFromDBTask extends OTask {
 	 *     }>
 	 * } $model Model definition.
 	 *
-	 * @return array{
-	 *     name: string,
-	 *     fields: list<array{
-	 *         name: string,
-	 *         decorator: string,
-	 *         comment: string,
-	 *         attribute_type?: string,
-	 *         type?: string,
-	 *         nullable?: bool,
-	 *         default?: string|int|float|bool|null,
-	 *         max?: int,
-	 *         ref?: string
-	 *     }>,
-	 *     refs?: list<array{
-	 *         to: string,
-	 *         field_from: string,
-	 *         field_to: string
-	 *     }>
-	 * } Updated model definition.
+	 * @return array Updated model definition.
+	 *
+	 * @throws \RuntimeException If a primary key field type cannot be determined.
 	 */
-	private function getPK(array $model): array {
+	private function getPK(
+		array $model
+	): array {
 		$sql = "SELECT
-			kcu.`TABLE_SCHEMA`,
-			kcu.`TABLE_NAME`,
-			kcu.`COLUMN_NAME`,
-			kcu.`ORDINAL_POSITION`
+		kcu.`TABLE_SCHEMA`,
+		kcu.`TABLE_NAME`,
+		kcu.`COLUMN_NAME`,
+		kcu.`ORDINAL_POSITION`,
+		c.`EXTRA`
 		FROM INFORMATION_SCHEMA.`KEY_COLUMN_USAGE` kcu
 		JOIN INFORMATION_SCHEMA.`TABLE_CONSTRAINTS` tc
-		ON tc.`CONSTRAINT_SCHEMA` = kcu.`CONSTRAINT_SCHEMA`
-		AND tc.`TABLE_NAME`        = kcu.`TABLE_NAME`
-		AND tc.`CONSTRAINT_NAME`   = kcu.`CONSTRAINT_NAME`
+			ON tc.`CONSTRAINT_SCHEMA` = kcu.`CONSTRAINT_SCHEMA`
+			AND tc.`TABLE_NAME` = kcu.`TABLE_NAME`
+			AND tc.`CONSTRAINT_NAME` = kcu.`CONSTRAINT_NAME`
+		JOIN INFORMATION_SCHEMA.`COLUMNS` c
+			ON c.`TABLE_SCHEMA` = kcu.`TABLE_SCHEMA`
+			AND c.`TABLE_NAME` = kcu.`TABLE_NAME`
+			AND c.`COLUMN_NAME` = kcu.`COLUMN_NAME`
 		WHERE tc.`CONSTRAINT_TYPE` = 'PRIMARY KEY'
-		AND tc.`TABLE_SCHEMA` = :db_name
-		AND kcu.`TABLE_NAME` = :table_name
-		ORDER BY kcu.`TABLE_NAME`, kcu.`ORDINAL_POSITION`";
+			AND tc.`TABLE_SCHEMA` = :db_name
+			AND kcu.`TABLE_NAME` = :table_name
+		ORDER BY kcu.`ORDINAL_POSITION`";
 
 		$db = new ODB();
-		$db->query($sql, [
-			'db_name'    => $this->db_name,
-			'table_name' => $model['name']
-		]);
+
+		$db->query(
+			$sql,
+			[
+				'db_name' => $this->db_name,
+				'table_name' => $model['name']
+			]
+		);
 
 		while ($res = $db->next()) {
-			for ($i = 0; $i < count($model['fields']); $i++) {
-				if ($model['fields'][$i]['name'] === $res['COLUMN_NAME']) {
-					$model['fields'][$i]['decorator'] = 'OPK';
-					unset($model['fields'][$i]['nullable']);
-					unset($model['fields'][$i]['attribute_type']);
-					unset($model['fields'][$i]['default']);
-					break;
+			foreach ($model['fields'] as &$field) {
+				if ($field['name'] !== $res['COLUMN_NAME']) {
+					continue;
 				}
+
+				$attribute_type = $field['attribute_type'] ?? null;
+
+				if (!is_string($attribute_type)) {
+					throw new \RuntimeException(
+						"Could not determine PHP type for primary key '{$field['name']}'."
+					);
+				}
+
+				$field['decorator'] = 'OPK';
+
+				$field['type'] = match ($attribute_type) {
+					'int' => 'OField::NUMBER',
+					'float' => 'OField::FLOAT',
+					'bool' => 'OField::BOOL',
+					'string' => $field['type'] ?? 'OField::TEXT',
+					default => throw new \RuntimeException(
+						"Unsupported PHP type '{$attribute_type}' for primary key '{$field['name']}'."
+					)
+				};
+
+				$field['incr'] = str_contains(
+					strtolower(
+						(string) $res['EXTRA']
+					),
+					'auto_increment'
+				);
+
+				$field['nullable'] = false;
+
+				if ($field['incr']) {
+					$field['default'] = null;
+				}
+
+				unset(
+					$field['max'],
+					$field['visible']
+				);
+
+				break;
 			}
+
+			unset($field);
 		}
 
 		return $model;

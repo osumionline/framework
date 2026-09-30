@@ -7,6 +7,7 @@ use Osumi\OsumiFramework\ORM\OPK;
 use Osumi\OsumiFramework\ORM\OField;
 use Osumi\OsumiFramework\ORM\OCreatedAt;
 use Osumi\OsumiFramework\ORM\OUpdatedAt;
+use Osumi\OsumiFramework\ORM\ODeletedAt;
 
 class {{table_name}} extends OModel {
 {{fields}}
