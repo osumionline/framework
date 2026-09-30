@@ -51,48 +51,86 @@ class OLog {
 	}
 
 	/**
-	 * Log a given debug string if the log level is in ('ALL', 'DEBUG')
+	 * Log a debug message when the configured level allows it.
 	 *
-	 * @param string $str String to be logged
+	 * @param string $str Message to log.
 	 *
-	 * @return bool Returns if the message was written to the log file or not
+	 * @return bool Whether the message was written successfully.
 	 */
 	public function debug(string $str): bool {
-		$bt = debug_backtrace();
-		$caller = array_shift($bt);
-		if (in_array($this->log_level, ['ALL', 'DEBUG'])) {
-			return $this->putLog('DEBUG', $str, $caller);
+		if (!in_array(
+			$this->log_level,
+			[
+				'ALL',
+				'DEBUG'
+			],
+			true
+		)) {
+			return false;
 		}
-		return false;
+
+		$caller = debug_backtrace(
+			DEBUG_BACKTRACE_IGNORE_ARGS,
+			1
+		)[0] ?? [];
+
+		return $this->putLog(
+			'DEBUG',
+			$str,
+			$caller
+		);
 	}
 
 	/**
-	 * Log a given info string if the log level is in ('ALL', 'DEBUG', 'INFO')
+	 * Log an informational message when the configured level allows it.
 	 *
-	 * @param string $str String to be logged
+	 * @param string $str Message to log.
 	 *
-	 * @return bool Returns if the message was written to the log file or not
+	 * @return bool Whether the message was written successfully.
 	 */
 	public function info(string $str): bool {
-		$bt = debug_backtrace();
-		$caller = array_shift($bt);
-		if (in_array($this->log_level, ['ALL', 'DEBUG', 'INFO'])) {
-			return $this->putLog('INFO', $str, $caller);
+		if (!in_array(
+			$this->log_level,
+			[
+				'ALL',
+				'DEBUG',
+				'INFO'
+			],
+			true
+		)) {
+			return false;
 		}
-		return false;
+
+		$caller = debug_backtrace(
+			DEBUG_BACKTRACE_IGNORE_ARGS,
+			1
+		)[0] ?? [];
+
+		return $this->putLog(
+			'INFO',
+			$str,
+			$caller
+		);
 	}
 
 	/**
-	 * Log a given error string
+	 * Log an error message.
 	 *
-	 * @param string $str String to be logged
+	 * @param string $str Message to log.
 	 *
-	 * @return bool Returns if the message was written to the log file or not
+	 * @return bool Whether the message was written successfully.
 	 */
 	public function error(string $str): bool {
-		$bt = debug_backtrace();
-		$caller = array_shift($bt);
-		return $this->putLog('ERROR', $str, $caller);
+		$caller = debug_backtrace(
+			DEBUG_BACKTRACE_IGNORE_ARGS,
+			1
+		)[0] ?? [];
+
+		return $this->putLog(
+			'ERROR',
+			$str,
+			$caller
+		);
 	}
 
 	/**
