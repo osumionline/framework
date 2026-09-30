@@ -33,7 +33,7 @@ class OPK {
         bool $incr = true,
         string $comment = '',
         string $ref = '',
-        bool $nullable = true,
+        bool $nullable = false,
         mixed $default = null,
         int $max = 50
     ) {
