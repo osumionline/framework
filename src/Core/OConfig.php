@@ -787,6 +787,7 @@ class OConfig {
 		$this->setDir('app_dto',        $bd . 'src/DTO/');
 		$this->setDir('app_filter',     $bd . 'src/Filter/');
 		$this->setDir('app_layout',     $bd . 'src/Layout/');
+		$this->setDir('app_middleware', $bd . 'src/Middleware/');
 		$this->setDir('app_model',      $bd . 'src/Model/');
 		$this->setDir('app_routes',     $bd . 'src/Routes/');
 		$this->setDir('app_service',    $bd . 'src/Service/');
