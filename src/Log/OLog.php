@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Log;
 
-use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Tools\OTools;
 
 /**
@@ -34,7 +33,18 @@ class OLog {
 		$this->log_path = $this->log_dir . $this->log_file_name . '.' . $this->log_file_ext;
 		$this->max_file_size = $core->config->getLog('max_file_size');
 		$this->max_num_files = $core->config->getLog('max_num_files');
-		$this->log_level = array_key_exists($core->config->getLog('level'), $this->levels) ? $core->config->getLog('level') : 'ALL';
+		$log_level = $core->config->getLog('level');
+
+		$this->log_level = (is_string($log_level) &&
+			in_array(
+				$log_level,
+				$this->levels,
+				true
+			)
+		)
+			? $log_level
+			: 'ALL';
+
 		if (!is_null($class_name)) {
 			$this->class_name = $class_name;
 		}
