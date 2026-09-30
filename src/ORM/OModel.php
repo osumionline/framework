@@ -505,6 +505,7 @@ abstract class OModel {
             $field_schema['type'] = $attr_instance->type;
             $field_schema['nullable'] = $attr_instance->nullable;
             $field_schema['default'] = $attr_instance->default;
+            $field_schema['max'] = $attr_instance->max;
             $field_schema['primary'] = true;
             $field_schema['auto_increment'] = $attr_instance->incr;
             $field_schema['ref'] = $attr_instance->ref;

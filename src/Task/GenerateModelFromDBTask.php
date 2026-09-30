@@ -46,6 +46,147 @@ class GenerateModelFromDBTask extends OTask {
 	}
 
 	/**
+	 * Parse a MariaDB column default into an ORM-compatible PHP value.
+	 *
+	 * String and date literals must be quoted by MariaDB metadata. Numeric and
+	 * boolean literals may be represented without quotes. SQL expressions cannot
+	 * be represented by the ORM because model defaults must be actual PHP values.
+	 *
+	 * @param string $field_name Field name.
+	 * @param string $attribute_type PHP property type.
+	 * @param mixed $column_default Raw COLUMN_DEFAULT metadata value.
+	 *
+	 * @return string|int|float|bool|null Parsed default value.
+	 *
+	 * @throws \RuntimeException If the metadata is invalid or contains an SQL
+	 *                           expression that cannot be represented by the ORM.
+	 */
+	private function parseColumnDefault(
+		string $field_name,
+		string $attribute_type,
+		mixed $column_default
+	): string|int|float|bool|null {
+		if ($column_default === null) {
+			return null;
+		}
+
+		if (!is_string($column_default)) {
+			throw new \RuntimeException(
+				"Unexpected COLUMN_DEFAULT metadata type for field '{$field_name}'."
+			);
+		}
+
+		/*
+	 * MariaDB may return the text NULL for an implicit or explicit SQL
+	 * DEFAULT NULL. A literal string containing "NULL" is returned quoted and
+	 * therefore does not match this condition.
+	 */
+		if (strcasecmp(
+			$column_default,
+			'NULL'
+		) === 0) {
+			return null;
+		}
+
+		$length = strlen(
+			$column_default
+		);
+
+		$is_quoted = (
+			$length >= 2 &&
+			$column_default[0] === "'" &&
+			$column_default[$length - 1] === "'"
+		);
+
+		$value = $column_default;
+
+		if ($is_quoted) {
+			$value = substr(
+				$column_default,
+				1,
+				-1
+			);
+
+			$value = str_replace(
+				"''",
+				"'",
+				$value
+			);
+		}
+
+		switch ($attribute_type) {
+			case 'string':
+				if (!$is_quoted) {
+					throw new \RuntimeException(
+						"SQL default expression '{$column_default}' for field '{$field_name}' cannot be represented as an ORM default value."
+					);
+				}
+
+				return $value;
+
+			case 'int':
+				if (
+					preg_match(
+						'/^[+-]?\d+$/D',
+						$value
+					) !== 1
+				) {
+					throw new \RuntimeException(
+						"SQL default expression '{$column_default}' for field '{$field_name}' cannot be represented as an integer ORM default."
+					);
+				}
+
+				$normalized = filter_var(
+					$value,
+					FILTER_VALIDATE_INT
+				);
+
+				if ($normalized === false) {
+					throw new \RuntimeException(
+						"Integer default for field '{$field_name}' is outside the supported PHP integer range."
+					);
+				}
+
+				return $normalized;
+
+			case 'float':
+				$normalized = filter_var(
+					$value,
+					FILTER_VALIDATE_FLOAT
+				);
+
+				if (
+					$normalized === false ||
+					!is_finite(
+						(float) $normalized
+					)
+				) {
+					throw new \RuntimeException(
+						"SQL default expression '{$column_default}' for field '{$field_name}' cannot be represented as a float ORM default."
+					);
+				}
+
+				return (float) $normalized;
+
+			case 'bool':
+				if (
+					$value !== '0' &&
+					$value !== '1'
+				) {
+					throw new \RuntimeException(
+						"SQL default expression '{$column_default}' for field '{$field_name}' cannot be represented as a boolean ORM default."
+					);
+				}
+
+				return $value === '1';
+		}
+
+		throw new \RuntimeException(
+			"Unsupported PHP attribute type '{$attribute_type}' for field '{$field_name}'."
+		);
+	}
+
+	/**
 	 * Get the column definitions for a database table.
 	 *
 	 * @param string $table_name Table name.
@@ -57,115 +198,160 @@ class GenerateModelFromDBTask extends OTask {
 	 *     attribute_type?: string,
 	 *     type?: string,
 	 *     nullable?: bool,
-	 *     default?: string|int|float|bool|null,
+	 *     default?: string|int|float|bool,
 	 *     max?: int,
 	 *     ref?: string
 	 * }> Column definitions.
+	 *
+	 * @throws \RuntimeException If a database field type or default value cannot
+	 *                           be represented by the ORM.
 	 */
-	private function getColumns(string $table_name): array {
+	private function getColumns(
+		string $table_name
+	): array {
 		$sql = "SELECT
-			c.`COLUMN_NAME`,
-			c.`ORDINAL_POSITION`,
-			c.`COLUMN_DEFAULT`,
-			c.`IS_NULLABLE`,                     -- 'YES'/'NO'
-			c.`DATA_TYPE`,                       -- varchar, int, float, datetime, text, tinyint, etc.
-			c.`CHARACTER_MAXIMUM_LENGTH`,
-			c.`NUMERIC_PRECISION`,
-			c.`NUMERIC_SCALE`,
-			c.`COLUMN_TYPE`,
-			c.`COLUMN_KEY`,
-			c.`EXTRA`,
-			c.`GENERATION_EXPRESSION`,
-			c.`COLLATION_NAME`,
-			c.`COLUMN_COMMENT`
-		FROM INFORMATION_SCHEMA.`COLUMNS` c
-		WHERE c.`TABLE_SCHEMA` = :db_name
+		c.`COLUMN_NAME`,
+		c.`ORDINAL_POSITION`,
+		c.`COLUMN_DEFAULT`,
+		c.`IS_NULLABLE`,
+		c.`DATA_TYPE`,
+		c.`CHARACTER_MAXIMUM_LENGTH`,
+		c.`NUMERIC_PRECISION`,
+		c.`NUMERIC_SCALE`,
+		c.`COLUMN_TYPE`,
+		c.`COLUMN_KEY`,
+		c.`EXTRA`,
+		c.`GENERATION_EXPRESSION`,
+		c.`COLLATION_NAME`,
+		c.`COLUMN_COMMENT`
+	FROM INFORMATION_SCHEMA.`COLUMNS` c
+	WHERE c.`TABLE_SCHEMA` = :db_name
 		AND c.`TABLE_NAME` = :table_name
-		ORDER BY c.`TABLE_NAME`, c.`ORDINAL_POSITION`";
+	ORDER BY c.`ORDINAL_POSITION`";
 
 		$db = new ODB();
-		$db->query($sql, [
-			'db_name'    => $this->db_name,
-			'table_name' => $table_name
-		]);
+
+		$db->query(
+			$sql,
+			[
+				'db_name' => $this->db_name,
+				'table_name' => $table_name
+			]
+		);
 
 		$ret = [];
 
 		while ($res = $db->next()) {
+			$field_name = (string) $res['COLUMN_NAME'];
+
 			$field = [
-				'name'    => $res['COLUMN_NAME'],
-				'comment' => $res['COLUMN_COMMENT']
+				'name' => $field_name,
+				'comment' => (string) $res['COLUMN_COMMENT']
 			];
 
-			// Created At
-			if ($field['name'] === 'created_at') {
+			if ($field_name === 'created_at') {
 				$field['decorator'] = 'OCreatedAt';
+				$ret[] = $field;
+				continue;
 			}
-			// Updated At
-			elseif ($field['name'] === 'updated_at') {
-				$field['decorator'] = 'OUpdatedAt';
-			} elseif ($field['name'] === 'deleted_at') {
-				$field['decorator'] = 'ODeletedAt';
-			} else {
-				$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
 
-				// Text
-				if ($res['DATA_TYPE'] === 'text' || $res['DATA_TYPE'] === 'longtext') {
+			if ($field_name === 'updated_at') {
+				$field['decorator'] = 'OUpdatedAt';
+				$ret[] = $field;
+				continue;
+			}
+
+			if ($field_name === 'deleted_at') {
+				$field['decorator'] = 'ODeletedAt';
+				$ret[] = $field;
+				continue;
+			}
+
+			$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
+
+			$data_type = strtolower(
+				(string) $res['DATA_TYPE']
+			);
+
+			$column_type = strtolower(
+				(string) $res['COLUMN_TYPE']
+			);
+
+			switch ($data_type) {
+				case 'text':
+				case 'longtext':
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::LONGTEXT';
 					$field['attribute_type'] = 'string';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-						? ($field['nullable'] ? null : '')
-						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
-				}
+					break;
 
-				// Float
-				if ($res['DATA_TYPE'] === 'float' || $res['DATA_TYPE'] === 'decimal') {
+				case 'varchar':
+				case 'char':
 					$field['decorator'] = 'OField';
-					$field['attribute_type'] = 'float';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-						? ($field['nullable'] ? null : 0.0)
-						: floatval($res['COLUMN_DEFAULT']);
-				}
+					$field['type'] = 'OField::TEXT';
+					$field['attribute_type'] = 'string';
+					$field['max'] = (int) $res['CHARACTER_MAXIMUM_LENGTH'];
+					break;
 
-				// Datetime
-				if ($res['DATA_TYPE'] === 'datetime') {
+				case 'float':
+				case 'decimal':
+					$field['decorator'] = 'OField';
+					$field['type'] = 'OField::FLOAT';
+					$field['attribute_type'] = 'float';
+					break;
+
+				case 'datetime':
+				case 'timestamp':
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::DATE';
 					$field['attribute_type'] = 'string';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-						? null
-						: $res['COLUMN_DEFAULT'];
-				}
+					break;
 
-				// Bool
-				if (
-					$res['DATA_TYPE'] === 'tinyint' &&
-					($res['COLUMN_DEFAULT'] === '0' || $res['COLUMN_DEFAULT'] === '1')
-				) {
-					$field['decorator'] = 'OField';
-					$field['attribute_type'] = 'bool';
-					$field['default'] = $res['COLUMN_DEFAULT'] === '1';
-				}
+				case 'tinyint':
+					if (
+						preg_match(
+							'/^tinyint\(1\)/D',
+							$column_type
+						) === 1
+					) {
+						$field['decorator'] = 'OField';
+						$field['type'] = 'OField::BOOL';
+						$field['attribute_type'] = 'bool';
+						break;
+					}
 
-				// String
-				if ($res['DATA_TYPE'] === 'varchar' || $res['DATA_TYPE'] === 'char') {
+					/*
+				 * Non-boolean TINYINT columns are regular integer fields.
+				 */
 					$field['decorator'] = 'OField';
-					$field['max'] = (int) $res['CHARACTER_MAXIMUM_LENGTH'];
-					$field['attribute_type'] = 'string';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-						? ($field['nullable'] ? null : '')
-						: ($res['COLUMN_DEFAULT'] === "''" ? '' : $res['COLUMN_DEFAULT']);
-				}
-
-				// Int
-				if ($res['DATA_TYPE'] === 'int' || $res['DATA_TYPE'] === 'bigint') {
-					$field['decorator'] = 'OField';
+					$field['type'] = 'OField::NUMBER';
 					$field['attribute_type'] = 'int';
-					$field['default'] = $res['COLUMN_DEFAULT'] === 'NULL'
-						? ($field['nullable'] ? null : 0)
-						: intval($res['COLUMN_DEFAULT']);
-				}
+					break;
+
+				case 'smallint':
+				case 'mediumint':
+				case 'int':
+				case 'integer':
+				case 'bigint':
+					$field['decorator'] = 'OField';
+					$field['type'] = 'OField::NUMBER';
+					$field['attribute_type'] = 'int';
+					break;
+
+				default:
+					throw new \RuntimeException(
+						"Database type '{$data_type}' for field '{$field_name}' cannot be represented by the ORM."
+					);
+			}
+
+			$default = $this->parseColumnDefault(
+				$field_name,
+				$field['attribute_type'],
+				$res['COLUMN_DEFAULT']
+			);
+
+			if ($default !== null) {
+				$field['default'] = $default;
 			}
 
 			$ret[] = $field;
@@ -270,13 +456,12 @@ class GenerateModelFromDBTask extends OTask {
 				$field['nullable'] = false;
 
 				if ($field['incr']) {
-					$field['default'] = null;
+					unset(
+						$field['default']
+					);
 				}
 
-				unset(
-					$field['max'],
-					$field['visible']
-				);
+				unset($field['visible']);
 
 				break;
 			}

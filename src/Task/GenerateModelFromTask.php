@@ -62,7 +62,8 @@ class GenerateModelFromTask extends OTask {
           'OPK',
           'OField',
           'OCreatedAt',
-          'OUpdatedAt'
+          'OUpdatedAt',
+          'ODeletedAt'
         ],
         true
       )
@@ -82,7 +83,8 @@ class GenerateModelFromTask extends OTask {
         'comment',
         'ref',
         'nullable',
-        'default'
+        'default',
+        'max'
       ],
       'OField' => [
         'name',
@@ -97,7 +99,8 @@ class GenerateModelFromTask extends OTask {
         'ref'
       ],
       'OCreatedAt',
-      'OUpdatedAt' => [
+      'OUpdatedAt',
+      'ODeletedAt' => [
         'name',
         'decorator',
         'comment'
