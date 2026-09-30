@@ -73,8 +73,8 @@ class ODTO {
     }
 
     /*
-	 * Validate requiredIf references before loading any values.
-	 */
+     * Validate requiredIf references before loading any values.
+     */
     foreach ($properties as $property) {
       $attributes = $property->getAttributes(
         ODTOField::class
@@ -83,15 +83,25 @@ class ODTO {
       foreach ($attributes as $attribute) {
         $field_definition = $attribute->newInstance();
 
-        if (
-          $field_definition->requiredIf !== null &&
-          !array_key_exists(
-            $field_definition->requiredIf,
-            $field_names
-          )
-        ) {
+        if ($field_definition->requiredIf === null) {
+          continue;
+        }
+
+        $property_name = $property->getName();
+        $dependency = $field_definition->requiredIf;
+
+        if ($dependency === $property_name) {
           throw new \InvalidArgumentException(
-            "DTO property '{$property->getName()}' references unknown requiredIf field '{$field_definition->requiredIf}'."
+            "DTO property '{$property_name}' cannot use itself as requiredIf dependency."
+          );
+        }
+
+        if (!array_key_exists(
+          $dependency,
+          $field_names
+        )) {
+          throw new \InvalidArgumentException(
+            "DTO property '{$property_name}' references unknown requiredIf field '{$dependency}'."
           );
         }
       }
@@ -185,9 +195,9 @@ class ODTO {
     }
 
     /*
-	 * Apply required and requiredIf validations after every DTO field has
-	 * been loaded.
-	 */
+     * Apply required and requiredIf validations after every DTO field has
+     * been loaded.
+     */
     foreach ($properties as $property) {
       $attributes = $property->getAttributes(
         ODTOField::class
@@ -197,32 +207,34 @@ class ODTO {
         $field_definition = $attribute->newInstance();
         $property_name = $property->getName();
 
+        $value = $field_values[$property_name]
+          ?? null;
+
         if (
           $field_definition->required &&
-          ($field_values[$property_name] ?? null) === null
+          $value === null
         ) {
           $this->validation_errors[] =
             "The property '{$property_name}' is required.";
+
+          continue;
         }
 
-        if ($field_definition->requiredIf !== null) {
-          $dependency = $field_definition->requiredIf;
-          $property_name = $property->getName();
+        if ($field_definition->requiredIf === null) {
+          continue;
+        }
 
-          if ($dependency === $property_name) {
-            throw new \InvalidArgumentException(
-              "DTO property '{$property_name}' cannot use itself as requiredIf dependency."
-            );
-          }
+        $dependency = $field_definition->requiredIf;
 
-          if (!array_key_exists(
-            $dependency,
-            $field_names
-          )) {
-            throw new \InvalidArgumentException(
-              "DTO property '{$property_name}' references unknown requiredIf field '{$dependency}'."
-            );
-          }
+        $dependency_value = $field_values[$dependency]
+          ?? null;
+
+        if (
+          $dependency_value !== null &&
+          $value === null
+        ) {
+          $this->validation_errors[] =
+            "The property '{$property_name}' is required when '{$dependency}' has a value.";
         }
       }
     }

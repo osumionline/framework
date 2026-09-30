@@ -100,14 +100,25 @@ class ORequest {
 	}
 
 	/**
-	 * Get an HTTP header.
+	 * Get an HTTP header using a case-insensitive name comparison.
 	 *
 	 * @param string $key Header name.
 	 *
 	 * @return string|null Header value or null if not found.
 	 */
-	public function getHeader(string $key): ?string {
-		return $this->headers[$key] ?? null;
+	public function getHeader(
+		string $key
+	): ?string {
+		foreach ($this->headers as $header_name => $value) {
+			if (strcasecmp(
+				$header_name,
+				$key
+			) === 0) {
+				return $value;
+			}
+		}
+
+		return null;
 	}
 
 	/**

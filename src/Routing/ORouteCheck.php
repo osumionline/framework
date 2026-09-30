@@ -59,6 +59,10 @@ class ORouteCheck {
 	 * @param  array   $context The context
 	 *
 	 * @return array   An array of parameters
+	 *
+	 * @throws \InvalidArgumentException If the route cannot be compiled.
+	 *
+	 * @throws \RuntimeException If the compiled route cannot be evaluated.
 	 */
 	public function matchesUrl(string $url, array $context = []): ?array {
 		if (!$this->compiled) {
@@ -69,7 +73,20 @@ class ORouteCheck {
 		if ('' !== $this->staticPrefix  && 0 !== strpos($url, $this->staticPrefix)) {
 			return null;
 		}
-		if (!preg_match($this->regex, $url, $matches)) {
+
+		$result = preg_match(
+			$this->regex,
+			$url,
+			$matches
+		);
+
+		if ($result === false) {
+			throw new \RuntimeException(
+				"Unable to evaluate compiled route '{$this->pattern}'."
+			);
+		}
+
+		if ($result === 0) {
 			return null;
 		}
 
@@ -131,6 +148,17 @@ class ORouteCheck {
 		}
 
 		$this->regex = "#^" . implode("", $this->segments) . "" . preg_quote($separator, '#') . "$#x";
+
+		if (
+			@preg_match(
+				$this->regex,
+				''
+			) === false
+		) {
+			throw new \InvalidArgumentException(
+				"Route '{$this->pattern}' generates an invalid regular expression."
+			);
+		}
 	}
 
 	/**
@@ -183,6 +211,7 @@ class ORouteCheck {
 	 */
 	protected function tokenize(): void {
 		$this->tokens = [];
+		$tokens = [];
 		$buffer = $this->pattern;
 		$afterASeparator = false;
 		$currentSeparator = '';
@@ -237,11 +266,11 @@ class ORouteCheck {
 	 *
 	 * @param array    $tokens           An array of current tokens
 	 *
-	 * @param Boolean  $afterASeparator  Whether the buffer is just after a separator
+	 * @param bool  $afterASeparator  Whether the buffer is just after a separator
 	 *
 	 * @param string   $currentSeparator The last matched separator
 	 *
-	 * @return Boolean true if a token has been generated, false otherwise
+	 * @return bool true if a token has been generated, false otherwise
 	 */
 	protected function tokenizeBufferBefore(&$buffer, &$tokens, &$afterASeparator, &$currentSeparator): bool {
 		return false;
@@ -255,11 +284,11 @@ class ORouteCheck {
 	 *
 	 * @param array    $tokens           An array of current tokens
 	 *
-	 * @param Boolean  $afterASeparator  Whether the buffer is just after a separator
+	 * @param bool  $afterASeparator  Whether the buffer is just after a separator
 	 *
 	 * @param string   $currentSeparator The last matched separator
 	 *
-	 * @return Boolean true if a token has been generated, false otherwise
+	 * @return bool true if a token has been generated, false otherwise
 	 */
 	protected function tokenizeBufferAfter(&$buffer, &$tokens, &$afterASeparator, &$currentSeparator): bool {
 		return false;
@@ -413,36 +442,98 @@ class ORouteCheck {
 	}
 
 	/**
-	 * Fixes the defaults if any text character is present
+	 * Normalize route default parameters.
+	 *
+	 * Numeric array entries are interpreted as boolean flags. String default
+	 * values are URL-decoded while other scalar values are preserved.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a numeric default entry does not contain
+	 *                                   a valid parameter name.
 	 */
 	protected function fixDefaults(): void {
 		foreach ($this->defaults as $key => $value) {
-			if (ctype_digit($key)) {
+			if (is_int($key)) {
+				if (
+					!is_string($value) ||
+					$value === ''
+				) {
+					throw new \InvalidArgumentException(
+						'Numeric route default entries must contain a non-empty parameter name.'
+					);
+				}
+
+				unset(
+					$this->defaults[$key]
+				);
+
 				$this->defaults[$value] = true;
-			} else {
-				$this->defaults[$key] = urldecode($value);
+
+				continue;
+			}
+
+			if (is_string($value)) {
+				$this->defaults[$key] = urldecode(
+					$value
+				);
 			}
 		}
 	}
 
 	/**
-	 * Fixes the requirements checking the regexs format
+	 * Normalize route variable requirements.
 	 *
 	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a requirement name or regular expression
+	 *                                   is invalid.
 	 */
 	protected function fixRequirements(): void {
 		foreach ($this->requirements as $key => $regex) {
-			if (!is_string($regex)) {
-				continue;
+			if (
+				!is_string($key) ||
+				$key === ''
+			) {
+				throw new \InvalidArgumentException(
+					'Route requirement names must be non-empty strings.'
+				);
 			}
 
-			if ('^' == $regex[0]) {
-				$regex = substr($regex, 1);
+			if (
+				!is_string($regex) ||
+				$regex === ''
+			) {
+				throw new \InvalidArgumentException(
+					"Route requirement '{$key}' must contain a non-empty regular expression."
+				);
 			}
-			if ('$' == substr($regex, -1)) {
-				$regex = substr($regex, 0, -1);
+
+			if (str_starts_with(
+				$regex,
+				'^'
+			)) {
+				$regex = substr(
+					$regex,
+					1
+				);
+			}
+
+			if (str_ends_with(
+				$regex,
+				'$'
+			)) {
+				$regex = substr(
+					$regex,
+					0,
+					-1
+				);
+			}
+
+			if ($regex === '') {
+				throw new \InvalidArgumentException(
+					"Route requirement '{$key}' cannot contain only anchors."
+				);
 			}
 
 			$this->requirements[$key] = $regex;

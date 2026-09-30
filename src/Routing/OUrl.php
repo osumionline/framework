@@ -351,41 +351,48 @@ class OUrl {
 	): string {
 		global $core;
 
-		$requested_parts = explode(
-			'\\',
-			$component
+		$normalized_component = ltrim(
+			$component,
+			'\\'
 		);
 
-		$requested_component = array_pop(
-			$requested_parts
-		);
-
-		if (
-			$requested_component === null ||
-			$requested_component === ''
-		) {
+		if ($normalized_component === '') {
 			return '';
 		}
+
+		$is_fully_qualified = str_contains(
+			$normalized_component,
+			'\\'
+		);
 
 		$url = '';
 
 		foreach (ORoute::$routes as $route) {
-			$route_parts = explode(
-				'\\',
-				$route['component']
+			$route_component = ltrim(
+				$route['component'],
+				'\\'
 			);
 
-			$route_component = array_pop(
-				$route_parts
-			);
+			if ($is_fully_qualified) {
+				if ($route_component !== $normalized_component) {
+					continue;
+				}
+			} else {
+				$route_parts = explode(
+					'\\',
+					$route_component
+				);
 
-			if (
-				$route['component'] === $component ||
-				$route_component === $requested_component
-			) {
-				$url = $route['url'];
-				break;
+				if (
+					array_pop($route_parts) !==
+					$normalized_component
+				) {
+					continue;
+				}
 			}
+
+			$url = $route['url'];
+			break;
 		}
 
 		if ($url === '') {
