@@ -5,9 +5,22 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\Routing;
 
 class ORoute {
-  public  static array         $routes         = [];
-  private static string        $current_prefix = '';
-  private static string | null $current_layout = null;
+  /**
+   * Registered application routes.
+   *
+   * @var list<array{
+   *     method: string,
+   *     url: string,
+   *     component: string,
+   *     filters: array,
+   *     layout: string|null,
+   *     is_view: bool
+   * }>
+   */
+  public static array $routes = [];
+
+  private static string  $current_prefix = '';
+  private static ?string $current_layout = null;
 
   /**
    * Register a new GET route with the router.
@@ -22,7 +35,12 @@ class ORoute {
    *
    * @return void
    */
-  public static function get(string $url, string $component, array $filters = [], string | null $layout = null): void {
+  public static function get(
+    string $url,
+    string $component,
+    array $filters = [],
+    ?string $layout = null
+  ): void {
     $full_url = self::normalizeUrl(self::$current_prefix . '/' . $url);
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -42,7 +60,12 @@ class ORoute {
    *
    * @return void
    */
-  public static function post(string $url, string $component, array $filters = [], string | null $layout = null): void {
+  public static function post(
+    string $url,
+    string $component,
+    array $filters = [],
+    ?string $layout = null
+  ): void {
     $full_url = self::normalizeUrl(self::$current_prefix . '/' . $url);
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -62,7 +85,12 @@ class ORoute {
    *
    * @return void
    */
-  public static function put(string $url, string $component, array $filters = [], string | null $layout = null): void {
+  public static function put(
+    string $url,
+    string $component,
+    array $filters = [],
+    ?string $layout = null
+  ): void {
     $full_url = self::normalizeUrl(self::$current_prefix . '/' . $url);
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -82,7 +110,12 @@ class ORoute {
    *
    * @return void
    */
-  public static function delete(string $url, string $component, array $filters = [], string | null $layout = null): void {
+  public static function delete(
+    string $url,
+    string $component,
+    array $filters = [],
+    ?string $layout = null
+  ): void {
     $full_url = self::normalizeUrl(self::$current_prefix . '/' . $url);
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -102,7 +135,12 @@ class ORoute {
    *
    * @return void
    */
-  public static function view(string $url, string $file, array $filters = [], string | null $layout = null): void {
+  public static function view(
+    string $url,
+    string $file,
+    array $filters = [],
+    ?string $layout = null
+  ): void {
     $full_url = self::normalizeUrl(self::$current_prefix . '/' . $url);
     $layout = (!is_null(self::$current_layout)) ? self::$current_layout : $layout;
 
@@ -112,21 +150,51 @@ class ORoute {
   /**
    * Register a new route with the router.
    *
-   * @param string $method Method of the request (GET, POST, PUT, DELETE)
-   *
-   * @param string $url URL to respond.
-   *
-   * @param string $component Component to be executed.
-   *
-   * @param array $filters List of filters to be applied.
-   *
-   * @param string | null $layout Layout component, optional.
-   *
-   * @param bool $is_view View mark for static file routes, optional.
+   * @param string $method HTTP request method.
+   * @param string $url Route URL.
+   * @param string $component Component or view file to execute.
+   * @param array $filters Filters applied to the route.
+   * @param string|null $layout Optional layout component.
+   * @param bool $is_view Whether the route represents a static view.
    *
    * @return void
+   *
+   * @throws \InvalidArgumentException If the HTTP method is empty.
+   * @throws \LogicException If the same method and URL are already registered.
    */
-  public static function addRoute(string $method, string $url, string $component, array $filters, string | null $layout = null, bool $is_view = false): void {
+  public static function addRoute(
+    string $method,
+    string $url,
+    string $component,
+    array $filters,
+    ?string $layout = null,
+    bool $is_view = false
+  ): void {
+    $method = strtoupper(
+      trim($method)
+    );
+
+    if ($method === '') {
+      throw new \InvalidArgumentException(
+        'Route HTTP method cannot be empty.'
+      );
+    }
+
+    $url = self::normalizeUrl(
+      $url
+    );
+
+    foreach (self::$routes as $route) {
+      if (
+        $route['method'] === $method &&
+        $route['url'] === $url
+      ) {
+        throw new \LogicException(
+          "Route '{$method} {$url}' is already registered."
+        );
+      }
+    }
+
     $route = [
       'method'    => $method,
       'url'       => $url,

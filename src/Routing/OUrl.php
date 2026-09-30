@@ -11,7 +11,14 @@ use Osumi\OsumiFramework\Routing\ORoute;
  */
 class OUrl {
 	/**
-	 * @var array<int, array<string, mixed>>
+	 * @var list<array{
+	 *     method: string,
+	 *     url: string,
+	 *     component: string,
+	 *     filters: array,
+	 *     layout: string|null,
+	 *     is_view: bool
+	 * }>
 	 */
 	private array $urls = [];
 
@@ -204,6 +211,12 @@ class OUrl {
 	/**
 	 * Process the requested URL against the configured routes.
 	 *
+	 * A route matching both URL and HTTP method has priority. If the URL exists
+	 * but no route accepts the current method, the first URL match is returned so
+	 * the caller can generate a 405 response. OPTIONS requests also use the first
+	 * URL match, allowing preflight requests to be handled without executing the
+	 * route component.
+	 *
 	 * @param string|null $url URL to process or null to use the currently loaded
 	 *                         URL.
 	 *
@@ -223,106 +236,194 @@ class OUrl {
 	 * @throws \InvalidArgumentException If a route parameter key is invalid.
 	 * @throws \UnexpectedValueException If HTTP headers have an invalid structure.
 	 */
-	public function process(?string $url = null): array {
-		if (!is_null($url)) {
+	public function process(
+		?string $url = null
+	): array {
+		if ($url !== null) {
 			$this->check_url = $url;
 		}
 
-		$found = false;
-		$i     = 0;
-		$ret   = [
-			'component'        => null,
-			'filters'          => [],
-			'layout'           => null,
-			'type'             => 'html',
-			'params'           => [],
-			'headers'          => $this->getRequestHeaders(),
-			'method'           => $this->method,
+		$ret = [
+			'component' => null,
+			'filters' => [],
+			'layout' => null,
+			'type' => 'html',
+			'params' => [],
+			'headers' => $this->getRequestHeaders(),
+			'method' => $this->method,
 			'component_method' => '',
-			'is_view'          => false,
-			'res'              => false
+			'is_view' => false,
+			'res' => false
 		];
 
-		while (!$found && $i < count($this->urls)) {
-			$route = new ORouteCheck($this->urls[$i]['url']);
-			$chk = $route->matchesUrl($this->check_url);
+		$first_url_match = null;
+		$method_match = null;
 
-			// If there is a match, return Urls.php values plus the parameters in the route and the headers
-			if (!is_null($chk)) {
-				$found      = true;
-				$ret['res'] = true;
-				$ret['component']        = $this->urls[$i]['component'];
-				$ret['component_method'] = $this->urls[$i]['method'];
-				$ret['is_view']          = $this->urls[$i]['is_view'];
+		foreach ($this->urls as $route) {
+			$route_check = new ORouteCheck(
+				$route['url']
+			);
 
-				if (array_key_exists('filters', $this->urls[$i])) {
-					$ret['filters'] = $this->urls[$i]['filters'];
-				}
-				if (array_key_exists('layout', $this->urls[$i])) {
-					$ret['layout'] = $this->urls[$i]['layout'];
-				}
+			$params = $route_check->matchesUrl(
+				$this->check_url
+			);
 
-				foreach ($chk as $key => $value) {
-					if (!is_string($key)) {
-						throw new \InvalidArgumentException(
-							'Route parameter keys must be strings.'
-						);
-					}
-
-					$ret['params'][$key] = $value;
-				}
-
-				foreach ($this->url_params as $key => $value) {
-					$ret['params'][$key] = $value;
-				}
+			if ($params === null) {
+				continue;
 			}
 
-			$i++;
+			$match = [
+				'route' => $route,
+				'params' => $params
+			];
+
+			if ($first_url_match === null) {
+				$first_url_match = $match;
+			}
+
+			if ($route['method'] === $this->method) {
+				$method_match = $match;
+				break;
+			}
 		}
+
+		/*
+		 * OPTIONS intentionally falls back to the first matching URL so OCore can
+		 * answer the preflight request without requiring an explicit OPTIONS route.
+		 *
+		 * For other unsupported methods, the same fallback lets OCore return 405
+		 * instead of incorrectly reporting 404.
+		 */
+		$selected_match = $method_match
+			?? $first_url_match;
+
+		if ($selected_match === null) {
+			return $ret;
+		}
+
+		$route = $selected_match['route'];
+		$route_params = $selected_match['params'];
+
+		$ret['res'] = true;
+		$ret['component'] = $route['component'];
+		$ret['component_method'] = $route['method'];
+		$ret['is_view'] = $route['is_view'];
+		$ret['filters'] = $route['filters'];
+		$ret['layout'] = $route['layout'];
+
+		foreach ($route_params as $key => $value) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					'Route parameter keys must be strings.'
+				);
+			}
+
+			$ret['params'][$key] = $value;
+		}
+
+		foreach ($this->url_params as $key => $value) {
+			$ret['params'][$key] = $value;
+		}
+
 		return $ret;
 	}
 
 	/**
-	 * Static method to generate a URL for a user configured URL
+	 * Generate the URL registered for a component.
 	 *
-	 * @param string $component Component whose url has to be generated
+	 * Route parameters are substituted using scalar values. Both a fully-qualified
+	 * component class name and its short class name are accepted.
 	 *
-	 * @param array $params Array of parameters to build the URL in case of a dynamic URL (eg /user/:id/:slug -> /user/1/igorosabel)
+	 * @param string $component Component class or short component name.
+	 * @param array<array-key, mixed> $params Dynamic route parameters.
+	 * @param bool $absolute Whether to prepend the configured base URL.
 	 *
-	 * @param bool $absolute If true returns an absolute URL and if false returns a partial URL
+	 * @return string Generated URL, or an empty string if no route is registered
+	 *                for the component.
 	 *
-	 * @return string Generated URL with given parameters
+	 * @throws \InvalidArgumentException If a parameter key or value cannot be used
+	 *                                   in a URL.
 	 */
-	public static function generateUrl(string $component, array $params = [], bool $absolute = false): string {
-		// Load URLs, as it's a static method it won't go through the constructor
+	public static function generateUrl(
+		string $component,
+		array $params = [],
+		bool $absolute = false
+	): string {
 		global $core;
 
-		$found  = false;
-		$i      = 0;
-		$url    = '';
-		$routes = ORoute::$routes;
+		$requested_parts = explode(
+			'\\',
+			$component
+		);
 
-		while (!$found && $i < count($routes)) {
-			$check_component = $routes[$i]['component'];
-			$check_component_parts = explode('\\', $check_component);
-			$check_last_part = array_pop($check_component_parts);
+		$requested_component = array_pop(
+			$requested_parts
+		);
 
-			if ($check_last_part == $component) {
-				$url = $routes[$i]['url'];
-				$found = true;
-			}
-			$i++;
+		if (
+			$requested_component === null ||
+			$requested_component === ''
+		) {
+			return '';
 		}
 
-		if ($found) {
-			foreach ($params as $key => $value) {
-				$url = str_replace(':' . $key, $value, $url);
+		$url = '';
+
+		foreach (ORoute::$routes as $route) {
+			$route_parts = explode(
+				'\\',
+				$route['component']
+			);
+
+			$route_component = array_pop(
+				$route_parts
+			);
+
+			if (
+				$route['component'] === $component ||
+				$route_component === $requested_component
+			) {
+				$url = $route['url'];
+				break;
 			}
 		}
 
-		if ($absolute === true) {
-			$base = $core->config->getUrl('base');
-			$base = substr($base, 0, strlen($base) - 1);
+		if ($url === '') {
+			return '';
+		}
+
+		foreach ($params as $key => $value) {
+			if (!is_string($key)) {
+				throw new \InvalidArgumentException(
+					'URL parameter keys must be strings.'
+				);
+			}
+
+			if (
+				!is_string($value) &&
+				!is_int($value) &&
+				!is_float($value) &&
+				!is_bool($value)
+			) {
+				throw new \InvalidArgumentException(
+					"URL parameter '{$key}' must be a scalar value."
+				);
+			}
+
+			$url = str_replace(
+				':' . $key,
+				rawurlencode(
+					(string) $value
+				),
+				$url
+			);
+		}
+
+		if ($absolute) {
+			$base = rtrim(
+				$core->config->getUrl('base'),
+				'/'
+			);
 
 			$url = $base . $url;
 		}
