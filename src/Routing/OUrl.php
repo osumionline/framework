@@ -15,7 +15,11 @@ class OUrl {
 	 *     method: string,
 	 *     url: string,
 	 *     component: string,
-	 *     filters: array,
+	 *     middlewares: array{
+	 *         before: list<class-string>,
+	 *         afterRender: list<class-string>,
+	 *         afterResponse: list<class-string>
+	 *     },
 	 *     layout: string|null,
 	 *     is_view: bool
 	 * }>
@@ -184,9 +188,9 @@ class OUrl {
 			);
 		} catch (\JsonException) {
 			/*
-		 * The request body is not JSON. It may belong to another supported
-		 * content type, so it is ignored here.
-		 */
+			 * The request body is not JSON. It may belong to another supported
+			 * content type, so it is ignored here.
+			 */
 			return;
 		}
 
@@ -222,7 +226,11 @@ class OUrl {
 	 *
 	 * @return array{
 	 *     component: string|null,
-	 *     filters: array,
+	 *     middlewares: array{
+	 *         before: list<class-string>,
+	 *         afterRender: list<class-string>,
+	 *         afterResponse: list<class-string>
+	 *     },
 	 *     layout: string|null,
 	 *     type: string,
 	 *     params: array<string, mixed>,
@@ -245,7 +253,11 @@ class OUrl {
 
 		$ret = [
 			'component' => null,
-			'filters' => [],
+			'middlewares' => [
+				'before' => [],
+				'afterRender' => [],
+				'afterResponse' => []
+			],
 			'layout' => null,
 			'type' => 'html',
 			'params' => [],
@@ -308,7 +320,7 @@ class OUrl {
 		$ret['component'] = $route['component'];
 		$ret['component_method'] = $route['method'];
 		$ret['is_view'] = $route['is_view'];
-		$ret['filters'] = $route['filters'];
+		$ret['middlewares'] = $route['middlewares'];
 		$ret['layout'] = $route['layout'];
 
 		foreach ($route_params as $key => $value) {

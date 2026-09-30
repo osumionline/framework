@@ -140,6 +140,39 @@ final class OUrlTest extends TestCase {
     }
 
     /**
+     * Test that route middlewares are transported in the processed URL result.
+     *
+     * @return void
+     */
+    public function testProcessReturnsRouteMiddlewares(): void {
+        ORoute::get(
+            '/secure',
+            'App\\SecureComponent',
+            [
+                'before' => ['App\\Middleware\\AuthMiddleware'],
+                'afterResponse' => ['App\\Middleware\\AuditMiddleware']
+            ]
+        );
+
+        $url = new OUrl(
+            'GET'
+        );
+
+        $result = $url->process(
+            '/secure'
+        );
+
+        self::assertSame(
+            [
+                'before' => ['App\\Middleware\\AuthMiddleware'],
+                'afterRender' => [],
+                'afterResponse' => ['App\\Middleware\\AuditMiddleware']
+            ],
+            $result['middlewares']
+        );
+    }
+
+    /**
      * Test that an unsupported method still returns the matching URL.
      *
      * This allows OCore to generate a 405 response instead of a 404.
@@ -235,6 +268,15 @@ final class OUrlTest extends TestCase {
 
         self::assertFalse(
             $result['res']
+        );
+
+        self::assertSame(
+            [
+                'before' => [],
+                'afterRender' => [],
+                'afterResponse' => []
+            ],
+            $result['middlewares']
         );
     }
 
