@@ -107,8 +107,12 @@ class OCore {
 		}
 
 		// Load framework translations
-		$this->translate = new OTranslate();
-		$this->translate->load($this->config->getDir('ofw_locale') . $this->config->getLang() . '.po');
+		$translate = new OTranslate();
+		$translate->load(
+			$locale_file
+		);
+
+		$this->translate = $translate;
 
 		// If there is a DB connection configured, check drivers and load required classes
 		if ($this->config->getDB('user') !== '' || $this->config->getDB('pass') !== '' || $this->config->getDB('host') !== '' || $this->config->getDB('name') !== '') {

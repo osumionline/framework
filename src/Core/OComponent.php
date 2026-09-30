@@ -245,115 +245,295 @@ class OComponent {
   }
 
   /**
-   * Method to apply template substitutions such as {{variable}} with class properties
+   * Apply template substitutions using the component public properties.
    *
-   * @param string $content Content of the template
+   * @param string $content Template content.
    *
-   * @return string Returns content with substitutions applied
+   * @return string Content with substitutions applied.
+   *
+   * @throws \RuntimeException If a template regular expression cannot be
+   *                           evaluated.
    */
-  private function applyTemplateSubstitutions(string $content): string {
-    $reflection = new ReflectionClass($this);
-    $public_properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
+  private function applyTemplateSubstitutions(
+    string $content
+  ): string {
+    $reflection = new ReflectionClass(
+      $this
+    );
+
+    $public_properties = $reflection->getProperties(
+      ReflectionProperty::IS_PUBLIC
+    );
 
     foreach ($public_properties as $property) {
       $property_name = $property->getName();
       $property_value = $this->$property_name;
 
-      // Check if there is any pattern of the variable in the content before proceeding
-      if (!preg_match("/\{\{\s*" . preg_quote($property_name) . "(?:\.[a-zA-Z0-9_]+)?(?:\s*\|\s*[a-zA-Z0-9_]+(?:\(.*?\))?)?\s*\}\}/", $content)) {
+      $property_pattern = "/\{\{\s*"
+        . preg_quote(
+          $property_name,
+          '/'
+        )
+        . "(?:\.[a-zA-Z0-9_]+)?(?:\s*\|\s*[a-zA-Z0-9_]+(?:\(.*?\))?)?\s*\}\}/";
+
+      $match_result = preg_match(
+        $property_pattern,
+        $content
+      );
+
+      if ($match_result === false) {
+        throw new \RuntimeException(
+          "Could not evaluate template expression for property '{$property_name}'."
+        );
+      }
+
+      if ($match_result === 0) {
         continue;
       }
 
-      // If the value is a component, render it and replace the marker with the rendered content
+      /*
+       * If the value is another component, render it and replace the direct
+       * property marker.
+       */
       if ($property_value instanceof OComponent) {
-        $content = preg_replace(
-          "/\{\{\s*" . preg_quote($property_name) . "\s*\}\}/",
+        $replaced_content = preg_replace(
+          "/\{\{\s*"
+            . preg_quote(
+              $property_name,
+              '/'
+            )
+            . "\s*\}\}/",
           $property_value->render(),
           $content
         );
+
+        if ($replaced_content === null) {
+          throw new \RuntimeException(
+            "Could not replace component template property '{$property_name}'."
+          );
+        }
+
+        $content = $replaced_content;
+
         continue;
       }
 
-      // Checking and handling {{variable | filter}}
-      $content = preg_replace_callback(
-        "/\{\{\s*" . preg_quote($property_name) . "\.([a-zA-Z0-9_]+)\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
-        function ($matches) use ($property_value) {
+      /*
+		   * Handle {{ object.property | filter }}.
+		   */
+      $replaced_content = preg_replace_callback(
+        "/\{\{\s*"
+          . preg_quote(
+            $property_name,
+            '/'
+          )
+          . "\.([a-zA-Z0-9_]+)\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
+        function (
+          array $matches
+        ) use (
+          $property_value
+        ): string {
           $sub_property = $matches[1];
           $filter_name = $matches[2];
 
-          $params = isset($matches[3]) ? str_getcsv($matches[3], ',', '"') : [];
-          $params = array_map('trim', $params);
+          $params = isset($matches[3])
+            ? str_getcsv(
+              $matches[3],
+              ',',
+              '"'
+            )
+            : [];
 
-          // Apply pipe function to value
-          if (is_object($property_value) && property_exists($property_value, $sub_property)) {
-            $sub_value = $property_value->$sub_property;
+          $params = array_map(
+            'trim',
+            $params
+          );
 
-            switch ($filter_name) {
-              case 'date':
-                array_unshift($params, $sub_value);
-                return OPipeFunctions::getDateValue(...$params);
-              case 'number':
-                array_unshift($params, $sub_value);
-                return OPipeFunctions::getNumberValue(...$params);
-              case 'string':
-                return OPipeFunctions::getStringValue($sub_value);
-              case 'plain':
-                return OPipeFunctions::getStringPlainValue($sub_value);
-              case 'bool':
-                return OPipeFunctions::getBoolValue($sub_value);
-              default:
-                return $matches[0]; // If the pipe function is not valid just return the value
-            }
+          if (
+            !is_object($property_value) ||
+            !property_exists(
+              $property_value,
+              $sub_property
+            )
+          ) {
+            return $matches[0];
           }
-          return $matches[0]; // If property is not right just return it
+
+          $sub_value = $property_value->$sub_property;
+
+          return match ($filter_name) {
+            'date' => OPipeFunctions::getDateValue(
+              $sub_value,
+              ...$params
+            ),
+
+            'number' => OPipeFunctions::getNumberValue(
+              $sub_value,
+              ...$params
+            ),
+
+            'string' => OPipeFunctions::getStringValue(
+              $sub_value
+            ),
+
+            'plain' => OPipeFunctions::getStringPlainValue(
+              $sub_value
+            ),
+
+            'bool' => OPipeFunctions::getBoolValue(
+              $sub_value
+            ),
+
+            default => $matches[0]
+          };
         },
         $content
       );
 
-      // Direct handling of {{variable | filter}} (no additional properties)
-      $content = preg_replace_callback(
-        "/\{\{\s*" . preg_quote($property_name) . "\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
-        function ($matches) use ($property_value) {
+      if ($replaced_content === null) {
+        throw new \RuntimeException(
+          "Could not apply object template filter for property '{$property_name}'."
+        );
+      }
+
+      $content = $replaced_content;
+
+      /*
+		   * Handle {{ property | filter }}.
+		   */
+      $replaced_content = preg_replace_callback(
+        "/\{\{\s*"
+          . preg_quote(
+            $property_name,
+            '/'
+          )
+          . "\s*\|\s*([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s*\}\}/",
+        function (
+          array $matches
+        ) use (
+          $property_value
+        ): string {
           $filter_name = $matches[1];
 
-          $params = isset($matches[2]) ? str_getcsv($matches[2], ',', '"') : [];
-          $params = array_map('trim', $params);
+          $params = isset($matches[2])
+            ? str_getcsv(
+              $matches[2],
+              ',',
+              '"'
+            )
+            : [];
 
-          switch ($filter_name) {
-            case 'date':
-              array_unshift($params, $property_value);
-              return OPipeFunctions::getDateValue(...$params);
-            case 'number':
-              array_unshift($params, $property_value);
-              return OPipeFunctions::getNumberValue(...$params);
-            case 'string':
-              return OPipeFunctions::getStringValue($property_value);
-            case 'plain':
-              return OPipeFunctions::getStringPlainValue($property_value);
-            case 'bool':
-              return OPipeFunctions::getBoolValue($property_value);
-            default:
-              return $matches[0]; // If the pipe function is not valid just return the value
-          }
+          $params = array_map(
+            'trim',
+            $params
+          );
+
+          return match ($filter_name) {
+            'date' => OPipeFunctions::getDateValue(
+              $property_value,
+              ...$params
+            ),
+
+            'number' => OPipeFunctions::getNumberValue(
+              $property_value,
+              ...$params
+            ),
+
+            'string' => OPipeFunctions::getStringValue(
+              $property_value
+            ),
+
+            'plain' => OPipeFunctions::getStringPlainValue(
+              $property_value
+            ),
+
+            'bool' => OPipeFunctions::getBoolValue(
+              $property_value
+            ),
+
+            default => $matches[0]
+          };
         },
         $content
       );
 
-      // Handling {{object.property}}
+      if ($replaced_content === null) {
+        throw new \RuntimeException(
+          "Could not apply template filter for property '{$property_name}'."
+        );
+      }
+
+      $content = $replaced_content;
+
+      /*
+		   * Handle {{ object.property }}.
+		   */
       if (is_object($property_value)) {
-        preg_match_all("/\{\{\s*" . preg_quote($property_name) . "\.([a-zA-Z0-9_]+)\s*\}\}/", $content, $matches, PREG_SET_ORDER);
+        $match_result = preg_match_all(
+          "/\{\{\s*"
+            . preg_quote(
+              $property_name,
+              '/'
+            )
+            . "\.([a-zA-Z0-9_]+)\s*\}\}/",
+          $content,
+          $matches,
+          PREG_SET_ORDER
+        );
+
+        if ($match_result === false) {
+          throw new \RuntimeException(
+            "Could not evaluate object template property '{$property_name}'."
+          );
+        }
 
         foreach ($matches as $match) {
           $sub_property = $match[1];
-          if (property_exists($property_value, $sub_property)) {
-            $sub_value = $property_value->$sub_property;
-            $content = str_replace($match[0], strval($sub_value), $content);
+
+          if (!property_exists(
+            $property_value,
+            $sub_property
+          )) {
+            continue;
           }
+
+          $sub_value = $property_value->$sub_property;
+
+          $content = str_replace(
+            $match[0],
+            strval(
+              $sub_value
+            ),
+            $content
+          );
         }
-      } else {
-        // Direct substitution of {{variable}} or {{  variable  }}
-        $content = preg_replace("/\{\{\s*" . preg_quote($property_name) . "\s*\}\}/", strval($property_value), $content);
+
+        continue;
       }
+
+      /*
+		   * Handle {{ property }}.
+		   */
+      $replaced_content = preg_replace(
+        "/\{\{\s*"
+          . preg_quote(
+            $property_name,
+            '/'
+          )
+          . "\s*\}\}/",
+        strval(
+          $property_value
+        ),
+        $content
+      );
+
+      if ($replaced_content === null) {
+        throw new \RuntimeException(
+          "Could not replace template property '{$property_name}'."
+        );
+      }
+
+      $content = $replaced_content;
     }
 
     return $content;

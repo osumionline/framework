@@ -126,7 +126,6 @@ class ORouteCheck {
 		$this->fixDefaults();
 		$this->fixSuffix();
 
-		$this->compiled = true;
 		$this->firstOptional = 0;
 		$this->segments = [];
 
@@ -159,6 +158,8 @@ class ORouteCheck {
 				"Route '{$this->pattern}' generates an invalid regular expression."
 			);
 		}
+
+		$this->compiled = true;
 	}
 
 	/**
