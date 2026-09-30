@@ -52,7 +52,11 @@ abstract class OModel {
   /**
    * Create a model instance.
    *
-   * @param array<string, mixed> $data Initial field values.
+   * @param array<array-key, mixed> $data Initial field values.
+   *
+   * @throws \InvalidArgumentException If an input key does not match a model
+   *                                   field.
+   * @throws \UnexpectedValueException If a field value cannot be normalized.
    */
   public function __construct(array $data = []) {
     $this->validateModel();
@@ -585,20 +589,49 @@ abstract class OModel {
   }
 
   /**
+   * Synchronize the persisted value snapshot with the current model values.
+   *
+   * @return void
+   */
+  protected function syncOriginalValues(): void {
+    $schema = self::$schema_cache[static::class];
+
+    foreach ($schema['fields'] as $field_name => $field) {
+      $this->original_values[$field_name] = $this->$field_name;
+    }
+  }
+
+  /**
    * Assign field values to the model.
    *
    * Input values are normalized according to the ORM schema before being
    * assigned to their typed PHP properties.
    *
-   * @param array<string, mixed> $data Field values.
+   * @param array<array-key, mixed> $data Field values.
    *
    * @return void
    *
+   * @throws \InvalidArgumentException If an input key does not match a model
+   *                                   field.
    * @throws \UnexpectedValueException If a field value cannot be converted to
    *                                   its ORM type.
    */
   protected function assignValues(array $data): void {
     $schema = self::$schema_cache[static::class];
+
+    foreach ($data as $field_name => $value) {
+      if (
+        !is_string($field_name) ||
+        !array_key_exists(
+          $field_name,
+          $schema['fields']
+        )
+      ) {
+        throw new \InvalidArgumentException(
+          "Unknown model field '{$field_name}'."
+        );
+      }
+    }
 
     foreach ($schema['fields'] as $field_name => $field) {
       $value = array_key_exists(
@@ -617,7 +650,6 @@ abstract class OModel {
     }
 
     $is_existing_record = true;
-
     foreach ($schema['primary_key'] as $primary_key) {
       if ($this->$primary_key === null) {
         $is_existing_record = false;
@@ -625,7 +657,7 @@ abstract class OModel {
       }
     }
 
-    $this->is_new_record = !$is_existing_record;
+    $this->is_new_record = ! $is_existing_record;
   }
 
   /**
@@ -1028,9 +1060,13 @@ abstract class OModel {
    * The model is always marked as a new record regardless of whether primary
    * key values are provided in the initial data.
    *
-   * @param array<string, mixed> $data Initial field values.
+   * @param array<array-key, mixed> $data Initial field values.
    *
    * @return static New model instance.
+   *
+   * @throws \InvalidArgumentException If an input key does not match a model
+   *                                   field.
+   * @throws \UnexpectedValueException If a field value cannot be normalized.
    */
   public static function create(array $data = []): static {
     $instance = new static($data);
@@ -1044,11 +1080,13 @@ abstract class OModel {
    *
    * Every primary key field must have a value.
    *
-   * @param array<string, mixed> $data Persisted record values.
+   * @param array<array-key, mixed> $data Persisted record values.
    *
    * @return static Model instance.
    *
-   * @throws \InvalidArgumentException If any primary key value is missing.
+   * @throws \InvalidArgumentException If an input field is invalid or any
+   *                                   primary key value is missing.
+   * @throws \UnexpectedValueException If a field value cannot be normalized.
    */
   public static function from(array $data): static {
     $instance = new static($data);
@@ -1221,34 +1259,41 @@ abstract class OModel {
   }
 
   /**
-   * Save a model class object into the database
+   * Save the model to the database.
    *
-   * @return bool Result of the operation
+   * New records are inserted and persisted records are updated only when their
+   * values have changed.
+   *
+   * @return bool Whether the database operation succeeded.
+   *
+   * @throws \LogicException If an update is attempted on a non-persisted model.
+   * @throws \Exception If model validation fails.
    */
   public function save(): bool {
     if ($this->is_new_record) {
       $this->applyDefaults();
     }
-    $this->validate();
 
-    // Empty cache
-    self::clearResultsCache();
+    $this->validate();
 
     $schema = self::$schema_cache[static::class];
     $table_name = $schema['table_name'];
     $fields = $schema['fields'];
 
     $db = ODB::getInstance();
-
     if ($this->is_new_record) {
-      // INSERT
       $columns = [];
       $placeholders = [];
       $params = [];
-
       foreach ($fields as $field_name => $field) {
-        if (in_array($field_name, $schema['primary_key']) && $field['auto_increment']) {
-          continue; // Ommit autoincremental fields
+        if (
+          in_array(
+            $field_name,
+            $schema['primarykey'],
+            true
+          ) && !empty($field['auto_increment'])
+        ) {
+          continue;
         }
 
         $columns[] = "`{$field_name}`";
@@ -1256,133 +1301,240 @@ abstract class OModel {
         $params[":{$field_name}"] = $this->$field_name;
       }
 
-      // Handle created_at and updated_at
-      if (!is_null($schema['created_at'])) {
+      $created_at_value = null;
+      $updated_at_value = null;
+      if ($schema['created_at'] !== null) {
         $created_at_field = $schema['created_at'];
-        $params[":{$created_at_field}"] = date('Y-m-d H:i:s');
-        $this->$created_at_field = $params[":{$created_at_field}"];
+        $created_at_value = date(
+          'Y-m-d H:i:s'
+        );
+
+        $params[":{$created_at_field}"] = $created_at_value;
       }
-      if (!is_null($schema['updated_at'])) {
+
+      if ($schema['updated_at'] !== null) {
         $updated_at_field = $schema['updated_at'];
-        $params[":{$updated_at_field}"] = date('Y-m-d H:i:s');
-        $this->$updated_at_field = $params[":{$updated_at_field}"];
+        $updated_at_value = date(
+          'Y-m-d H:i:s'
+        );
+
+        $params[":{$updated_at_field}"] = $updated_at_value;
       }
 
-      $sql = "INSERT INTO `{$table_name}` (" . implode(',', $columns) . ") VALUES (" . implode(',', $placeholders) . ")";
-      $stmt = $db->prepare($sql);
-      $result = $stmt->execute($params);
+      $sql = "INSERT INTO `{$table_name}` ("
+        . implode(',', $columns)
+        . ') VALUES ('
+        . implode(',', $placeholders)
+        . ')';
 
-      // If there is a autoincremental key, update it's value
+      $stmt = $db->prepare(
+        $sql
+      );
+
+      $result = $stmt->execute(
+        $params
+      );
+      if (!$result) {
+        return false;
+      }
+
+      if (
+        $schema['created_at'] !== null &&
+        $created_at_value !== null
+      ) {
+        $this->{$schema['created_at']} = $created_at_value;
+      }
+
+      if (
+        $schema['updated_at'] !== null &&
+        $updated_at_value !== null
+      ) {
+        $this->{$schema['updated_at']} = $updated_at_value;
+      }
+
       foreach ($schema['primary_key'] as $primary_key_field) {
         $field = $fields[$primary_key_field];
-        if ($field['auto_increment']) {
+
+        if (!empty($field['auto_increment'])) {
           $this->$primary_key_field = (int) $db->lastInsertId();
-          break; // There can only be one autoincremental field
+          break;
         }
       }
 
       $this->is_new_record = false;
-    } else {
-      // UPDATE
-      $this->assertPersisted();
-      $updates = [];
-      $params = [];
-      $updated_at_field = $schema['updated_at'];
 
-      foreach ($fields as $field_name => $field) {
-        if (in_array($field_name, $schema['primary_key'])) {
-          continue; // Ommit primary keys
-        }
-        if ($field_name === $updated_at_field) {
-          continue; // The updated_at field is handled automatically
-        }
+      self::clearResultsCache();
+      $this->syncOriginalValues();
 
-        if ($this->$field_name !== $this->original_values[$field_name]) {
-          $updates[] = "`{$field_name}` = :{$field_name}";
-          $params[":{$field_name}"] = $this->$field_name;
-        }
-      }
-
-      //  If there are no changes, it's not necessary to perform the UPDATE
-      if (empty($updates)) {
-        return true;
-      }
-
-      // Handle updated_at
-      if (!is_null($schema['updated_at'])) {
-        $updates[] = "`{$updated_at_field}` = :{$updated_at_field}";
-        $params[":{$updated_at_field}"] = date('Y-m-d H:i:s');
-        $this->$updated_at_field = $params[":{$updated_at_field}"];
-      }
-
-      // Build WHERE clause with all the primary keys
-      $where_clause = [];
-      foreach ($schema['primary_key'] as $primary_key_field) {
-        $where_clause[] = "`{$primary_key_field}` = :{$primary_key_field}";
-        $params[":{$primary_key_field}"] = $this->$primary_key_field;
-      }
-
-      $sql = "UPDATE `{$table_name}` SET " . implode(',', $updates) . " WHERE " . implode(' AND ', $where_clause);
-      $stmt = $db->prepare($sql);
-      $result = $stmt->execute($params);
+      return true;
     }
 
-    // Update original values
-    foreach ($this->original_values as $key => $value) {
-      $this->original_values[$key] = $this->$key;
+    $this->assertPersisted();
+
+    $updates = [];
+    $params = [];
+    $updated_at_field = $schema['updated_at'];
+    foreach ($fields as $field_name => $field) {
+      if (
+        in_array(
+          $field_name,
+          $schema['primarykey'],
+          true
+        )
+      ) continue;
+      if ($field_name === $updated_at_field) {
+        continue;
+      }
+
+      if (
+        $this->$field_name !==
+        $this->original_values[$field_name]
+      ) {
+        $updates[] = "`{$field_name}` = :{$field_name}";
+        $params[":{$field_name}"] = $this->$field_name;
+      }
     }
 
-    return $result;
+    if ($updates === []) {
+      return true;
+    }
+
+    $updated_at_value = null;
+    if ($updated_at_field !== null) {
+      $updated_at_value = date(
+        'Y-m-d H:i:s'
+      );
+
+      $updates[] = "`{$updated_at_field}` = :{$updated_at_field}";
+      $params[":{$updated_at_field}"] = $updated_at_value;
+    }
+
+    $where_clause = [];
+    foreach ($schema['primary_key'] as $primary_key_field) {
+      $where_clause[] = "`{$primary_key_field}` = :{$primary_key_field}";
+      $params[":{$primary_key_field}"] = $this->$primary_key_field;
+    }
+
+    $sql = "UPDATE `{$table_name}` SET "
+      . implode(',', $updates)
+      . ' WHERE '
+      . implode(
+        ' AND ',
+        $where_clause
+      );
+
+    $stmt = $db->prepare(
+      $sql
+    );
+
+    $result = $stmt->execute(
+      $params
+    );
+    if (!$result) {
+      return false;
+    }
+
+    if (
+      $updated_at_field !== null &&
+      $updated_at_value !== null
+    ) {
+      $this->$updated_at_field = $updated_at_value;
+    }
+
+    self::clearResultsCache();
+    $this->syncOriginalValues();
+
+    return true;
   }
 
   /**
-   * Delete a record from the database. If there is a "deleted_at" field it updated it's value but doesn't delete it.
+   * Delete the persisted model.
    *
-   * @return bool Result of the operation
+   * Models with an ODeletedAt field are soft-deleted. Models without one are
+   * removed from the database and become new/transient instances again.
+   *
+   * @return bool Whether the database operation succeeded.
+   *
+   * @throws \LogicException If the model does not represent a persisted record.
    */
   public function delete(): bool {
     $this->assertPersisted();
-
-    // Empty cache
-    self::clearResultsCache();
 
     $schema = self::$schema_cache[static::class];
     $table_name = $schema['table_name'];
     $primary_keys = $schema['primary_key'];
     $db = ODB::getInstance();
 
-    if (!is_null($schema['deleted_at'])) {
-      // Soft Delete: Update deleted_at field
-      $deleted_at_field = $schema['deleted_at'];
-      $this->$deleted_at_field = date('Y-m-d H:i:s');
-
-      // Generate WHERE clause for composite keys
-      $where_clause = [];
-      $params = [];
-      foreach ($primary_keys as $primary_key) {
-        $where_clause[] = "`{$primary_key}` = :{$primary_key}";
-        $params[":{$primary_key}"] = $this->$primary_key;
-      }
-
-      $sql = "UPDATE `{$table_name}` SET `{$deleted_at_field}` = :{$deleted_at_field} WHERE " . implode(' AND ', $where_clause);
-      $params[":{$deleted_at_field}"] = $this->$deleted_at_field;
-
-      $stmt = $db->prepare($sql);
-      return $stmt->execute($params);
-    } else {
-      // Hard Delete: Delete record from database
-      // Generate WHERE clause for composite keys
-      $where_clause = [];
-      $params = [];
-      foreach ($primary_keys as $primary_key) {
-        $where_clause[] = "`{$primary_key}` = :{$primary_key}";
-        $params[":{$primary_key}"] = $this->$primary_key;
-      }
-
-      $sql = "DELETE FROM `{$table_name}` WHERE " . implode(' AND ', $where_clause);
-      $stmt = $db->prepare($sql);
-      return $stmt->execute($params);
+    $where_clause = [];
+    $params = [];
+    foreach ($primary_keys as $primary_key) {
+      $where_clause[] = "`{$primary_key}` = :{$primary_key}";
+      $params[":{$primary_key}"] = $this->$primary_key;
     }
+
+    if ($schema['deleted_at'] !== null) {
+      $deleted_at_field = $schema['deleted_at'];
+      $deleted_at_value = date(
+        'Y-m-d H:i:s'
+      );
+
+      $sql = "UPDATE `{$table_name}` SET "
+        . "`{$deleted_at_field}` = :{$deleted_at_field}"
+        . ' WHERE '
+        . implode(
+          ' AND ',
+          $where_clause
+        );
+
+      $params[":{$deleted_at_field}"] = $deleted_at_value;
+
+      $stmt = $db->prepare(
+        $sql
+      );
+
+      $result = $stmt->execute(
+        $params
+      );
+      if (!$result) {
+        return false;
+      }
+
+      $this->$deleted_at_field = $deleted_at_value;
+
+      self::clearResultsCache();
+      $this->syncOriginalValues();
+
+      return true;
+    }
+
+    $sql = "DELETE FROM `{$table_name}` WHERE "
+      . implode(
+        ' AND ',
+        $where_clause
+      );
+
+    $stmt = $db->prepare(
+      $sql
+    );
+
+    $result = $stmt->execute(
+      $params
+    );
+    if (!$result) {
+      return false;
+    }
+
+    /*
+	 * A hard-deleted model no longer represents a persisted row. Mark it as a
+	 * new record so a subsequent save performs an INSERT rather than attempting
+	 * to UPDATE a row that no longer exists.
+	 */
+    $this->is_new_record = true;
+    $this->original_values = [];
+
+    self::clearResultsCache();
+
+    return true;
   }
 
   /**
