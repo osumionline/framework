@@ -477,6 +477,7 @@ class OBuild {
 	 *
 	 * @return string Generation status.
 	 * @throws \RuntimeException If the generated model class cannot be written.
+	 * @throws \InvalidArgumentException If a generated primary key definition is invalid.
 	 */
 	public static function addModelClass(array $values): string {
 		global $core;
@@ -497,9 +498,11 @@ class OBuild {
 			if ($field['decorator'] === 'OPK') {
 				$has_pk = true;
 			}
+
 			if ($field['decorator'] === 'OCreatedAt') {
 				$has_created_at = true;
 			}
+
 			if ($field['decorator'] === 'OUpdatedAt') {
 				$has_updated_at = true;
 			}
@@ -507,9 +510,30 @@ class OBuild {
 			if (in_array($field['decorator'], ['OCreatedAt', 'OUpdatedAt', 'ODeletedAt'])) {
 				$field['attribute_type'] = 'string';
 			}
-			if ($field['decorator'] === 'OPK' && !array_key_exists('attribute_type', $field)) {
-				$field['attribute_type'] = 'int';
+
+			if (
+				$field['decorator'] === 'OPK' &&
+				!array_key_exists(
+					'attribute_type',
+					$field
+				)
+			) {
+				$field_type = $field['type']
+					?? 'OField::NUMBER';
+
+				$field['attribute_type'] = match ($field_type) {
+					'OField::NUMBER' => 'int',
+					'OField::FLOAT' => 'float',
+					'OField::BOOL' => 'bool',
+					'OField::TEXT',
+					'OField::LONGTEXT',
+					'OField::DATE' => 'string',
+					default => throw new \InvalidArgumentException(
+						"Unsupported primary key field type '{$field_type}'."
+					)
+				};
 			}
+
 			$fields .= "	#[" . $field['decorator'] . "(\n";
 			$field_properties = [];
 			foreach ($field as $key => $value) {

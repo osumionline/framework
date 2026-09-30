@@ -340,6 +340,35 @@ abstract class OModel {
 
     $type = $field->type;
 
+    if ($field instanceof OPK) {
+      if (
+        $field->incr &&
+        $type !== OField::NUMBER
+      ) {
+        throw new Exception(
+          "Auto-increment primary key '{$field_name}' must use OField::NUMBER."
+        );
+      }
+
+      if (
+        $field->incr &&
+        $field->default !== null
+      ) {
+        throw new Exception(
+          "Auto-increment primary key '{$field_name}' cannot define a default value."
+        );
+      }
+    }
+
+    if (
+      $type === OField::TEXT &&
+      $field->max <= 0
+    ) {
+      throw new Exception(
+        "Text field '{$field_name}' must define a maximum length greater than zero."
+      );
+    }
+
     switch ($type) {
       case OField::NUMBER:
         if ($property_type_name !== 'int') {
@@ -701,10 +730,31 @@ abstract class OModel {
 
       // Allow null value if field is nullable
       if ($value === null) {
-        if (!$field['nullable']) {
-          throw new Exception("Field '{$field_name}' cannot be null.");
+        /*
+         * An auto-increment primary key is legitimately null while creating a new
+         * record because its value will be assigned by the database.
+         */
+        if (
+          !empty($field['primary']) &&
+          $this->is_new_record &&
+          !empty($field['auto_increment'])
+        ) {
+          continue;
         }
-        continue; // If it is null and it is allowed, continue to next field
+
+        if (!empty($field['primary'])) {
+          throw new Exception(
+            "Primary key field '{$field_name}' cannot be null."
+          );
+        }
+
+        if (!$field['nullable']) {
+          throw new Exception(
+            "Field '{$field_name}' cannot be null."
+          );
+        }
+
+        continue;
       }
 
       // Validate the data type
@@ -1833,7 +1883,7 @@ abstract class OModel {
           $sql_field .= " COLLATE utf8mb4_unicode_ci";
           break;
         case OField::LONGTEXT:
-          $sql_field .= " TEXT COLLATE utf8mb4_unicode_ci";
+          $sql_field .= " LONGTEXT COLLATE utf8mb4_unicode_ci";
           break;
         case OField::BOOL:
           $sql_field .= " TINYINT(1)";

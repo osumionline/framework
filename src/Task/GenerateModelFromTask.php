@@ -171,6 +171,59 @@ class GenerateModelFromTask extends OTask {
       }
     }
 
+    if (
+      array_key_exists('type', $field) &&
+      array_key_exists('attribute_type', $field)
+    ) {
+      $expected_attribute_type = match ($field['type']) {
+        'OField::NUMBER' => 'int',
+        'OField::FLOAT' => 'float',
+        'OField::BOOL' => 'bool',
+        'OField::TEXT',
+        'OField::LONGTEXT',
+        'OField::DATE' => 'string'
+      };
+
+      if (
+        $field['attribute_type'] !==
+        $expected_attribute_type
+      ) {
+        throw new \InvalidArgumentException(
+          "Field '{$field['name']}' type '{$field['type']}' is incompatible with PHP attribute type '{$field['attribute_type']}'."
+        );
+      }
+    }
+
+    if ($field['decorator'] === 'OPK') {
+      $field_type = $field['type']
+        ?? 'OField::NUMBER';
+
+      $is_incremental = $field['incr']
+        ?? true;
+
+      if (
+        $is_incremental &&
+        $field_type !== 'OField::NUMBER'
+      ) {
+        throw new \InvalidArgumentException(
+          "Auto-increment primary key '{$field['name']}' must use OField::NUMBER."
+        );
+      }
+
+      if (
+        $is_incremental &&
+        array_key_exists(
+          'default',
+          $field
+        ) &&
+        $field['default'] !== null
+      ) {
+        throw new \InvalidArgumentException(
+          "Auto-increment primary key '{$field['name']}' cannot define a default value."
+        );
+      }
+    }
+
     foreach (['nullable', 'incr', 'visible'] as $key) {
       if (
         array_key_exists($key, $field) &&
@@ -186,11 +239,11 @@ class GenerateModelFromTask extends OTask {
       array_key_exists('max', $field) &&
       (
         !is_int($field['max']) ||
-        $field['max'] < 0
+        $field['max'] <= 0
       )
     ) {
       throw new \InvalidArgumentException(
-        "Field '{$field['name']}' property 'max' must be a non-negative integer."
+        "Field '{$field['name']}' property 'max' must be a positive integer."
       );
     }
 

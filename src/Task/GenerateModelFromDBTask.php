@@ -224,10 +224,10 @@ class GenerateModelFromDBTask extends OTask {
 		c.`GENERATION_EXPRESSION`,
 		c.`COLLATION_NAME`,
 		c.`COLUMN_COMMENT`
-	FROM INFORMATION_SCHEMA.`COLUMNS` c
-	WHERE c.`TABLE_SCHEMA` = :db_name
-		AND c.`TABLE_NAME` = :table_name
-	ORDER BY c.`ORDINAL_POSITION`";
+		FROM INFORMATION_SCHEMA.`COLUMNS` c
+		WHERE c.`TABLE_SCHEMA` = :db_name
+			AND c.`TABLE_NAME` = :table_name
+		ORDER BY c.`ORDINAL_POSITION`";
 
 		$db = new ODB();
 
@@ -243,6 +243,16 @@ class GenerateModelFromDBTask extends OTask {
 
 		while ($res = $db->next()) {
 			$field_name = (string) $res['COLUMN_NAME'];
+
+			$generation_expression = trim(
+				(string) ($res['GENERATION_EXPRESSION'] ?? '')
+			);
+
+			if ($generation_expression !== '') {
+				throw new \RuntimeException(
+					"Generated database column '{$field_name}' cannot be represented by the ORM."
+				);
+			}
 
 			$field = [
 				'name' => $field_name,
@@ -277,6 +287,21 @@ class GenerateModelFromDBTask extends OTask {
 				(string) $res['COLUMN_TYPE']
 			);
 
+			if (
+				str_contains(
+					$column_type,
+					'unsigned'
+				) ||
+				str_contains(
+					$column_type,
+					'zerofill'
+				)
+			) {
+				throw new \RuntimeException(
+					"Database column '{$field_name}' uses unsupported numeric modifiers '{$column_type}'."
+				);
+			}
+
 			switch ($data_type) {
 				case 'text':
 				case 'longtext':
@@ -294,18 +319,26 @@ class GenerateModelFromDBTask extends OTask {
 					break;
 
 				case 'float':
-				case 'decimal':
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::FLOAT';
 					$field['attribute_type'] = 'float';
 					break;
 
+				case 'decimal':
+					throw new \RuntimeException(
+						"DECIMAL field '{$field_name}' cannot be represented safely by the ORM FLOAT type."
+					);
+
 				case 'datetime':
-				case 'timestamp':
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::DATE';
 					$field['attribute_type'] = 'string';
 					break;
+
+				case 'timestamp':
+					throw new \RuntimeException(
+						"TIMESTAMP field '{$field_name}' cannot be represented faithfully by the ORM DATE type."
+					);
 
 				case 'tinyint':
 					if (
@@ -332,11 +365,15 @@ class GenerateModelFromDBTask extends OTask {
 				case 'mediumint':
 				case 'int':
 				case 'integer':
-				case 'bigint':
 					$field['decorator'] = 'OField';
 					$field['type'] = 'OField::NUMBER';
 					$field['attribute_type'] = 'int';
 					break;
+
+				case 'bigint':
+					throw new \RuntimeException(
+						"BIGINT field '{$field_name}' cannot be represented safely by the ORM NUMBER type."
+					);
 
 				default:
 					throw new \RuntimeException(
