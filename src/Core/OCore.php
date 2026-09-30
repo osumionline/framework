@@ -193,197 +193,664 @@ class OCore {
 			require_once $route_file;
 		}
 
+		// Load global middlewares (project-level)
+		OMiddleware::setGlobal([]);
+
+		$middlewares_file = rtrim(
+			$this->config->getDir('app_middleware'),
+			'/\\'
+		)
+			. DIRECTORY_SEPARATOR
+			. 'Middlewares.php';
+
+		if (file_exists($middlewares_file)) {
+			if (
+				!is_file($middlewares_file) ||
+				!is_readable($middlewares_file)
+			) {
+				throw new \RuntimeException(
+					"Middleware configuration file '{$middlewares_file}' is not readable."
+				);
+			}
+
+			require $middlewares_file;
+		}
+
 		// Load global functions
 		require_once $this->config->getDir('ofw_tools') . 'functions.php';
 	}
 
 	/**
-	 * Start up the application checking the accessed URL, load matched URL or give the appropiate error
+	 * Process the current HTTP request and execute the matched route.
+	 *
+	 * The request is resolved against the registered routes, route middlewares
+	 * are configured, and the middleware pipeline is executed in the following
+	 * order: before, component or view rendering, afterRender, layout rendering
+	 * and afterResponse. Middleware stops are converted into an error response
+	 * and still pass through afterResponse before being emitted.
 	 *
 	 * @return void
+	 *
+	 * @throws \LogicException If the core has not been loaded before execution.
+	 * @throws \RuntimeException If a matched component, view or layout cannot be
+	 *                           resolved, read or executed safely.
+	 * @throws \InvalidArgumentException If middleware configuration or response
+	 *                                    data contains an invalid value.
+	 * @throws \UnexpectedValueException If a middleware returns an invalid result.
+	 * @throws \JsonException If a JSON middleware error response cannot be encoded.
+	 * @throws \Exception If a component run() method has an invalid signature.
 	 */
 	public function run(): void {
+		if ($this->config === null) {
+			throw new \LogicException(
+				'OCore must be loaded before run() is called.'
+			);
+		}
+
 		if ($this->config->getAllowCrossOrigin()) {
 			header('Access-Control-Allow-Origin: *');
 			header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');
 			header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 		}
 
-		// Load current URL
-		$u = new OUrl($_SERVER['REQUEST_METHOD']);
-		$u->setCheckUrl($_SERVER['REQUEST_URI'], $_GET, $_POST, $_FILES);
-		$url_result = $u->process();
+		$url = new OUrl(
+			$_SERVER['REQUEST_METHOD']
+		);
+		$url->setCheckUrl(
+			$_SERVER['REQUEST_URI'],
+			$_GET,
+			$_POST,
+			$_FILES
+		);
 
-		if ($url_result['res']) {
-			// If the call method is OPTIONS, just return OK right away
-			if ($url_result['method'] === 'OPTIONS') {
-				header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
-				exit;
+		$url_result = $url->process();
+
+		if (!$url_result['res']) {
+			$this->setHttpStatus(
+				404
+			);
+			$this->closeDbConnections();
+
+			OTools::showErrorPage(
+				$url_result,
+				'404'
+			);
+
+			return;
+		}
+
+		if ($url_result['method'] === 'OPTIONS') {
+			if (!headers_sent()) {
+				http_response_code(
+					200
+				);
 			}
 
-			// Check method
-			if ($url_result['method'] !== $url_result['component_method']) {
-				$url_result['message'] = OTools::getMessage('ERROR_405_MESSAGE', [$url_result['component_method'], $url_result['method']]);
-				$this->setHttpStatus(405);
-				header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->getHttpStatus());
-				OTools::showErrorPage($url_result, '405');
-				exit;
+			$this->closeDbConnections();
+
+			return;
+		}
+
+		if ($url_result['method'] !== $url_result['component_method']) {
+			$url_result['message'] = OTools::getMessage(
+				'ERROR_405_MESSAGE',
+				[
+					$url_result['component_method'],
+					$url_result['method']
+				]
+			);
+
+			$this->setHttpStatus(
+				405
+			);
+			$this->closeDbConnections();
+
+			OTools::showErrorPage(
+				$url_result,
+				'405'
+			);
+
+			return;
+		}
+
+		OMiddleware::reset();
+		OMiddleware::setRoute(
+			$url_result['middlewares']
+		);
+
+		$expected_type = $this->getExpectedResponseType(
+			$url_result
+		);
+
+		$this->prepareMiddlewareResponseHeaders(
+			$expected_type
+		);
+
+		/** @var array<string, mixed> $middleware_data */
+		$middleware_data = [
+			'route' => $url_result,
+			'params' => $url_result['params'],
+			'headers' => $url_result['headers'],
+			'expected_type' => $expected_type,
+			'response_type' => $expected_type
+		];
+
+		$before_result = OMiddleware::runPhase(
+			OMiddleware::PHASE_BEFORE,
+			$middleware_data
+		);
+
+		if ($before_result['stop']) {
+			OMiddleware::setFinalBody(
+				$this->buildMiddlewareErrorBody(
+					$expected_type,
+					$before_result['status_code'],
+					$before_result['message']
+				)
+			);
+
+			OMiddleware::runPhase(
+				OMiddleware::PHASE_AFTER_RESPONSE,
+				$middleware_data
+			);
+
+			$this->emitMiddlewareResponse();
+			$this->closeDbConnections();
+
+			return;
+		}
+
+		$body = '';
+		$return_type = $expected_type;
+
+		if (!$url_result['is_view']) {
+			$component = $url_result['component'];
+
+			if (
+				!is_string($component) ||
+				$component === '' ||
+				!class_exists($component)
+			) {
+				throw new \RuntimeException(
+					'Matched route does not contain a valid component class.'
+				);
 			}
 
-			// If there is a filter defined, apply it before the controller
-			$filter_results = [];
-			if (array_key_exists('filters', $url_result) && count($url_result['filters']) > 0) {
-				$filter_check =  true;
-				$filter_return = null;
-				foreach ($url_result['filters'] as $filter) {
-					$filter_instance = new $filter();
-					$value = $filter_instance->handle(
-						$url_result['params'],
-						$url_result['headers']
-					);
-					$reflection = new ReflectionClass($filter_instance);
-					$class_name = str_ireplace('Filter', '', $reflection->getShortName());
+			$component_instance = new $component();
+			$reflection = new ReflectionClass(
+				$component_instance
+			);
 
-					// If status is not 'ok', filter checks have failed
-					if ($value['status'] !== 'ok') {
-						$filter_check = false;
-						if (is_null($filter_return) && array_key_exists('return', $value)) {
-							$filter_return = $value['return'];
-						}
-						break;
-					}
+			if (!$reflection->hasMethod('run')) {
+				$body = $component_instance->render();
+			} else {
+				$run_method = $reflection->getMethod(
+					'run'
+				);
+				$run_parameters = $run_method->getParameters();
+				$run_parameter_count = count(
+					$run_parameters
+				);
 
-					// Store the result value
-					$filter_results[$class_name] = $value;
-				}
-
-				// If filter checks didn't pass
-				if (!$filter_check) {
-					// If return value has been set in any of the filters, go there, otherwise go to error page
-					if (!is_null($filter_return)) {
-						OUrl::goToUrl($filter_return);
-					} else {
-						$this->setHttpStatus(403);
-						OTools::showErrorPage($url_result, '403');
-					}
-				}
-			}
-
-			// If route has a component
-			if (!$url_result['is_view']) {
-				$component_instance = new $url_result['component']();
-				$reflection = new ReflectionClass($component_instance);
-
-				// Component without run()
-				if (!$reflection->hasMethod('run')) {
+				if ($run_parameter_count === 0) {
 					$body = $component_instance->render();
-				} else {
-					$run_method = $reflection->getMethod('run');
-					$run_parameters = $run_method->getParameters();
-					$run_parameter_count = count($run_parameters);
+				} elseif ($run_parameter_count === 1) {
+					$reflection_param_type = $run_parameters[0]->getType();
 
-					// run() without parameters
-					if ($run_parameter_count === 0) {
-						$body = $component_instance->render();
-					}
-					// run() with one parameter
-					elseif ($run_parameter_count === 1) {
-						$reflection_param_type = $run_parameters[0]->getType();
-
-						// Parameter must have a non-nullable named type
-						if (
-							!$reflection_param_type instanceof ReflectionNamedType ||
-							$reflection_param_type->allowsNull()
-						) {
-							throw new Exception(
-								"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO."
-							);
-						}
-
-						$param_class = $reflection_param_type->getName();
-						$req = new ORequest($url_result, $filter_results);
-
-						// ORequest parameter
-						if ($param_class === ORequest::class) {
-							$body = $component_instance->render($req);
-						}
-						// ODTO parameter
-						elseif (
-							class_exists($param_class) &&
-							is_subclass_of($param_class, ODTO::class)
-						) {
-							/** @var ODTO $dto */
-							$dto = new $param_class($req);
-							$body = $component_instance->render($dto);
-						}
-						// Any other parameter type is invalid
-						else {
-							throw new Exception(
-								"The run method of component '{$url_result['component']}' must receive an ORequest or a class extending ODTO. Received: '{$param_class}'."
-							);
-						}
-					}
-					// More than one parameter is not allowed
-					else {
+					if (
+						!$reflection_param_type instanceof ReflectionNamedType ||
+						$reflection_param_type->allowsNull()
+					) {
 						throw new Exception(
-							"The run method of component '{$url_result['component']}' can receive at most one parameter."
+							"The run method of component '{$component}' must receive an ORequest or a class extending ODTO."
 						);
 					}
-				}
 
-				$return_type = $component_instance->component_info['template_type'];
-			} else {
-				// Route is a view
-				$view_file = $this->config->getDir('app') . $url_result['component'];
-				if (file_exists($view_file)) {
-					$body = file_get_contents($view_file);
-					$return_type = pathinfo($view_file, PATHINFO_EXTENSION);
+					$param_class = $reflection_param_type->getName();
+					$request = new ORequest(
+						$url_result,
+						[]
+					);
+
+					if ($param_class === ORequest::class) {
+						$body = $component_instance->render(
+							$request
+						);
+					} elseif (
+						class_exists($param_class) &&
+						is_subclass_of(
+							$param_class,
+							ODTO::class
+						)
+					) {
+						/** @var ODTO $dto */
+						$dto = new $param_class(
+							$request
+						);
+
+						$body = $component_instance->render(
+							$dto
+						);
+					} else {
+						throw new Exception(
+							"The run method of component '{$component}' must receive an ORequest or a class extending ODTO. Received: '{$param_class}'."
+						);
+					}
 				} else {
-					$url_result['message'] = OTools::getMessage('ERROR_VIEW_MESSAGE', [$url_result['component']]);
-					OTools::showErrorPage($url_result, 'view');
+					throw new Exception(
+						"The run method of component '{$component}' can receive at most one parameter."
+					);
 				}
 			}
 
-			// If there is a layout defined
-			if (!is_null($url_result['layout'])) {
-				$layout_instance = new $url_result['layout']();
-				// Add title and executed component's body
-				$layout_instance->title = $this->config->getDefaultTitle();
-				$layout_instance->body = $body;
-				// Get resulting body
-				$layout_body = $layout_instance->render();
-
-				// Add any CSS, inline CSS, JS or inline JS
-				if (stripos($layout_body, '</head>') !== false) {
-					$layout_body = str_ireplace('</head>', $this->renderInline() . '</head>', $layout_body);
-					$layout_body = str_ireplace('</head>', $this->renderExternal() . '</head>', $layout_body);
-				}
-				$body = $layout_body;
-				if (isset($component_instance)) {
-					$return_type = $component_instance->component_info['template_type'];
-				}
-			}
-
-			// If type is not html is most likely it's and API call so tell the browsers not to cache it
-			if ($return_type !== 'html') {
-				header('Cache-Control: no-cache, must-revalidate');
-				header('Expires: Thu, 02 Jul 1981 03:00:00 GMT');
-			}
-
-			header('Content-type: ' . $this->return_types[$return_type]);
-			header('X-Powered-By: Osumi Framework ' . OTools::getVersion());
-
-			// Show resulting HTML
-			echo $body;
+			$return_type = $this->normalizeResponseType(
+				(string) $component_instance->component_info['template_type']
+			);
 		} else {
-			$this->setHttpStatus(404);
-			OTools::showErrorPage($url_result, '404');
+			$view = $url_result['component'];
+
+			if (
+				!is_string($view) ||
+				$view === ''
+			) {
+				throw new \RuntimeException(
+					'Matched view route does not contain a valid view path.'
+				);
+			}
+
+			$view_file = $this->config->getDir('app')
+				. $view;
+
+			if (
+				!is_file($view_file) ||
+				!is_readable($view_file)
+			) {
+				$url_result['message'] = OTools::getMessage(
+					'ERROR_VIEW_MESSAGE',
+					[
+						$view
+					]
+				);
+
+				$this->setHttpStatus(
+					500
+				);
+				$this->closeDbConnections();
+
+				OTools::showErrorPage(
+					$url_result,
+					'view'
+				);
+
+				return;
+			}
+
+			$view_content = file_get_contents(
+				$view_file
+			);
+
+			if ($view_content === false) {
+				throw new \RuntimeException(
+					"Unable to read view file '{$view_file}'."
+				);
+			}
+
+			$body = $view_content;
+			$return_type = $this->normalizeResponseType(
+				pathinfo(
+					$view_file,
+					PATHINFO_EXTENSION
+				)
+			);
 		}
 
-		if (!is_null($this->db_container)) {
+		OMiddleware::setComponentBody(
+			$body
+		);
+
+		$middleware_data['response_type'] = $return_type;
+
+		$after_render_result = OMiddleware::runPhase(
+			OMiddleware::PHASE_AFTER_RENDER,
+			$middleware_data
+		);
+
+		if ($after_render_result['stop']) {
+			OMiddleware::setFinalBody(
+				$this->buildMiddlewareErrorBody(
+					$return_type,
+					$after_render_result['status_code'],
+					$after_render_result['message']
+				)
+			);
+
+			OMiddleware::runPhase(
+				OMiddleware::PHASE_AFTER_RESPONSE,
+				$middleware_data
+			);
+
+			$this->emitMiddlewareResponse();
+			$this->closeDbConnections();
+
+			return;
+		}
+
+		$body = OMiddleware::getComponentBody();
+
+		if ($url_result['layout'] !== null) {
+			$layout = $url_result['layout'];
+
+			if (
+				!is_string($layout) ||
+				$layout === '' ||
+				!class_exists($layout)
+			) {
+				throw new \RuntimeException(
+					'Matched route does not contain a valid layout class.'
+				);
+			}
+
+			$layout_instance = new $layout();
+			$layout_instance->title = $this->config->getDefaultTitle();
+			$layout_instance->body = $body;
+
+			$layout_body = $layout_instance->render();
+
+			if (
+				stripos(
+					$layout_body,
+					'</head>'
+				) !== false
+			) {
+				$layout_body = str_ireplace(
+					'</head>',
+					$this->renderInline() . '</head>',
+					$layout_body
+				);
+				$layout_body = str_ireplace(
+					'</head>',
+					$this->renderExternal() . '</head>',
+					$layout_body
+				);
+			}
+
+			$body = $layout_body;
+		}
+
+		OMiddleware::setFinalBody(
+			$body
+		);
+
+		$middleware_data['final_body'] = $body;
+
+		OMiddleware::runPhase(
+			OMiddleware::PHASE_AFTER_RESPONSE,
+			$middleware_data
+		);
+
+		$this->emitMiddlewareResponse();
+		$this->closeDbConnections();
+	}
+
+	/**
+	 * Determine the expected response type for a matched route without
+	 * instantiating its component.
+	 *
+	 * Static views use their file extension. Component routes are inspected by
+	 * reflection and their template file is resolved using the same supported
+	 * extensions as OComponent. PHP templates are normalized to HTML responses.
+	 *
+	 * @param array<string, mixed> $url_result Processed route information.
+	 *
+	 * @return string Normalized response type: html, json or xml.
+	 *
+	 * @throws \RuntimeException If the component class does not exist or its
+	 *                           source file cannot be resolved.
+	 */
+	private function getExpectedResponseType(array $url_result): string {
+		$component = $url_result['component'];
+
+		if (!is_string($component) || $component === '') {
+			return 'html';
+		}
+
+		if ($url_result['is_view']) {
+			return $this->normalizeResponseType(
+				pathinfo(
+					$component,
+					PATHINFO_EXTENSION
+				)
+			);
+		}
+
+		if (!class_exists($component)) {
+			throw new \RuntimeException(
+				"Route component '{$component}' does not exist."
+			);
+		}
+
+		$reflection = new ReflectionClass(
+			$component
+		);
+		$component_file = $reflection->getFileName();
+
+		if ($component_file === false) {
+			throw new \RuntimeException(
+				"Could not resolve component file for '{$component}'."
+			);
+		}
+
+		$base_name = str_ireplace(
+			'Component',
+			'',
+			pathinfo(
+				$component_file,
+				PATHINFO_FILENAME
+			)
+		);
+
+		foreach (
+			[
+				'html',
+				'json',
+				'xml',
+				'php'
+			] as $extension
+		) {
+			$template_file = dirname(
+				$component_file
+			)
+				. DIRECTORY_SEPARATOR
+				. $base_name
+				. 'Template.'
+				. $extension;
+
+			if (is_file($template_file)) {
+				return $this->normalizeResponseType(
+					$extension
+				);
+			}
+		}
+
+		return 'html';
+	}
+
+	/**
+	 * Normalize a template or response type to a supported HTTP response type.
+	 *
+	 * PHP templates are treated as HTML. Unknown values also fall back to HTML.
+	 *
+	 * @param string $type Template or response type.
+	 *
+	 * @return string Normalized response type: html, json or xml.
+	 */
+	private function normalizeResponseType(string $type): string {
+		$type = strtolower(
+			trim(
+				$type
+			)
+		);
+
+		if ($type === 'php') {
+			return 'html';
+		}
+
+		return array_key_exists(
+			$type,
+			$this->return_types
+		)
+			? $type
+			: 'html';
+	}
+
+	/**
+	 * Build a middleware stop response body for the requested response type.
+	 *
+	 * The temporary F3 implementation generates minimal valid HTML, JSON or XML
+	 * responses. Dedicated framework error templates will replace this fallback
+	 * in the later middleware error-response block.
+	 *
+	 * @param string $type Requested response type.
+	 * @param int $status_code HTTP status code returned by the middleware.
+	 * @param string $message Public middleware error message.
+	 *
+	 * @return string Encoded middleware error response body.
+	 *
+	 * @throws \JsonException If the JSON response cannot be encoded.
+	 */
+	private function buildMiddlewareErrorBody(
+		string $type,
+		int $status_code,
+		string $message
+	): string {
+		$type = $this->normalizeResponseType(
+			$type
+		);
+
+		if ($type === 'json') {
+			return json_encode(
+				[
+					'status' => 'error',
+					'status_code' => $status_code,
+					'message' => $message
+				],
+				JSON_UNESCAPED_UNICODE |
+					JSON_UNESCAPED_SLASHES |
+					JSON_THROW_ON_ERROR
+			);
+		}
+
+		if ($type === 'xml') {
+			return '<error><status>error</status><status_code>'
+				. $status_code
+				. '</status_code><message>'
+				. htmlspecialchars(
+					$message,
+					ENT_QUOTES |
+						ENT_XML1 |
+						ENT_SUBSTITUTE,
+					'UTF-8'
+				)
+				. '</message></error>';
+		}
+
+		return '<h1>Error '
+			. $status_code
+			. '</h1><p>'
+			. htmlspecialchars(
+				$message,
+				ENT_QUOTES |
+					ENT_SUBSTITUTE |
+					ENT_HTML5,
+				'UTF-8'
+			)
+			. '</p>';
+	}
+
+	/**
+	 * Initialize the response headers exposed to the middleware pipeline.
+	 *
+	 * Non-HTML responses receive the framework no-cache headers. Middleware
+	 * phases may subsequently replace any of these headers through OMiddleware.
+	 *
+	 * @param string $type Expected response type.
+	 *
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException If a generated response header is invalid.
+	 */
+	private function prepareMiddlewareResponseHeaders(
+		string $type
+	): void {
+		$type = $this->normalizeResponseType(
+			$type
+		);
+
+		if ($type !== 'html') {
+			OMiddleware::setHeader(
+				'Cache-Control',
+				'no-cache, must-revalidate'
+			);
+			OMiddleware::setHeader(
+				'Expires',
+				'Thu, 02 Jul 1981 03:00:00 GMT'
+			);
+		}
+
+		OMiddleware::setHeader(
+			'Content-Type',
+			$this->return_types[$type]
+		);
+		OMiddleware::setHeader(
+			'X-Powered-By',
+			'Osumi Framework '
+				. OTools::getVersion()
+		);
+	}
+
+	/**
+	 * Emit the final response accumulated by the middleware pipeline.
+	 *
+	 * The final middleware status code and response headers are applied before
+	 * writing the final response body.
+	 *
+	 * @return void
+	 */
+	private function emitMiddlewareResponse(): void {
+		$status_code = OMiddleware::isError()
+			? OMiddleware::getErrorStatusCode()
+			: OMiddleware::getStatusCode();
+
+		$this->setHttpStatus(
+			$status_code
+		);
+
+		if (!headers_sent()) {
+			http_response_code(
+				$status_code
+			);
+
+			foreach (OMiddleware::getHeaders() as $name => $value) {
+				header(
+					$name . ': ' . $value,
+					true
+				);
+			}
+		}
+
+		echo OMiddleware::getFinalBody();
+	}
+
+	/**
+	 * Close all active framework database connections when a database container
+	 * is available.
+	 *
+	 * @return void
+	 */
+	private function closeDbConnections(): void {
+		if ($this->db_container !== null) {
 			$this->db_container->closeAllConnections();
 		}
-		header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->getHttpStatus());
 	}
 
 	/**
