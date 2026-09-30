@@ -595,16 +595,23 @@ class OConfig {
 	/**
 	 * Set a logging configuration value.
 	 *
+	 * Log levels must be one of ALL, DEBUG, INFO or ERROR. File size and file
+	 * count limits must be positive integers. The log name must be a safe,
+	 * non-empty filename component.
+	 *
 	 * @param string $key Logging configuration key.
 	 * @param string|int $value Configuration value.
 	 *
 	 * @return void
 	 *
-	 * @throws \InvalidArgumentException If the value type does not match the
-	 *                                   requested configuration key.
+	 * @throws \InvalidArgumentException If the supplied value is invalid for the
+	 *                                   requested logging configuration key.
 	 * @throws \OutOfBoundsException If the logging configuration key is invalid.
 	 */
-	public function setLog(string $key, string | int $value): void {
+	public function setLog(
+		string $key,
+		string|int $value
+	): void {
 		if (!array_key_exists($key, $this->log)) {
 			throw new \OutOfBoundsException(
 				"Logging configuration key '{$key}' does not exist."
@@ -612,18 +619,31 @@ class OConfig {
 		}
 
 		$valid = match ($key) {
-			'name',
-			'level' => is_string($value),
+			'name' => (
+				is_string($value) &&
+				$value !== '' &&
+				$value !== '.' &&
+				$value !== '..' && !str_contains($value, '/') &&
+				!str_contains($value, '\\') &&
+				!str_contains($value, "\0")
+			),
 
-			'max_file_size',
-			'max_num_files' => is_int($value),
+
+			'level' => (
+				is_string($value) &&
+				in_array(
+					$value,
+					['ALL', 'DEBUG', 'INFO', 'ERROR'],
+					true
+				)),
+			'maxfilesize', 'maxnumfiles' => (is_int($value) && $value > 0),
 
 			default => false
 		};
 
 		if (!$valid) {
 			throw new \InvalidArgumentException(
-				"Invalid value type for logging configuration key '{$key}'."
+				"Invalid value for logging configuration key '{$key}'."
 			);
 		}
 
