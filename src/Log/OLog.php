@@ -115,7 +115,7 @@ class OLog {
 		$data = '['
 			. date('Y-m-d H:i:s')
 			. '] - ['
-			. $level . '] -';
+			. $level . '] - ';
 		if ($this->class_name !== null) {
 			$data .= '['
 				. $this->class_name

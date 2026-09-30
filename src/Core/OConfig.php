@@ -636,7 +636,8 @@ class OConfig {
 					['ALL', 'DEBUG', 'INFO', 'ERROR'],
 					true
 				)),
-			'maxfilesize', 'maxnumfiles' => (is_int($value) && $value > 0),
+
+			'max_file_size', 'max_num_files' => (is_int($value) && $value > 0),
 
 			default => false
 		};
