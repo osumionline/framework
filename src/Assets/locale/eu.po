@@ -143,7 +143,7 @@ msgid "TASK_VERSION"
 msgstr "Frameworkaren oraingo bertsioaren informazioa jaso."
 
 msgid "TASK_ADD"
-msgstr "Ekintza, zerbitzu, zeregin, modulu osagai, osagai edo iragazki berriak gehitu."
+msgstr "Ekintza, zerbitzu, zeregin, modulu osagai, osagai edo middleware berriak gehitu."
 
 msgid "TASK_ADD_DEFAULT_NOT_VALID"
 msgstr "Adierazitako komandoa ez da onartutako aukera bat."

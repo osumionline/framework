@@ -143,7 +143,7 @@ msgid "TASK_VERSION"
 msgstr "Get Frameworks current version information."
 
 msgid "TASK_ADD"
-msgstr "Add new actions, services, tasks, model components, components or filters."
+msgstr "Add new actions, services, tasks, model components, components or middlewares."
 
 msgid "TASK_ADD_DEFAULT_NOT_VALID"
 msgstr "Indicated command is not a valid option."
