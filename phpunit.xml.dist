@@ -5,6 +5,7 @@
 	bootstrap="vendor/autoload.php"
 	colors="true"
 	cacheDirectory=".phpunit.cache"
+	displayDetailsOnAllIssues="true"
 >
 	<testsuites>
 		<testsuite name="Osumi Framework">

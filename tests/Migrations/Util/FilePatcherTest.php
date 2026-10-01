@@ -296,6 +296,23 @@ final class FilePatcherTest extends TestCase {
             );
         }
 
+        $temporary_files = glob(
+            $this->project->getPath(
+                'ofw/tmp/ofw*'
+            )
+        );
+
+        if ($temporary_files === false) {
+            self::fail(
+                'Could not inspect temporary migration files.'
+            );
+        }
+
+        self::assertSame(
+            [],
+            $temporary_files
+        );
+
         $patcher->rollback();
 
         self::assertFileDoesNotExist(
@@ -306,6 +323,99 @@ final class FilePatcherTest extends TestCase {
 
         self::assertDirectoryExists(
             $state_path
+        );
+    }
+
+    /**
+     * Test that atomic writes replace the destination without leaving temporary
+     * files behind.
+     *
+     * @return void
+     */
+    public function testAtomicWriteReplacesFileWithoutTemporaryResidue(): void {
+        $file = $this->project->getPath(
+            'src/Atomic.php'
+        );
+
+        $this->writeFile(
+            $file,
+            'original'
+        );
+
+        $patcher = new FilePatcher(
+            $this->project->getBasePath(),
+            $this->project->getPath(
+                'ofw/tmp'
+            )
+        );
+
+        $patcher->write(
+            'src/Atomic.php',
+            'replaced'
+        );
+
+        if (PHP_OS_FAMILY !== 'Windows') {
+            if (!chmod(
+                $file,
+                0640
+            )) {
+                self::fail(
+                    'Could not set test file permissions.'
+                );
+            }
+        }
+
+        if (PHP_OS_FAMILY !== 'Windows') {
+            clearstatcache(
+                true,
+                $file
+            );
+
+            $permissions = fileperms(
+                $file
+            );
+
+            self::assertNotFalse(
+                $permissions
+            );
+
+            self::assertSame(
+                0640,
+                $permissions & 0777
+            );
+        }
+
+        self::assertSame(
+            'replaced',
+            file_get_contents(
+                $file
+            )
+        );
+
+        $temporary_files = glob(
+            $this->project->getPath(
+                'src/ofw*'
+            )
+        );
+
+        if ($temporary_files === false) {
+            self::fail(
+                'Could not inspect temporary migration files.'
+            );
+        }
+
+        self::assertSame(
+            [],
+            $temporary_files
+        );
+
+        $patcher->rollback();
+
+        self::assertSame(
+            'original',
+            file_get_contents(
+                $file
+            )
         );
     }
 

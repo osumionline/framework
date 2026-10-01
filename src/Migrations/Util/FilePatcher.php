@@ -129,8 +129,9 @@ final class FilePatcher {
     /**
      * Write a project file transactionally.
      *
-     * The original file is backed up before its first modification. Writing the
-     * same contents again is a no-op.
+     * The original file is backed up before its first modification. New contents
+     * are written through a temporary file in the destination directory and moved
+     * atomically into place. Writing the same contents again is a no-op.
      *
      * @param string $relative_path Project-relative file path.
      * @param string $content New file contents.
@@ -388,12 +389,15 @@ final class FilePatcher {
     }
 
     /**
-     * Write file contents while converting native filesystem failures into a
-     * stable migration exception.
+     * Write file contents atomically while converting native filesystem failures
+     * into a stable migration exception.
      *
-     * PHP filesystem functions may emit warnings that are converted to exceptions
-     * by the framework error handler. Those implementation details must not leak
-     * through the migration API.
+     * Contents are first written to a temporary file located in the same directory
+     * as the destination. The temporary file is then renamed over the destination,
+     * preventing readers from observing partially written migration files.
+     *
+     * Existing Unix permissions are preserved. New files receive the permissions
+     * that a regular file creation would obtain from the current process umask.
      *
      * @param string $absolute_path Absolute target file path.
      * @param string $content File contents.
@@ -401,31 +405,144 @@ final class FilePatcher {
      *
      * @return void
      *
-     * @throws \RuntimeException If the file cannot be written.
+     * @throws \RuntimeException If the temporary file cannot be created, written,
+     *                           prepared or atomically moved into place.
      */
     private function writeFileContents(
         string $absolute_path,
         string $content,
         string $error_message
     ): void {
+        $directory = dirname(
+            $absolute_path
+        );
+
+        $temporary_path = null;
+
         try {
+            $temporary_path = tempnam(
+                $directory,
+                'ofw'
+            );
+
+            if ($temporary_path === false) {
+                throw new \RuntimeException(
+                    $error_message
+                );
+            }
+
+            $target_directory = realpath(
+                $directory
+            );
+
+            $temporary_directory = realpath(
+                dirname(
+                    $temporary_path
+                )
+            );
+
+            if (
+                $target_directory === false ||
+                $temporary_directory === false
+            ) {
+                throw new \RuntimeException(
+                    $error_message
+                );
+            }
+
+            $target_directory = $this->normalizeAbsolutePath(
+                $target_directory
+            );
+
+            $temporary_directory = $this->normalizeAbsolutePath(
+                $temporary_directory
+            );
+
+            if (PHP_OS_FAMILY === 'Windows') {
+                $target_directory = strtolower(
+                    $target_directory
+                );
+
+                $temporary_directory = strtolower(
+                    $temporary_directory
+                );
+            }
+
+            if ($temporary_directory !== $target_directory) {
+                throw new \RuntimeException(
+                    $error_message
+                );
+            }
+
             $result = file_put_contents(
-                $absolute_path,
+                $temporary_path,
                 $content,
                 LOCK_EX
             );
+
+            if ($result === false) {
+                throw new \RuntimeException(
+                    $error_message
+                );
+            }
+
+            if (PHP_OS_FAMILY !== 'Windows') {
+                $permissions = is_file(
+                    $absolute_path
+                )
+                    ? fileperms(
+                        $absolute_path
+                    )
+                    : null;
+
+                $target_permissions = $permissions === false ||
+                    $permissions === null
+                    ? 0666 & ~umask()
+                    : $permissions & 0777;
+
+                if (!chmod(
+                    $temporary_path,
+                    $target_permissions
+                )) {
+                    throw new \RuntimeException(
+                        $error_message
+                    );
+                }
+            }
+
+            if (!@rename(
+                $temporary_path,
+                $absolute_path
+            )) {
+                throw new \RuntimeException(
+                    $error_message
+                );
+            }
+
+            $temporary_path = null;
         } catch (\Throwable $exception) {
             throw new \RuntimeException(
                 $error_message,
                 0,
                 $exception
             );
-        }
-
-        if ($result === false) {
-            throw new \RuntimeException(
-                $error_message
-            );
+        } finally {
+            if (
+                $temporary_path !== null &&
+                is_file($temporary_path)
+            ) {
+                try {
+                    unlink(
+                        $temporary_path
+                    );
+                } catch (\Throwable) {
+                    /*
+				 * Keep the original migration failure as the authoritative
+				 * exception. A leftover temporary file is preferable to
+				 * hiding the actual write failure.
+				 */
+                }
+            }
         }
     }
 
