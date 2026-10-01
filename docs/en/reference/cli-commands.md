@@ -1,156 +1,134 @@
 # Osumi Framework CLI Commands
 
-Osumi Framework includes a set of CLI tasks that allow you to perform various operations related to the development and maintenance of applications. Below is a description of the available commands:
+Osumi Framework provides application CLI tasks and a dedicated framework migration binary.
 
-## Available Commands
+## Application CLI
+
+Application tasks are executed from the project root through:
+
+```bash
+php of <task> [options]
+```
 
 ### `add`
 
-**Description:** Allows you to create new actions, services, tasks, model components, components, or filters.
-
-**Usage:**
+Creates framework application elements.
 
 ```bash
-php of add [option] [name]
+php of add --option <type> --name <name>
 ```
 
-- **option:** Type of element to create (`action`, `service`, `task`, `modelComponent`, `component`, `filter`).
-- **name:** Name of the element to create.
+Supported types include:
 
-**Example:**
+- `action`
+- `service`
+- `task`
+- `modelComponent`
+- `component`
+- `middleware`
+
+Example:
 
 ```bash
-php of add --option action --name MyAction
+php of add --option middleware --name Login
 ```
 
----
+The old `filter` option is not supported in 9.9.
 
 ### `backupAll`
-
-**Description:** Generates a complete backup file of the application, including the database and code.
-
-**Usage:**
 
 ```bash
 php of backupAll
 ```
 
-**Notes:** This command internally calls the `backupDB` and `extractor` tasks.
-
----
+Creates a complete application backup by using the corresponding framework backup/export tasks.
 
 ### `backupDB`
 
-**Description:** Creates a database backup using the `mysqldump` tool.
-
-**Usage:**
-
 ```bash
-php of backupDB [options]
+php of backupDB
 ```
 
-- **options:**
-    - `silent`: If included, the command will not display messages in the console.
-
-**Example:**
-
-```bash
-php of backupDB silent
-```
-
----
+Creates a database backup using the configured database connection and system tooling.
 
 ### `extractor`
-
-**Description:** Exports the entire application to a single self-extracting PHP file.
-
-**Usage:**
 
 ```bash
 php of extractor
 ```
 
-**Notes:** Exports the entire application to a single self-extracting PHP file.
-
----
+Exports the application using the framework extractor.
 
 ### `generateModel`
-
-**Description:** Generates an SQL file to create all database tables based on the user-defined models.
-
-**Usage:**
 
 ```bash
 php of generateModel
 ```
 
-**Notes:** The SQL file is generated in the export directory.
-
----
+Generates the SQL schema from application model classes.
 
 ### `generateModelFrom`
 
-**Description:** Generates all models from a provided JSON file.
-
-**Usage:**
-
 ```bash
-php of generateModelFrom [file]
+php of generateModelFrom <file>
 ```
 
-- **file:** Path to the JSON file containing the model definitions.
-
-**Example:**
-
-```bash
-php of generateModelFrom models.json
-```
-
----
+Generates models from a model definition file.
 
 ### `generateModelFromDB`
-
-**Description:** Generates all models from an existing database connection.
-
-**Usage:**
 
 ```bash
 php of generateModelFromDB
 ```
 
-**Notes:** Connects to the configured database and generates the corresponding models.
-
----
+Generates model classes from the configured database.
 
 ### `reset`
-
-**Description:** Cleans all non-framework data, useful for new installations.
-
-**Usage:**
 
 ```bash
 php of reset
 ```
 
-**Notes:** Deletes user-generated folders and files and restores the default configuration and structure.
-
----
+Starts the protected reset workflow used to recreate a clean application structure. The generated structure includes `src/Middleware/` and `src/Middleware/Middlewares.php`.
 
 ### `version`
-
-**Description:** Displays information about the current version of the framework.
-
-**Usage:**
 
 ```bash
 php of version
 ```
 
-**Notes:** Includes links to the official repository and the project's X (formerly Twitter) account.
+Displays framework version information.
 
 ---
 
-## Additional Notes
+## Framework Migration CLI
 
-- All commands must be executed from the root of the project.
-- Ensure that the necessary configurations are defined in the `Config.json` file before running commands related to the database or exports.
+The Composer package exposes:
+
+```bash
+php vendor/bin/ofw-migrate --help
+```
+
+Supported migration options include:
+
+```text
+--from
+--to
+--dry-run
+--force
+--verbose
+--no-interaction
+--help
+```
+
+Framework migrations are versioned, idempotent and keep their state under `ofw/tmp/state.json`.
+
+The 9.8.5 → 9.9.0 migration guide documents the migration workflow and the automatic Composer integration in detail.
+
+---
+
+## Notes
+
+- Run application CLI commands from the project root.
+- Run migration commands from the project root so the migration runner operates on the intended application.
+- Database-related tasks require valid database configuration.

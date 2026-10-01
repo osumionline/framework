@@ -1,118 +1,126 @@
 # Layouts
 
-In **Osumi Framework**, a **layout** is a special kind of component that wraps the output of the main action component.
+In **Osumi Framework**, a layout is a special component that wraps the output of the main route component.
 
-Layouts are typically used to share the same HTML structure across multiple routes (for example: `<head>`, metadata, header/footer, script/style injection, etc.).
+Layouts are typically used to share the same HTML structure across multiple routes.
 
-A layout is applied **after** the route component is executed and rendered, and it receives the rendered output as its `body`.
+A layout is applied after the route component and the `afterRender` Middleware phase. It receives the current component output as its `body`.
 
 ---
 
-## 1. How Layouts Work (Render Flow)
+## 1. Render Flow
 
-When a route is matched, Osumi Framework executes this sequence:
+For a normal matched route, the relevant flow is:
 
-1. The route is resolved (Routing).
-2. Filters are executed (if any).
-3. The route component is instantiated and rendered.
-4. If a layout is defined for the route, the layout is instantiated and receives:
-    - `title`: default title from config
-    - `body`: the rendered output from the route component
-5. The layout template is rendered, producing the final response.
+```text
+Routing
+↓
+before Middlewares
+↓
+Component
+↓
+afterRender Middlewares
+↓
+Layout
+↓
+afterResponse Middlewares
+↓
+HTTP response
+```
 
 This means:
 
-- Your **action component** focuses on producing the **page content**.
-- Your **layout** provides the shared structure and wraps that content.
+- The action component produces page content.
+- `afterRender` Middlewares may inspect or replace that content before the layout.
+- The layout wraps the resulting content.
+- `afterResponse` Middlewares run after the final body has been produced.
+
+If a `before` Middleware stops execution, the component and layout are skipped.
+
+If an `afterRender` Middleware stops execution, the layout is skipped.
+
+In both cases, `afterResponse` still runs before the response is emitted.
 
 ---
 
 ## 2. Default Layout
 
-When you create a new Osumi Framework project, a default layout is generated.
+New projects include a default layout.
 
-### 2.1 Default Layout Component
+### Default Layout Component
 
-`DefaultLayoutComponent` is a very simple component that only defines the public properties used by its template:
+`DefaultLayoutComponent` exposes:
 
-- `title`: page title
-- `body`: HTML content from the action component
+- `title`
+- `body`
 
-### 2.2 Default Layout Template
+### Default Layout Template
 
-The default layout template contains a standard HTML skeleton and uses two placeholders:
+The default template uses:
 
-- `{{title}}` → inserted in `<title>`
-- `{{body}}` → inserted in the `<body>`
-
-This makes the default layout a generic wrapper for most server-rendered pages.
+- `{{title}}`
+- `{{body}}`
 
 ---
 
-## 3. Defining a Layout in Routing (IMPORTANT)
+## 3. Defining Layouts in Routing
 
-You can assign a layout in routing in two ways:
-
-### 3.1 Layout Group
-
-Use `ORoute::layout()` to apply a layout to multiple routes:
+### Layout Group
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\App\Layout\MainLayoutComponent;
+use Osumi\OsumiFramework\Routing\ORoute;
 
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-  ORoute::get('/contact', ContactComponent::class);
-});
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/home', HomeComponent::class);
+		ORoute::get('/contact', ContactComponent::class);
+	}
+);
 ```
 
-### 3.2 Layout + Prefix Group
+`ORoute::layout()` accepts an optional third argument containing Middleware definitions.
 
-Use `ORoute::group()` to combine a URL prefix and a layout:
+### Layout + Prefix Group
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Layout\AdminLayoutComponent;
-
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-  ORoute::get('/settings', SettingsComponent::class);
-});
+ORoute::group(
+	'/admin',
+	AdminLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/dashboard', DashboardComponent::class);
+		ORoute::get('/settings', SettingsComponent::class);
+	}
+);
 ```
 
-> This is the recommended way to apply a custom layout consistently to an area of your app.
+`ORoute::group()` accepts an optional fourth argument containing Middleware definitions.
+
+See `/docs/en/concepts/middlewares.md`.
 
 ---
 
 ## 4. CSS / JS Injection
 
-Layouts are also the place where Osumi Framework injects CSS and JS resources.
-
-When the layout output contains a `</head>` tag, the framework automatically inserts:
-
-- Inline CSS (`<style>...</style>`) from configured files
-- Inline JS (`<script>...</script>`) from configured files
-- External CSS (`<link ...>`) from config `ext_css_list`
-- External JS (`<script src=...>`) from config `ext_js_list`
-
-This makes the layout the natural point where global frontend assets are assembled.
+Layouts are the point where Osumi Framework injects configured frontend resources into documents containing `</head>`.
 
 ---
 
 ## 5. Best Practices
 
-- Keep layouts purely structural (HTML skeleton + shared UI).
-- Do not put business logic in layouts.
-- Use a dedicated layout per section if needed (e.g. `MainLayout`, `AdminLayout`).
-- Prefer `ORoute::layout()` / `ORoute::group()` for consistency.
+- Keep layouts structural.
+- Do not place business logic in layouts.
+- Use dedicated layouts for different application areas where useful.
+- Prefer `ORoute::layout()` and `ORoute::group()` for consistent routing configuration.
+- Use `afterRender` Middlewares when output must be changed before layout wrapping.
 
 ---
 
 ## 6. Summary
 
-- Layouts wrap the rendered output of route components.
-- Layouts receive `title` and `body`.
-- A default layout is generated in new projects.
-- You can define a **custom layout in routing** using `ORoute::layout()` or `ORoute::group()`.
-- Layouts are where global CSS/JS injection happens.
+- Layouts wrap route component output.
+- `afterRender` executes before the layout.
+- `afterResponse` executes after the final body is produced.
+- A stopped `before` or `afterRender` phase skips layout rendering.
+- Route groups can combine layouts and Middlewares.

@@ -1,37 +1,33 @@
 # Services
 
-Services in **Osumi Framework** are reusable classes that encapsulate business logic, shared operations, or utility functions used across components, modules, and tasks.
-They behave similarly to Angular services: lightweight, composable, and designed to keep components clean and focused.
+Services in **Osumi Framework** are reusable classes that encapsulate business logic, shared operations or utility functions used across components, modules and tasks.
 
 Services help you:
 
-- Avoid duplicating logic across components
-- Organize domain‑specific behaviors
-- Centralize interactions with models or external APIs
-- Structure your application according to clean architecture principles
+- Avoid duplicated logic.
+- Organize domain behavior.
+- Centralize model or external API interactions.
+- Keep components focused on orchestration and presentation.
 
 ---
 
-# 1. What is a Service?
+## 1. What Is a Service?
 
-A service is a PHP class that **extends `OService`**.
-The base class provides:
+A service extends `OService`.
 
-- A logger (`OLog`)
-- Access to the application configuration
-- Access to the global cache container
-
-The service class can then define any public methods needed by your application.
+It can use framework facilities such as logging, configuration and cache access.
 
 ---
 
-# 2. Creating a Service
+## 2. Creating a Service
 
-A service should live inside:
+Application services live under:
 
-    src/App/Service/
+```text
+src/Service/
+```
 
-Typical structure:
+Example:
 
 ```php
 namespace Osumi\OsumiFramework\App\Service;
@@ -39,184 +35,114 @@ namespace Osumi\OsumiFramework\App\Service;
 use Osumi\OsumiFramework\Core\OService;
 
 class UserService extends OService {
-  public function getUserById(int $id): ?User {
-    return User::findOne(['id' => $id]);
-  }
+	public function getUserById(int $id): ?User {
+		return User::findOne([
+			'id' => $id
+		]);
+	}
 }
 ```
 
-Services typically:
-
-- Implement reusable logic
-- Query or manipulate models
-- Coordinate multi-step operations
-- Optionally use other services
-
 ---
 
-# 3. Injecting a Service into a Component
+## 3. Injecting a Service into a Component
 
-You cannot inject a service at the moment of declaring the property in a class.
-**This is a PHP language limitation:** PHP does **not** allow calling functions (such as `inject()`) inside property declarations.
-
-For example, this is **invalid** in PHP:
-
-```php
-private UserService $us = inject(UserService::class); // Not allowed in PHP
-```
-
-Because of this, services must be injected inside the constructor:
+Services should be injected from executable code such as the constructor:
 
 ```php
 class MyComponent extends OComponent {
-  private ?UserService $us = null;
+	private ?UserService $us = null;
 
-  public function __construct() {
-    parent::__construct();
-    $this->us = inject(UserService::class); // Correct
-  }
+	public function __construct() {
+		parent::__construct();
+
+		$this->us = inject(
+			UserService::class
+		);
+	}
 }
 ```
 
-This ensures the service is available by the time `run()` executes.
-
 ---
 
-# 4. Using the Service in a Component
+## 4. Using a Service in a Component
 
-Once injected, you can access methods from the service normally:
+A common flow is:
+
+1. Read request or DTO data, possibly including trusted Middleware context.
+2. Delegate business logic to a service.
+3. Prepare component output.
 
 ```php
 public function run(ORequest $req): void {
-  $user = $this->us->getUserById(3);
-  $this->user = $user;
+	$id = $req->getMiddlewareValue(
+		'Login',
+		'id'
+	);
+
+	if (!is_int($id)) {
+		return;
+	}
+
+	$this->user = $this->us->getUserById(
+		$id
+	);
 }
 ```
 
-A typical pattern is:
+---
 
-1.  Extract data from request (possibly using filters or DTOs)
-2.  Delegate business logic to the service
-3.  Prepare the final component output
+## 5. Service Lifecycle
 
-Components stay small and declarative — services do the heavy lifting.
+`OService` provides access to framework facilities such as:
+
+- logging
+- application configuration
+- cache
 
 ---
 
-# 5. Lifecycle of a Service
+## 6. Naming and Location
 
-`OService` handles some initialization automatically:
+Use:
 
-### Logger Initialization
-
-Each service gets its own logger to write debug information.
-
-### Access to Configuration
-
-`$this->getConfig()` gives you global application configuration.
-
-### Access to Cache Container
-
-`$this->getCacheContainer()` gives you the global cache subsystem.
-
-These helpers ensure services are both powerful and decoupled from global state.
-
----
-
-# 6. Where to Place Services
-
-Follow this structure:
-
-    src/
-      App/
-        Service/
-          CinemaService.php
-          UserService.php
-          NotificationService.php
-
-Naming conventions:
-
-- Class: `XxxService`
-- File: `XxxService.php`
-
----
-
-# 7. Example: Domain‑Focused Service
-
-```php
-class CinemaService extends OService {
-  public function getCinemas(int $id_user): array {
-    return Cinema::where(['id_user' => $id_user]);
-  }
-
-  public function deleteCinema(Cinema $cinema): void {
-    $movies = $cinema->getMovies();
-    foreach ($movies as $movie) {
-      $movie->deleteFull();
-    }
-    $cinema->delete();
-  }
-}
+```text
+src/Service/UserService.php
 ```
 
-This service:
+with class names such as:
 
-- Retrieves data
-- Performs multi‑step delete operations
-- Encapsulates domain rules
-
-By centralizing this logic, every component that needs cinema operations can reuse it.
-
----
-
-# 8. Best Practices
-
-- **Keep services stateless** whenever possible
-  They should behave like pure helpers.
-
-- **Group related functionality together**
-  Avoid huge multipurpose service classes.
-
-- **Use other services when needed**
-  Creating service hierarchies is valid (e.g., `OrderService` using `PaymentService`).
-
-- **Avoid rendering or output in services**
-  Services should not echo or return HTML; that belongs to components.
-
-- **Use the logger for debugging**
-  `$this->getLog()->debug("...")` is extremely helpful.
-
-- **Let components orchestrate**
-  Components coordinate request → service → models → template.
+```text
+UserService
+OrderService
+PaymentService
+```
 
 ---
 
-# 9. When Should You Use a Service?
+## 7. Best Practices
 
-Use a service when:
-
-- Multiple components share the same logic
-- Logic involves non‑trivial model interactions
-- You need reusable operations
-- You want to separate domain logic from presentation logic
-- You need to keep components small, clean, and focused
-
-Do **not** use a service when:
-
-- The logic is purely request‑filtering (use Filters)
-- The logic is specific to rendering (use Components)
-- The logic relates to validating input data (use DTOs)
+- Keep services stateless where practical.
+- Group related functionality.
+- Avoid rendering or direct output.
+- Keep request/response cross-cutting concerns in Middlewares.
+- Keep input validation in DTOs.
+- Let components orchestrate request → service → model → template flows.
 
 ---
 
-# 10. Summary
+## 8. When to Use a Service
 
-Services are one of the key building blocks of Osumi Framework:
+Use a service for reusable business or domain logic.
 
-- They promote clean separation of concerns
-- They reduce duplication
-- They centralize business logic
-- They integrate cleanly with components through dependency injection
-- They support composition (services using services)
+Do not use a service when:
 
-Using services effectively results in a more maintainable, scalable, and organized application architecture.
+- The logic is a cross-cutting request/response concern better implemented as a Middleware.
+- The logic is specifically presentation/rendering logic.
+- The logic is input validation better represented by a DTO.
+
+---
+
+## 9. Summary
+
+Services provide reusable business logic and help keep components, Middlewares and DTOs focused on their respective responsibilities.

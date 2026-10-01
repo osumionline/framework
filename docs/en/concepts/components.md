@@ -3,35 +3,35 @@
 Components in Osumi Framework are small, reusable pieces of code that render a template. A component is composed of:
 
 - A PHP class extending `OComponent`.
-- A template file (php/html/json/xml depending on usage).
+- A template file (`php`, `html`, `json` or `xml`, depending on usage).
 
-A component instance is created, properties are assigned, and then the component is rendered, usually via `render()` or by casting the object to a string.
+A component instance is created, properties are assigned, and then the component is rendered.
 
 ---
 
-## Basic component structure
+## Basic Component Structure
 
 ### Component Class
 
-Example of a component class file (`LostPasswordComponent.php`):
-
 ```php
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\Component\Email\LostPassword;
 
 use Osumi\OsumiFramework\Core\OComponent;
 
 class LostPasswordComponent extends OComponent {
-  public ?string $token = null;
+	public ?string $token = null;
 }
 ```
 
 ### Template File
 
-```php
+```html
 <div>
-  Token: {{ token }}
+	Token: {{ token }}
 </div>
 ```
 
@@ -41,18 +41,20 @@ class LostPasswordComponent extends OComponent {
 
 ### Automatic Content-Type Headers
 
-When a component is used as a main action for a URL, the framework automatically sends the appropriate `Content-Type` header based on the template's file extension:
+When a component is used as the main action for a URL, the framework automatically sends the appropriate `Content-Type` header based on the template extension:
 
-- `.json`: Sends `Content-type: application/json`.
-- `.xml`: Sends `Content-type: application/xml`.
-- `.html` / `.php`: Sends `Content-type: text/html`.
+- `.json`: `application/json`.
+- `.xml`: `application/xml`.
+- `.html` / `.php`: `text/html`.
 
 ### Component Nesting
 
-Components can be chained or nested. A larger component can include and render smaller components within its logic or template to promote reusability.
+Components can be nested to promote reusability.
 
 ```php
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\Component\Father;
 
@@ -60,29 +62,27 @@ use Osumi\OsumiFramework\App\Component\Child\ChildComponent;
 use Osumi\OsumiFramework\Core\OComponent;
 
 class FatherComponent extends OComponent {
-  public ?ChildComponent $child = null;
+	public ?ChildComponent $child = null;
 
-  public function run(): void {
-    $this->child = new ChildComponent();
-    $this->child->name = 'Child Name';
-  }
+	public function run(): void {
+		$this->child = new ChildComponent();
+		$this->child->name = 'Child Name';
+	}
 }
 ```
 
 ### Template Syntax and Access
 
-Templates access the component's public properties differently depending on the file extension:
-
-1. **PHP Templates (`.php`)** can execute native PHP code and access public properties as standard variables.
-2. **Static/Structured Templates (`.html`, `.json`, `.xml`)** use double curly braces: `{{ variable_name }}`.
+1. **PHP templates (`.php`)** can execute PHP and access public properties as variables.
+2. **Static/structured templates (`.html`, `.json`, `.xml`)** use `{{ variable_name }}`.
 
 ---
 
-## The `run()` method (Optional)
+## The `run()` Method
 
-A component can define an optional `run()` method. If present, it is executed automatically at the beginning of the `render()` process to prepare data before the template is processed.
+A component can define an optional `run()` method.
 
-When the component is used as an action (a component rendered as a result of an activated route), the `run()` method supports exactly one of the following signatures:
+When the component is used as a route action, exactly these signatures are supported:
 
 ```php
 public function run(): void
@@ -96,62 +96,93 @@ public function run(ORequest $req): void
 public function run(MyDTO $dto): void
 ```
 
-The behavior depends on the selected signature:
+Behavior:
 
-- `run()` receives no request data and can be used when the component does not need access to the current request.
-- `run(ORequest $req)` receives the current request as an `ORequest` instance.
-- `run(MyDTO $dto)` receives a DTO automatically populated from the current request. `MyDTO` must extend `ODTO`.
-- DTOs are detected by inheritance from `ODTO`, not by their namespace. DTO classes can therefore be located anywhere in the application.
-- No other signatures are supported. The method can receive at most one parameter, and that parameter must be a non-nullable `ORequest` or a class extending `ODTO`.
+- `run()` receives no request data.
+- `run(ORequest $req)` receives the current request.
+- `run(MyDTO $dto)` receives a DTO populated from the current request. `MyDTO` must extend `ODTO`.
+- DTOs are recognized through inheritance from `ODTO`, not through their namespace.
+- No other signatures are supported.
+- The single parameter, when present, must be non-nullable.
 
-The `ORequest` class has methods to get data passed such as form values or parameters passed via the URL:
+`ORequest` provides typed request accessors such as:
 
-- **`getParamString('name')`**: returns the value of the field 'name' passed to the route as a string (null if not present).
-- **`getParamInt('name')`**: returns the value of the field 'name' passed to the route as an integer (null if not present).
-- **`getParamFloat('name')`**: returns the value of the field 'name' passed to the route as a float (null if not present).
-- **`getParamBool('name')`**: returns the value of the field 'name' passed to the route as a boolean (null if not present).
+- `getParamString('name')`
+- `getParamInt('name')`
+- `getParamFloat('name')`
+- `getParamBool('name')`
 
-If a route has a filter defined, the `ORequest` class also provides ways to access the result of their execution:
+### Middleware Context
+
+`ORequest` also exposes context published by executed Middlewares.
+
+Get all context published by one Middleware:
 
 ```php
 public function run(ORequest $req): void {
-  $login_filter = $req->getFilter('login');
-  $filters = $req->getFilters();
+	$login = $req->getMiddleware(
+		'Login'
+	);
 }
 ```
 
-**Examples:**
+Get one value:
+
+```php
+public function run(ORequest $req): void {
+	$id = $req->getMiddlewareValue(
+		'Login',
+		'id'
+	);
+}
+```
+
+`LoginMiddleware` is exposed through the public name `Login`.
+
+A missing Middleware context returns an empty array, while a missing context value returns `null`.
+
+See `/docs/en/concepts/middlewares.md`.
+
+### Examples
 
 ```php
 class BooksComponent extends OComponent {
-  public array $books = [];
+	public array $books = [];
 
-  public function run(): void {
-    $this->books = ['Book A', 'Book B'];
-  }
+	public function run(): void {
+		$this->books = [
+			'Book A',
+			'Book B'
+		];
+	}
 }
 ```
 
 ```php
 class GetBookComponent extends OComponent {
-  public ?Book $book = null;
+	public ?Book $book = null;
 
-  public function run(ORequest $req): void {
-    $id_book = $req->getParamInt('id');
-    $this->book = Book::findOne(['id' => $id_book]);
-  }
+	public function run(ORequest $req): void {
+		$id_book = $req->getParamInt(
+			'id'
+		);
+
+		$this->book = Book::findOne([
+			'id' => $id_book
+		]);
+	}
 }
 ```
 
 ---
 
-## Accessing global options
+## Accessing Global Options
 
-Components have methods to access global options such as application configuration, logs or session data:
+Components can access framework services such as:
 
-- **`getConfig()`**: Returns global `OConfig`.
-- **`getLog()`**: Returns the component `OLog` instance.
-- **`getSession()`**: Returns the `OSession` instance.
+- `getConfig()`: global `OConfig`.
+- `getLog()`: component `OLog`.
+- `getSession()`: `OSession`.
 
 ---
 
@@ -166,168 +197,116 @@ echo strval($cmp);
 
 # Template Pipes
 
-Osumi Framework templates support **Angular-style pipes**, allowing you to transform values directly inside the template.
+Osumi Framework templates support Angular-style pipes.
 
 ### Syntax
 
-    {{ value | pipeName }}
-    {{ value | pipeName:param }}
-    {{ value | pipeName:param1:param2 }}
+```text
+{{ value | pipeName }}
+{{ value | pipeName:param }}
+{{ value | pipeName:param1:param2 }}
+```
 
-### Purpose
+Pipes are processed by `OPipeFunctions`.
 
-Pipes allow formatting of:
+## `date`
 
-- Dates
-- Numbers
-- Strings
-- Booleans
+Formats a date string.
 
-Pipes are processed by the internal **OPipeFunctions** class.
+```text
+{{ user.created_at | date }}
+{{ user.created_at | date:"d/m/Y" }}
+```
 
----
+Default format:
 
-# Available Pipes
+```text
+d/m/Y H:i:s
+```
 
-## 1. `date`
+## `number`
 
-Formats a date string (`Y-m-d H:i:s` format) into a new format.
+Uses PHP `number_format()`.
 
-### Syntax
+```text
+{{ price | number }}
+{{ price | number:2 }}
+{{ price | number:2:".":"," }}
+```
 
-    {{ user.created_at | date }}
-    {{ user.created_at | date:"d/m/Y" }}
-    {{ user.created_at | date:"d-m-Y H:i" }}
+## `string`
 
-### Behavior
+Applies `urlencode()` and returns a quoted string.
 
-- Input must be `Y-m-d H:i:s`
-- Output is formatted using PHP `DateTime::format()`
-- If the date is invalid → `"null"`
-
-### Default format
-
-    d/m/Y H:i:s
-
----
-
-## 2. `number`
-
-Formats numbers using PHP's `number_format()`.
-
-### Syntax
-
-    {{ price | number }}
-    {{ price | number:2 }}
-    {{ price | number:2:".":"," }}
-
-### Behavior
-
-- Default decimals: **2**
-- Default decimal separator: `"."`
-- Default thousand separator: `""`
-- If value is null → `"null"`
-
----
-
-## 3. `string`
-
-Applies `urlencode()` to a string.
-
-### Syntax
-
-    {{ user.name | string }}
-
-### Behavior
-
-- Null → `null`
-- Value → URL-encoded string in quotes
+```text
+{{ user.name | string }}
+```
 
 Example:
 
-    John Doe → "John+Doe"
+```text
+John Doe → "John+Doe"
+```
 
----
+## `plain`
 
-## 4. `plain`
+Encodes a string as a JSON-safe quoted value without URL encoding.
 
-Encodes a string as a JSON-safe value without applying URL encoding.
+```text
+{{ user.name | plain }}
+```
 
-### Syntax
+Behavior:
 
-    {{ user.name | plain }}
-
-### Behavior
-
-- Null → `null`
-- Value → JSON-safe quoted string
-- Unicode characters are preserved
-- Slashes are not escaped
-- Quotes and other JSON-sensitive characters are properly escaped
+- `null` → `null`
+- Unicode is preserved.
+- Slashes are not escaped.
+- JSON-sensitive characters are escaped correctly.
 
 Examples:
 
-    John Doe → "John Doe"
-    He said "hello" → "He said \"hello\""
+```text
+John Doe → "John Doe"
+He said "hello" → "He said \"hello\""
+```
 
-This pipe is especially useful in JSON templates when the original string value must be preserved without URL encoding.
+This pipe is especially useful in JSON templates.
 
----
+## `bool`
 
-## 5. `bool`
+Produces:
 
-Converts booleans to:
+```text
+true
+false
+null
+```
 
-    true
-    false
-    null
-
-### Syntax
-
-    {{ user.isAdmin | bool }}
-
----
-
-# How Pipes Behave in JSON Templates
-
-Pipes provide values suitable for structured templates:
-
-- `string` produces a quoted URL-encoded string.
-- `plain` produces a quoted JSON-safe string without URL encoding.
-- Booleans appear without quotes.
-- Numbers appear unquoted.
-- Null values appear as `null`.
-
----
-
-# Examples
+### JSON Example
 
 ```json
 {
-  "id": {{ user.id | number }},
-  "name": {{ user.name | plain }},
-  "slug": {{ user.slug | string }},
-  "created": {{ user.created_at | date:"d/m/Y" }},
-  "active": {{ user.active | bool }}
+	"id": {{ user.id | number }},
+	"name": {{ user.name | plain }},
+	"slug": {{ user.slug | string }},
+	"created": {{ user.created_at | date:"d/m/Y" }},
+	"active": {{ user.active | bool }}
 }
 ```
 
+### Summary
+
+| Pipe     | Purpose | Notes |
+| -------- | ------- | ----- |
+| `date`   | Format date values | Accepts custom masks |
+| `number` | Format numeric values | Supports decimals and separators |
+| `string` | URL-encode strings | Adds quotes |
+| `plain`  | JSON-safe plain strings | Adds quotes without URL encoding |
+| `bool`   | Normalize boolean output | `true` / `false` / `null` |
+
 ---
 
-# Summary of Pipes
-
-| Pipe     | Purpose                  | Notes                            |
-| -------- | ------------------------ | -------------------------------- |
-| `date`   | Format date values       | Accepts custom masks             |
-| `number` | Format numeric values    | Supports decimals & separators   |
-| `string` | URL-encode strings       | Adds quotes                      |
-| `plain`  | JSON-safe plain strings  | Adds quotes without URL encoding |
-| `bool`   | Normalize boolean output | `true` / `false` / `null`        |
-
-
 ### Model-bound Components
-
-When components represent model views, you can use typed properties with your model classes.
 
 ```php
 namespace Osumi\OsumiFramework\App\Component\Model\User;
@@ -336,7 +315,7 @@ use Osumi\OsumiFramework\App\Model\User;
 use Osumi\OsumiFramework\Core\OComponent;
 
 class UserComponent extends OComponent {
-  public ?User $user = null;
+	public ?User $user = null;
 }
 ```
 
@@ -344,7 +323,7 @@ class UserComponent extends OComponent {
 
 ## Best Practices
 
-- **Keep templates simple**: Limit them to minimal display logic.
-- **Use `run()`**: Use it for preparing data or performing calculations before rendering.
-- **Typed properties**: Use typed public properties for clarity.
-- **Default values**: Prefer `?type = null` defaults to avoid uninitialized property errors.
+- Keep templates simple.
+- Use `run()` for preparing data.
+- Use typed public properties.
+- Prefer nullable defaults such as `?type = null` where appropriate.

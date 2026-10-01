@@ -1,21 +1,23 @@
 # Data Transfer Objects (DTOs)
 
-DTOs (Data Transfer Objects) in **Osumi Framework** are simple classes used to receive, normalize and validate input data coming from an HTTP request.
-They provide a structured and safe way for components to access typed and validated request values, headers or filter outputs.
+DTOs in **Osumi Framework** are simple classes used to receive, normalize and validate input data coming from an HTTP request.
 
-A DTO must **extend `ODTO`** and define its fields using the **`#[ODTOField]`** attribute.
+They provide a structured and safe way for components to access typed and validated request values, headers or Middleware context.
+
+A DTO must extend `ODTO` and define its fields using `#[ODTOField]`.
 
 ---
 
-# 1. Purpose of a DTO
+## 1. Purpose of a DTO
 
 DTOs are designed to:
 
-- Collect and type‑cast request data (URL params, JSON body, form fields, query strings, headers, filters).
-- Apply validation rules _before_ component logic executes.
-- Make parameter handling consistent across the entire framework.
-- Avoid manual calls to `$req->getParam...()` inside components.
-- Prevent unsafe or unexpected values from reaching the business logic.
+- Collect and type-cast request data.
+- Read trusted values from Middleware context.
+- Read values from HTTP headers.
+- Apply validation rules before component logic executes.
+- Keep request parsing consistent across the framework.
+- Avoid repeated `$req->getParam...()` calls inside components.
 
 When a component defines:
 
@@ -23,63 +25,66 @@ When a component defines:
 public function run(MovieDTO $dto): void
 ```
 
-...the framework automatically:
+the framework automatically:
 
-1.  Instantiates `MovieDTO`.
-2.  Loads request data into it.
-3.  Applies validation rules defined in its attributes.
-4.  Injects the DTO into the component’s `run()` method.
+1. Instantiates `MovieDTO`.
+2. Loads its values.
+3. Applies its validation rules.
+4. Injects it into `run()`.
 
 ---
 
-# 2. Base Class: `ODTO`
+## 2. Base Class: `ODTO`
 
-The `ODTO` class uses **reflection** to inspect all public properties in the DTO, read their `#[ODTOField]` definitions, and load data accordingly.
+`ODTO` uses reflection to inspect public DTO properties and their `#[ODTOField]` definitions.
 
-### 2.1 Data loading process
+### 2.1 Data Sources
 
-ODTO loads values in this order of priority:
+A field can use one explicit source.
 
-1.  **Filter result**
-    If a field defines `filter` and `filterProperty`, the value is taken from:
+#### Middleware Context
 
-    ```php
-    $req->getFilter($filterName)[$filterProperty]
-    ```
+If both `middleware` and `middlewareProperty` are defined, the value is obtained from:
 
-2.  **Header value**
-    If a field defines `header: 'X-Header'`, the value is taken from:
+```php
+$req->getMiddlewareValue(
+	$middlewareName,
+	$middlewareProperty
+);
+```
 
-    ```php
-    $req->getHeader('X-Header')
-    ```
+Middleware context is an explicit source. If the context value does not exist, the DTO value remains `null`; it does not fall back to client input.
 
-3.  **Request parameters**
-    The value is type‑cast depending on the property type:
-    - `int` → `$req->getParamInt()`
-    - `float` → `$req->getParamFloat()`
-    - `bool` → `$req->getParamBool()`
-    - `string` → `$req->getParamString()`
-    - `array` → `$req->getParam()`
-    - default → `null`
+#### Header
+
+If `header` is defined, the value is obtained from the corresponding HTTP header.
+
+A field cannot define both a Middleware source and a header source.
+
+#### Request Parameters
+
+When no explicit source is defined, the value is loaded from request parameters according to the property type:
+
+- `int` → `getParamInt()`
+- `float` → `getParamFloat()`
+- `bool` → `getParamBool()`
+- `string` → `getParamString()`
+- `array` → `getParam()`
 
 ### 2.2 Validation
 
-After loading all values, ODTO automatically checks:
+After loading values, ODTO evaluates:
 
-- **required**
-  If `required = true` and the value is missing, a validation error is added.
+- `required`
+- `requiredIf`
 
-- **requiredIf**
-  If another field has a value, and this field does not, a validation error is added.
-
-Errors are stored internally and can be retrieved via:
+Validation errors can be read with:
 
 ```php
 $dto->getValidationErrors();
 ```
 
-You can check if the DTO is valid with:
+Validity can be checked with:
 
 ```php
 $dto->isValid();
@@ -87,121 +92,96 @@ $dto->isValid();
 
 ---
 
-# 3. `ODTOField` Attribute
-
-The `ODTOField` attribute is used to configure each DTO property:
+## 3. `ODTOField`
 
 ```php
 #[ODTOField(
-  required: false,
-  requiredIf: null,
-  filter: null,
-  filterProperty: null,
-  header: null
+	required: false,
+	requiredIf: null,
+	middleware: null,
+	middlewareProperty: null,
+	header: null
 )]
 ```
 
-### Attribute options
+| Attribute | Description |
+| --------- | ----------- |
+| `required` | The field must contain a value. |
+| `requiredIf` | The field is required when another DTO field contains a value. |
+| `middleware` | Public Middleware name used as the field source. |
+| `middlewareProperty` | Context property read from that Middleware. |
+| `header` | HTTP header used as the field source. |
 
-| Attribute          | Description                                                         |
-| ------------------ | ------------------------------------------------------------------- |
-| **required**       | The field must have a value.                                        |
-| **requiredIf**     | The field is required only if another field has a value.            |
-| **filter**         | Name of a filter whose output should be used to populate the field. |
-| **filterProperty** | Key of the filter output array to use.                              |
-| **header**         | Name of an HTTP header to read the value from.                      |
+Rules:
 
-These options allow powerful combinations, such as obtaining user IDs from filters, extracting API tokens from headers, or enforcing conditional dependencies between DTO fields.
+- `middleware` and `middlewareProperty` must be defined together.
+- Empty Middleware names or properties are invalid.
+- A field cannot use both Middleware context and a header as explicit sources.
+- `requiredIf` must reference another DTO field and cannot reference itself.
 
 ---
 
-# 4. Example DTO
-
-Example from your project:
+## 4. Example DTO
 
 ```php
 class MovieDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?int $idCinema = null;
+	#[ODTOField(required: true)]
+	public ?int $idCinema = null;
 
-  #[ODTOField(required: true)]
-  public ?string $name = null;
+	#[ODTOField(required: true)]
+	public ?string $name = null;
 
-  #[ODTOField(required: true)]
-  public ?string $cover = null;
-
-  #[ODTOField(required: true)]
-  public ?int $coverStatus = null;
-
-  #[ODTOField(required: true)]
-  public ?string $ticket = null;
-
-  #[ODTOField(required: true)]
-  public ?string $imdbUrl = null;
-
-  #[ODTOField(required: true)]
-  public ?string $date = null;
-
-  #[ODTOField(required: true)]
-  public ?array $companions = null;
-
-  #[ODTOField(required: true, filter: 'Login', filterProperty: 'id')]
-  public ?int $idUser = null;
+	#[ODTOField(
+		required: true,
+		middleware: 'Login',
+		middlewareProperty: 'id'
+	)]
+	public ?int $idUser = null;
 }
 ```
 
-This DTO:
-
-- Loads typed values from request parameters (`int`, `string`, `array`).
-- Enforces required fields.
-- Loads `idUser` from the **Login filter** instead of the client request.
+Here `idUser` is read from context published by `LoginMiddleware`, not from client input.
 
 ---
 
-# 5. Using a DTO inside a Component
+## 5. Using a DTO in a Component
 
 ```php
 class AddMovieComponent extends OComponent {
-  public function run(MovieDTO $dto): void {
-    if (!$dto->isValid()) {
-      $this->errors = $dto->getValidationErrors();
-      return;
-    }
+	public function run(MovieDTO $dto): void {
+		if (!$dto->isValid()) {
+			$this->errors = $dto->getValidationErrors();
+			return;
+		}
 
-    $movie = new Movie();
-    $movie->name = $dto->name;
-    $movie->date = $dto->date;
-    $movie->idUser = $dto->idUser;
-    $movie->save();
-  }
+		$movie = new Movie();
+		$movie->name = $dto->name;
+		$movie->idUser = $dto->idUser;
+		$movie->save();
+	}
 }
 ```
 
-### Notes:
+---
 
-- The component does **not** need to read request values manually.
-- Values passed to the component are already typed and validated.
-- Error handling becomes straightforward.
+## 6. Best Practices
+
+- Use strict property types.
+- Prefer nullable defaults when a field can initially be absent.
+- Use DTOs for structured request input.
+- Use `requiredIf` for field dependencies.
+- Use Middleware context for trusted server-side values such as authenticated user IDs.
+- Keep business logic out of DTOs.
+- Check `isValid()` before using validated input.
 
 ---
 
-# 6. Best Practices
+## 7. When to Use DTOs
 
-- Use `?type = null` for all DTO properties to prevent uninitialized typed property errors.
-- Prefer DTOs whenever you receive structured data (API endpoints, forms, JSON).
-- Use `requiredIf` to express logical dependencies between fields.
-- Use `filter` fields to avoid exposing sensitive IDs to the client.
-- Keep DTOs simple; they should not contain business logic.
-- Always check `$dto->isValid()` before using it.
+DTOs are useful for:
 
----
-
-# 7. When to use DTOs
-
-DTOs are ideal for:
-
-- API endpoints receiving complex inputs.
-- Form submissions with many fields.
-- Endpoints requiring authentication data injected by filters.
-- Reusable data structures used across multiple components.
-- Replacing repeated request‑parsing logic.
+- API endpoints with structured input.
+- Form submissions.
+- Endpoints requiring authentication data published by Middlewares.
+- Reusable request structures.
+- Replacing repeated request parsing logic.
