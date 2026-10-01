@@ -32,9 +32,9 @@ Konfigurazio sistema eta aplikazioaren ezarpenak nola kudeatu deskribatzen ditu.
 
 Data Transfer Objects (DTO) eta framework-ean duten eginkizuna azaltzen ditu.
 
-### `/docs/eu/concepts/filters.md`
+### `/docs/eu/concepts/middlewares.md`
 
-Iragazkien eta framework-ean duten erabileraren inguruko informazioa ematen du.
+Middlewaren faseak, testuingurua, exekuzio-ordena eta ibilbideekin duten integrazioa azaltzen ditu.
 
 ### `/docs/eu/concepts/orm.md`
 

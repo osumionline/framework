@@ -32,9 +32,9 @@ Describes the configuration system and how to manage application settings.
 
 Covers the Data Transfer Objects (DTOs) and their role in the framework.
 
-### `/docs/en/concepts/filters.md`
+### `/docs/en/concepts/middlewares.md`
 
-Provides information about filters and their usage in the framework.
+Explains middleware phases, context, execution order and route integration.
 
 ### `/docs/en/concepts/orm.md`
 

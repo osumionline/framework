@@ -32,9 +32,9 @@ Describe el sistema de configuración y cómo administrar la configuración de l
 
 Aborda los Objetos de Transferencia de Datos (DTO) y su función en el marco de trabajo.
 
-### `/docs/es/concepts/filters.md`
+### `/docs/es/concepts/middlewares.md`
 
-Proporciona información sobre los filtros y su uso en el marco de trabajo.
+Explica las fases de los Middlewares, su contexto, orden de ejecución e integración con rutas.
 
 ### `/docs/es/concepts/orm.md`
 
