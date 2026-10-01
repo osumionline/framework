@@ -2,15 +2,15 @@
 
 El enrutamiento en Osumi Framework se gestiona mediante la clase `ORoute`. Esta clase asigna las solicitudes HTTP entrantes (URL) a componentes específicos que actúan como acciones.
 
-Las rutas se definen normalmente en archivos PHP ubicados en el directorio `src/Routes/`. Puede crear varios archivos en esta carpeta para organizar las rutas de forma lógica (por ejemplo, un archivo por módulo).
+Las rutas se definen normalmente en archivos PHP ubicados en el directorio `src/Routes/`. Se pueden crear varios archivos en esta carpeta para organizar las rutas de forma lógica, por ejemplo, un archivo por módulo.
 
-Cuando un usuario accede a una URL, `ORoute` localiza la ruta, ejecuta filtros, instancia el componente y llama a `run()`, pasando un `DTO` definido por el usuario o un `ORequest` genérico.
+Cuando un usuario accede a una URL, `ORoute` localiza la ruta, resuelve el pipeline efectivo de Middlewares, instancia el componente y llama a `run()`, pasando un `DTO` definido por el usuario, un `ORequest` genérico o ningún parámetro, según la firma del componente.
 
 ---
 
 ## Definición de rutas
 
-Para definir una ruta, utilice los métodos estáticos de `ORoute` correspondientes a los verbos HTTP: `get()`, `post()`, `put()` o `delete()`.
+Para definir una ruta, utiliza los métodos estáticos de `ORoute` correspondientes a los verbos HTTP: `get()`, `post()`, `put()` o `delete()`.
 
 ### Sintaxis básica
 
@@ -19,140 +19,204 @@ use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\App\Module\Home\Index\IndexComponent;
 
 ORoute::get('/', IndexComponent::class);
-
 ```
 
 ### Parámetros de ruta
 
-- **URL (cadena)**: La ruta a la que se responde.
-- **Componente (cadena)**: El FQCN (Nombre de clase completo) del componente que se ejecutará.
-- **Filtros (array, opcional)**: Una lista de clases de filtro que se ejecutarán antes del componente.
-- **Diseño (cadena, opcional)**: Un componente de diseño específico para esta ruta.
+Los métodos de ruta como `get()`, `post()`, `put()` y `delete()` aceptan:
+
+- **URL (string)**: La ruta a la que se responde.
+- **Componente (string)**: El FQCN del componente que se ejecutará.
+- **Middlewares (array, opcional)**: Clases Middleware agrupadas por fase de ejecución.
+- **Layout (string|null, opcional)**: Un componente de layout específico para la ruta.
 
 ---
 
-## Filtros
+## Middlewares
 
-Los filtros son clases que se ejecutan antes del componente principal. Se utilizan comúnmente para la autenticación (comprobación de tokens), el registro o la validación de solicitudes.
+Los Middlewares participan en el ciclo de vida de la petición en tres fases:
 
-Documentación: /docs/es/concepts/filters.md
+- `before`
+- `afterRender`
+- `afterResponse`
+
+Consulta `/docs/es/concepts/middlewares.md` para ver el ciclo de vida completo y el formato de resultado de los Middlewares.
+
+Ejemplo:
 
 ```php
-use Osumi\OsumiFramework\App\Filter\LoginFilter;
+use Osumi\OsumiFramework\App\Middleware\AuditMiddleware;
+use Osumi\OsumiFramework\App\Middleware\LoginMiddleware;
 use Osumi\OsumiFramework\App\Module\User\Profile\ProfileComponent;
+use Osumi\OsumiFramework\Core\OMiddleware;
+use Osumi\OsumiFramework\Routing\ORoute;
 
-ORoute::post('/profile', ProfileComponent::class, [LoginFilter::class]);
-
+ORoute::post(
+	'/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		],
+		OMiddleware::PHASE_AFTER_RESPONSE => [
+			AuditMiddleware::class
+		]
+	]
+);
 ```
 
 ---
 
 ## Agrupación de rutas
 
-Osumi Framework ofrece tres maneras de agrupar rutas con características comunes:
+Osumi Framework ofrece tres formas de agrupar rutas que comparten características comunes.
+
+Las definiciones de Middlewares asignadas a grupos de rutas se acumulan con los grupos anidados y con los Middlewares específicos de cada ruta.
+
+Dentro de cada fase, el orden de ejecución es:
+
+```text
+global
+↓
+grupo exterior
+↓
+grupo interior
+↓
+ruta
+```
 
 ### 1. Prefijos
 
-Se utilizan cuando varias rutas comparten el mismo inicio de URL (por ejemplo, una API). Los prefijos pueden anidarse; cada prefijo anidado se añade al prefijo activo.
+Se utilizan cuando varias rutas comparten el mismo inicio de URL. Los prefijos pueden anidarse; cada prefijo anidado se añade al prefijo activo.
 
 ```php
-ORoute::prefix('/api', function(): void {
-  ORoute::get('/health', HealthComponent::class);
+use Osumi\OsumiFramework\App\Middleware\AdminAuthMiddleware;
+use Osumi\OsumiFramework\Core\OMiddleware;
 
-  ORoute::prefix('/admin', function(): void {
-    ORoute::post('/login', LoginComponent::class);
-    ORoute::get('/me', MeComponent::class, [AdminAuthFilter::class]);
-  });
-});
+ORoute::prefix(
+	'/api',
+	static function (): void {
+		ORoute::get('/health', HealthComponent::class);
 
+		ORoute::prefix(
+			'/admin',
+			static function (): void {
+				ORoute::post('/login', LoginComponent::class);
+				ORoute::get('/me', MeComponent::class);
+			},
+			[
+				OMiddleware::PHASE_BEFORE => [
+					AdminAuthMiddleware::class
+				]
+			]
+		);
+	}
+);
 ```
 
 Esto registra `/api/health`, `/api/admin/login` y `/api/admin/me`.
 
-### 2. Diseños
+### 2. Layouts
 
-Se utiliza cuando varias rutas comparten la misma estructura visual (encabezado, pie de página, etc.).
+Usa `ORoute::layout()` cuando varias rutas comparten la misma estructura visual.
 
 ```php
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-  ORoute::get('/contact', ContactComponent::class);
-});
-
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/home', HomeComponent::class);
+		ORoute::get('/contact', ContactComponent::class);
+	}
+);
 ```
 
-### 3. Grupos (Prefijo + Diseño)
+`layout()` también puede recibir definiciones de Middlewares como tercer argumento.
 
-Combina la asignación de un prefijo y un diseño en un solo bloque. Los grupos pueden anidarse con otros grupos o prefijos; sus prefijos se acumulan y cada grupo aplica su diseño a las rutas declaradas en su interior.
+### 3. Grupos (prefijo + layout)
+
+`ORoute::group()` combina un prefijo y un layout. Los grupos pueden anidarse con otros grupos o prefijos.
 
 ```php
-ORoute::group('/admin', AdminLayoutComponent::class, function(): void {
-  ORoute::group('/users', UserLayoutComponent::class, function(): void {
-    ORoute::get('/profile', ProfileComponent::class);
-  });
-});
-
+ORoute::group(
+	'/admin',
+	AdminLayoutComponent::class,
+	static function (): void {
+		ORoute::group(
+			'/users',
+			UserLayoutComponent::class,
+			static function (): void {
+				ORoute::get('/profile', ProfileComponent::class);
+			}
+		);
+	}
+);
 ```
 
 La ruta anterior se registra como `/admin/users/profile` y utiliza `UserLayoutComponent`.
 
+`group()` también puede recibir definiciones de Middlewares como cuarto argumento.
+
 ### Normalización de URL
 
-Todos los métodos estáticos de `ORoute` normalizan las URL. Las barras iniciales se unifican, las barras repetidas se reducen a una sola y las barras finales se eliminan, excepto en la URL raíz `/`. Esto se aplica a `get()`, `post()`, `put()`, `delete()`, `view()`, `group()` y `prefix()`.
+Todos los métodos estáticos de `ORoute` normalizan las URL. Las barras iniciales se unifican, las barras repetidas se reducen a una sola y las barras finales se eliminan, excepto en la URL raíz `/`.
 
-Por ejemplo, con prefijos anidados y barras adicionales:
+Por ejemplo:
 
 ```php
-ORoute::prefix('/api/', function(): void {
-  ORoute::prefix('//admin///', function(): void {
-    ORoute::get('//users/', UsersComponent::class);
-  });
+ORoute::prefix('/api/', static function (): void {
+	ORoute::prefix('//admin///', static function (): void {
+		ORoute::get('//users/', UsersComponent::class);
+	});
 });
 ```
 
-La ruta se registra como `/api/admin/users`.
+Esto registra `/api/admin/users`.
 
 ---
 
 ## Vistas estáticas
 
-Si necesita servir un archivo estático o una plantilla simple sin la lógica de un componente de acción completo, use `ORoute::view()`.
+Usa `ORoute::view()` para servir un archivo estático o una plantilla sencilla sin un componente de acción completo.
 
 ```php
 ORoute::view('/about-us', 'about-us.html');
-
 ```
+
+Las rutas de vista estática también pueden recibir definiciones de Middlewares.
+
+---
 
 ## Parámetros en las rutas
 
-Se pueden definir URLs con parámetros usando la sintaxis `:name`.
+Las URL pueden definir parámetros mediante la sintaxis `:name`.
 
 ```php
 ORoute::get('/user/:id', UserComponent::class);
 ORoute::get('/location/:name', LocationComponent::class);
 ```
 
-El método `run(ORequest $req)` del componente puede acceder a ese parámetro mediante métodos como `getParamInt('id')` o `getParamString('name')`.
+Un componente que use `run(ORequest $req)` puede acceder a ellos mediante métodos como `getParamInt('id')` o `getParamString('name')`.
 
 ---
 
 ## Resumen de los métodos de `ORoute`
 
-| Método     | Descripción                                                       |
-| ---------- | ----------------------------------------------------------------- |
-| `get()`    | Registra una ruta GET.                                            |
-| `post()`   | Registra una ruta POST.                                           |
-| `put()`    | Registra una ruta PUT.                                            |
-| `delete()` | Registra una ruta DELETE.                                         |
-| `view()`   | Registra una ruta que renderiza un archivo estático directamente. |
-| `prefix()` | Agrupa rutas bajo un prefijo acumulativo y anidable.              |
-| `layout()` | Agrupa rutas bajo un componente de diseño común.                  |
-| `group()`  | Agrupa rutas con un prefijo anidable y un diseño.                 |
+| Método     | Descripción |
+| ---------- | ----------- |
+| `get()`    | Registra una ruta GET. |
+| `post()`   | Registra una ruta POST. |
+| `put()`    | Registra una ruta PUT. |
+| `delete()` | Registra una ruta DELETE. |
+| `view()`   | Registra una ruta que renderiza directamente un archivo estático. |
+| `prefix()` | Agrupa rutas bajo un prefijo acumulativo y anidable y Middlewares opcionales. |
+| `layout()` | Agrupa rutas bajo un layout común y Middlewares opcionales. |
+| `group()`  | Agrupa rutas con un prefijo anidable, layout y Middlewares opcionales. |
 
 ---
 
 ## Mejores prácticas
 
-- **Organizar por archivo**: Crea archivos diferentes en `src/Routes/` para cada módulo o área funcional de tu aplicación.
-- **Usar filtros**: Mantén tus componentes limpios delegando la lógica de autenticación y validación a los filtros.
-- **Constantes de clase**: Usa siempre la notación `::class` para componentes y filtros para aprovechar el autocompletado del IDE y el análisis estático.
+- **Organiza por archivo**: Crea archivos diferentes en `src/Routes/` para cada módulo o área funcional.
+- **Usa Middlewares**: Mantén los componentes limpios trasladando la lógica transversal de petición/respuesta a Middlewares.
+- **Usa constantes de fase**: Prefiere las constantes `OMiddleware::PHASE_*`.
+- **Constantes de clase**: Usa `::class` para componentes, layouts y Middlewares.

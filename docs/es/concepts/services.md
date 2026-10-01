@@ -1,37 +1,33 @@
 # Servicios
 
-Los servicios en **Osumi Framework** son clases reutilizables que encapsulan la lógica de negocio, las operaciones compartidas o las funciones de utilidad que se utilizan en componentes, módulos y tareas.
-Se comportan de forma similar a los servicios de Angular: ligeros, componibles y diseñados para mantener los componentes limpios y enfocados.
+Los servicios en **Osumi Framework** son clases reutilizables que encapsulan lógica de negocio, operaciones compartidas o funciones de utilidad utilizadas por componentes, módulos y tareas.
 
-Los servicios te ayudan a:
+Los servicios ayudan a:
 
-- Evitar la duplicación de lógica entre componentes
-- Organizar comportamientos específicos del dominio
-- Centralizar las interacciones con modelos o API externas
-- Estructurar tu aplicación según los principios de la arquitectura limpia
-
----
-
-# 1. ¿Qué es un servicio?
-
-Un servicio es una clase PHP que **extiende `OService`**.
-La clase base proporciona:
-
-- Un registrador (`OLog`)
-- Acceso a la configuración de la aplicación
-- Acceso al contenedor de caché global
-
-La clase de servicio puede definir cualquier método público que necesite tu aplicación.
+- Evitar lógica duplicada.
+- Organizar el comportamiento del dominio.
+- Centralizar interacciones con modelos o API externas.
+- Mantener los componentes centrados en la orquestación y presentación.
 
 ---
 
-# 2. Creación de un servicio
+## 1. ¿Qué es un servicio?
 
-Un servicio debe residir en:
+Un servicio extiende `OService`.
 
-    src/App/Service/
+Puede utilizar facilidades del framework como logging, configuración y acceso a caché.
 
-Estructura típica:
+---
+
+## 2. Creación de un servicio
+
+Los servicios de la aplicación se almacenan en:
+
+```text
+src/Service/
+```
+
+Ejemplo:
 
 ```php
 namespace Osumi\OsumiFramework\App\Service;
@@ -39,186 +35,114 @@ namespace Osumi\OsumiFramework\App\Service;
 use Osumi\OsumiFramework\Core\OService;
 
 class UserService extends OService {
-  public function getUserById(int $id): ?User {
-    return User::findOne(['id' => $id]);
-  }
+	public function getUserById(int $id): ?User {
+		return User::findOne([
+			'id' => $id
+		]);
+	}
 }
 ```
 
-Los servicios suelen:
-
-- Implementan lógica reutilizable
-- Consultan o manipulan modelos
-- Coordinan operaciones de varios pasos
-- Opcionalmente, utilizan otros servicios
-
 ---
 
-# 3. Inyección de un servicio en un componente
+## 3. Inyección de un servicio en un componente
 
-No se puede inyectar un servicio al declarar la propiedad en una clase. **Esta es una limitación del lenguaje PHP:** PHP **no** permite llamar a funciones (como `inject()`) dentro de las declaraciones de propiedades.
-
-Por ejemplo, esto es **inválido** en PHP:
-
-```php
-private UserService $us = inject(UserService::class); // No permitido en PHP
-```
-
-Por lo tanto, los servicios deben inyectarse dentro del constructor:
+Los servicios deben inyectarse desde código ejecutable, como el constructor:
 
 ```php
 class MyComponent extends OComponent {
-  private ?UserService $us = null;
+	private ?UserService $us = null;
 
-  public function __construct() {
-    parent::__construct();
-    $this->us = inject(UserService::class); // Correcto
-  }
+	public function __construct() {
+		parent::__construct();
+
+		$this->us = inject(
+			UserService::class
+		);
+	}
 }
 ```
 
-Esto garantiza que el servicio esté disponible para cuando se ejecute `run()`.
-
 ---
 
-# 4. Uso del servicio en un componente
+## 4. Uso de un servicio en un componente
 
-Una vez inyectado, se puede acceder a los métodos del servicio con normalidad:
+Un flujo habitual es:
+
+1. Leer datos de la petición o del DTO, incluyendo cuando corresponda contexto de confianza publicado por Middlewares.
+2. Delegar la lógica de negocio a un servicio.
+3. Preparar la salida del componente.
 
 ```php
 public function run(ORequest $req): void {
-  $user = $this->us->getUserById(3);
-  $this->user = $user;
+	$id = $req->getMiddlewareValue(
+		'Login',
+		'id'
+	);
+
+	if (!is_int($id)) {
+		return;
+	}
+
+	$this->user = $this->us->getUserById(
+		$id
+	);
 }
 ```
 
-Un patrón típico es:
+---
 
-1. Extraer datos de la solicitud (posiblemente mediante filtros o DTO)
-2. Delegar la lógica de negocio al servicio
-3. Preparar la salida final del componente
+## 5. Ciclo de vida de un servicio
 
-Los componentes son pequeños y declarativos; los servicios se encargan del trabajo pesado.
+`OService` proporciona acceso a facilidades del framework como:
+
+- logging
+- configuración de la aplicación
+- caché
 
 ---
 
-# 5. Ciclo de vida de un servicio
+## 6. Nombres y ubicación
 
-`OService` gestiona parte de la inicialización automáticamente:
+Usa:
 
-### Inicialización del registrador
-
-Cada servicio obtiene su propio registrador para escribir información de depuración.
-
-### Acceso a la configuración
-
-`$this->getConfig()` proporciona la configuración global de la aplicación.
-
-### Acceso al contenedor de caché
-
-`$this->getCacheContainer()` proporciona el subsistema de caché global.
-
-Estos asistentes garantizan que los servicios sean potentes y estén desacoplados del estado global.
-
----
-
-# 6. Dónde ubicar los servicios
-
-Siga esta estructura:
-
-    src/
-      App/
-        Service/
-          CinemaService.php
-          UserService.php
-          NotificationService.php
-
-Convenciones de nomenclatura:
-
-- Clase: `XxxService`
-- Archivo: `XxxService.php`
-
----
-
-# 7. Ejemplo: Servicio enfocado en el dominio
-
-```php
-class CinemaService extends OService {
-  public function getCinemas(int $id_user): array {
-    return Cinema::where(['id_user' => $id_user]);
-  }
-
-  public function deleteCinema(Cinema $cinema): void {
-    $movies = $cinema->getMovies();
-    foreach ($movies as $movie) {
-      $movie->deleteFull();
-    }
-    $cinema->delete();
-  }
-}
+```text
+src/Service/UserService.php
 ```
 
-Este servicio:
+con nombres de clase como:
 
-- Recupera datos
-- Realiza operaciones de eliminación de varios pasos
-- Encapsula las reglas del dominio
-
-Al centralizar esta lógica, todos los componentes que necesitan operaciones de cinema pueden reutilizarla.
-
----
-
-# 8. Mejores prácticas
-
-- **Mantenga los servicios sin estado** siempre que sea posible
-  Deben comportarse como simples ayudantes.
-
-- **Agrupe las funciones relacionadas**
-
-Evite clases de servicio multipropósito de gran tamaño.
-
-- **Use otros servicios cuando sea necesario**
-
-Es válido crear jerarquías de servicios (por ejemplo, `OrderService` usando `PaymentService`).
-
-- **Evite la representación o la salida en los servicios**
-
-Los servicios no deben repetir ni devolver HTML; esto pertenece a los componentes.
-
-- **Usa el registrador para depurar**
-  `$this->getLog()->debug("...")` es extremadamente útil.
-
-- **Deja que los componentes organicen**
-  Los componentes coordinan solicitud → servicio → modelos → plantilla.
+```text
+UserService
+OrderService
+PaymentService
+```
 
 ---
 
-# 9. ¿Cuándo deberías usar un servicio?
+## 7. Mejores prácticas
 
-Usa un servicio cuando:
-
-- Varios componentes comparten la misma lógica
-- La lógica implica interacciones de modelos no triviales
-- Necesitas operaciones reutilizables
-- Quieres separar la lógica del dominio de la lógica de presentación
-- Necesitas mantener los componentes pequeños, limpios y enfocados
-
-**No** uses un servicio cuando:
-
-- La lógica es puramente de filtrado de solicitudes (usa filtros)
-- La lógica es específica de la renderización (usa componentes)
-- La lógica se relaciona con la validación de los datos de entrada (usa DTO)
+- Mantén los servicios sin estado cuando sea práctico.
+- Agrupa funcionalidad relacionada.
+- Evita renderizado o salida directa.
+- Mantén las responsabilidades transversales de petición/respuesta en Middlewares.
+- Mantén la validación de entrada en DTOs.
+- Deja que los componentes coordinen petición → servicio → modelo → plantilla.
 
 ---
 
-# 10. Resumen
+## 8. Cuándo usar un servicio
 
-Los servicios son uno de los componentes clave de Osumi Framework:
+Usa un servicio para lógica de negocio o dominio reutilizable.
 
-- Promueven una clara separación de preocupaciones
-- Reducen la duplicación
-- Centralizan la lógica de negocio
-- Se integran perfectamente con los componentes mediante la inyección de dependencias
-- Facilitan la composición (servicios que utilizan servicios)
+No uses un servicio cuando:
 
-El uso eficaz de los servicios da como resultado una arquitectura de aplicaciones más mantenible, escalable y organizada.
+- La lógica sea una responsabilidad transversal de petición/respuesta más adecuada para un Middleware.
+- La lógica sea específicamente de presentación/renderizado.
+- La lógica sea validación de entrada más adecuada para un DTO.
+
+---
+
+## 9. Resumen
+
+Los servicios proporcionan lógica de negocio reutilizable y ayudan a mantener componentes, Middlewares y DTOs centrados en sus respectivas responsabilidades.

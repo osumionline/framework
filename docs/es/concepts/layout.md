@@ -1,118 +1,126 @@
-# Diseños
+# Layouts
 
-En **Osumi Framework**, un **diseño** es un tipo especial de componente que envuelve la salida del componente de acción principal.
+En **Osumi Framework**, un layout es un componente especial que envuelve la salida del componente principal de una ruta.
 
-Los diseños se suelen usar para compartir la misma estructura HTML en múltiples rutas (por ejemplo: `<head>`, metadatos, encabezado/pie de página, inyección de scripts/estilos, etc.).
+Los layouts se utilizan normalmente para compartir la misma estructura HTML entre varias rutas.
 
-Un diseño se aplica **después** de que el componente de ruta se ejecute y renderice, y recibe la salida renderizada como su `body`.
+Un layout se aplica después del componente de la ruta y de la fase Middleware `afterRender`. Recibe la salida actual del componente como su `body`.
 
 ---
 
-## 1. Cómo funcionan los diseños (Flujo de renderizado)
+## 1. Flujo de renderizado
 
-Cuando se encuentra una ruta, Osumi Framework ejecuta esta secuencia:
+Para una ruta encontrada normalmente, el flujo relevante es:
 
-1. Se resuelve la ruta (Enrutamiento).
-2. Se ejecutan los filtros (si los hay).
-3. Se instancia y renderiza el componente de ruta.
-4. Si se define un diseño para la ruta, este se instancia y recibe:
-    - `title`: título predeterminado de la configuración
-    - `body`: la salida renderizada del componente de ruta
-5. Se renderiza la plantilla de diseño, generando la respuesta final.
+```text
+Enrutamiento
+↓
+Middlewares before
+↓
+Componente
+↓
+Middlewares afterRender
+↓
+Layout
+↓
+Middlewares afterResponse
+↓
+Respuesta HTTP
+```
 
 Esto significa:
 
-- Tu **componente de acción** se centra en producir el **contenido de la página**.
-- Tu **diseño** proporciona la estructura compartida y encapsula ese contenido.
+- El componente de acción produce el contenido de la página.
+- Los Middlewares `afterRender` pueden inspeccionar o sustituir ese contenido antes del layout.
+- El layout envuelve el contenido resultante.
+- Los Middlewares `afterResponse` se ejecutan después de producir el cuerpo final.
+
+Si un Middleware `before` detiene la ejecución, se omiten el componente y el layout.
+
+Si un Middleware `afterRender` detiene la ejecución, se omite el layout.
+
+En ambos casos, `afterResponse` sigue ejecutándose antes de enviar la respuesta.
 
 ---
 
-## 2. Diseño predeterminado
+## 2. Layout predeterminado
 
-Al crear un nuevo proyecto de Osumi Framework, se genera un diseño predeterminado.
+Los nuevos proyectos incluyen un layout predeterminado.
 
-### 2.1 Componente de Diseño Predeterminado
+### Componente del layout predeterminado
 
-`DefaultLayoutComponent` es un componente muy simple que solo define las propiedades públicas utilizadas por su plantilla:
+`DefaultLayoutComponent` expone:
 
-- `title`: título de la página
-- `body`: contenido HTML del componente de acción
+- `title`
+- `body`
 
-### 2.2 Plantilla de Diseño Predeterminado
+### Plantilla del layout predeterminado
 
-La plantilla de diseño predeterminado contiene un esqueleto HTML estándar y utiliza dos marcadores de posición:
+La plantilla predeterminada utiliza:
 
-- `{{title}}` → se inserta en `<title>`
-- `{{body}}` → se inserta en `<body>`
-
-Esto convierte al diseño predeterminado en un contenedor genérico para la mayoría de las páginas renderizadas por el servidor.
+- `{{title}}`
+- `{{body}}`
 
 ---
 
-## 3. Definición de un diseño en el enrutamiento (IMPORTANTE)
+## 3. Definición de layouts en el enrutamiento
 
-Puede asignar un diseño en el enrutamiento de dos maneras:
-
-### 3.1 Grupo de diseños
-
-Use `ORoute::layout()` para aplicar un diseño a varias rutas:
+### Grupo de layout
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\App\Layout\MainLayoutComponent;
+use Osumi\OsumiFramework\Routing\ORoute;
 
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-  ORoute::get('/contact', ContactComponent::class);
-});
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/home', HomeComponent::class);
+		ORoute::get('/contact', ContactComponent::class);
+	}
+);
 ```
 
-### 3.2 Grupo de Diseño + Prefijo
+`ORoute::layout()` acepta un tercer argumento opcional con definiciones de Middlewares.
 
-Usa `ORoute::group()` para combinar un prefijo de URL y un diseño:
+### Grupo de layout + prefijo
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Layout\AdminLayoutComponent;
-
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-  ORoute::get('/settings', SettingsComponent::class);
-});
+ORoute::group(
+	'/admin',
+	AdminLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/dashboard', DashboardComponent::class);
+		ORoute::get('/settings', SettingsComponent::class);
+	}
+);
 ```
 
-> Esta es la forma recomendada de aplicar un diseño personalizado de forma consistente a un área de tu aplicación.
+`ORoute::group()` acepta un cuarto argumento opcional con definiciones de Middlewares.
+
+Consulta `/docs/es/concepts/middlewares.md`.
 
 ---
 
-## 4. Inyección de CSS/JS
+## 4. Inyección de CSS / JS
 
-Los diseños también son el lugar donde Osumi Framework inyecta recursos CSS y JS.
-
-Cuando la salida del diseño contiene una etiqueta `</head>`, el framework inserta automáticamente:
-
-- CSS en línea (`<style>...</style>`) de los archivos configurados
-- JS en línea (`<script>...</script>`) de los archivos configurados
-- CSS externo (`<link ...>`) de la configuración `ext_css_list`
-- JS externo (`<script src=...>`) de la configuración `ext_js_list`
-
-Esto convierte al diseño en el punto natural donde se ensamblan los recursos globales del frontend.
+Los layouts son el punto donde Osumi Framework inyecta los recursos frontend configurados en documentos que contienen `</head>`.
 
 ---
 
 ## 5. Mejores prácticas
 
-- Mantenga los diseños puramente estructurales (esqueleto HTML + interfaz de usuario compartida).
-- No incluya lógica de negocio en los diseños.
-- Utilice un diseño dedicado por sección si es necesario (por ejemplo, `MainLayout`, `AdminLayout`).
-- Prefiera `ORoute::layout()` / `ORoute::group()` para mayor consistencia.
+- Mantén los layouts centrados en la estructura.
+- No incluyas lógica de negocio en los layouts.
+- Usa layouts dedicados para distintas áreas de la aplicación cuando sea útil.
+- Prefiere `ORoute::layout()` y `ORoute::group()` para mantener una configuración de rutas consistente.
+- Usa Middlewares `afterRender` cuando haya que modificar la salida antes de envolverla con el layout.
 
 ---
 
 ## 6. Resumen
 
-- Los diseños envuelven la salida renderizada de los componentes de ruta.
-- Los diseños reciben `title` y `body`.
-- Se genera un diseño predeterminado en los nuevos proyectos.
-- Puedes definir un **diseño personalizado en el enrutamiento** usando `ORoute::layout()` o `ORoute::group()`.
-- Los diseños son donde se produce la inyección global de CSS/JS.
+- Los layouts envuelven la salida del componente de ruta.
+- `afterRender` se ejecuta antes del layout.
+- `afterResponse` se ejecuta después de producir el cuerpo final.
+- Un `stop` en `before` o `afterRender` evita el renderizado del layout.
+- Los grupos de rutas pueden combinar layouts y Middlewares.
