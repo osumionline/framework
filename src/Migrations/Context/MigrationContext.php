@@ -16,6 +16,7 @@ final class MigrationContext {
      * @param bool $dry_run Whether filesystem changes must be simulated only.
      * @param bool $force Whether migration safety checks may be bypassed.
      * @param bool $verbose Whether verbose migration messages are enabled.
+     * @param bool $interactive Whether interactive migration behavior is allowed.
      * @param FilePatcher $patcher Transactional project file patcher.
      * @param StateStore $state_store Migration state storage.
      * @param array<string, mixed> $extra Additional migration options.
@@ -26,6 +27,7 @@ final class MigrationContext {
         public readonly bool $dry_run,
         public readonly bool $force,
         public readonly bool $verbose,
+        public readonly bool $interactive,
         public readonly FilePatcher $patcher,
         public readonly StateStore $state_store,
         public readonly array $extra = [],
