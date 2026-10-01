@@ -226,8 +226,10 @@ class OCore {
 	 * The request is resolved against the registered routes, route middlewares
 	 * are configured, and the middleware pipeline is executed in the following
 	 * order: before, component or view rendering, afterRender, layout rendering
-	 * and afterResponse. Middleware stops are converted into an error response
-	 * and still pass through afterResponse before being emitted.
+	 * and afterResponse. Stops raised during before or afterRender are converted
+	 * into an error response and still pass through afterResponse before being
+	 * emitted. A stop raised by afterResponse itself terminates that final phase
+	 * and is emitted directly as the final error response.
 	 *
 	 * @return void
 	 *
@@ -349,9 +351,9 @@ class OCore {
 				)
 			);
 
-			OMiddleware::runPhase(
-				OMiddleware::PHASE_AFTER_RESPONSE,
-				$middleware_data
+			$this->runAfterResponsePhase(
+				$middleware_data,
+				$expected_type
 			);
 
 			$this->emitMiddlewareResponse();
@@ -521,9 +523,9 @@ class OCore {
 				)
 			);
 
-			OMiddleware::runPhase(
-				OMiddleware::PHASE_AFTER_RESPONSE,
-				$middleware_data
+			$this->runAfterResponsePhase(
+				$middleware_data,
+				$return_type
 			);
 
 			$this->emitMiddlewareResponse();
@@ -580,9 +582,9 @@ class OCore {
 
 		$middleware_data['final_body'] = $body;
 
-		OMiddleware::runPhase(
-			OMiddleware::PHASE_AFTER_RESPONSE,
-			$middleware_data
+		$this->runAfterResponsePhase(
+			$middleware_data,
+			$return_type
 		);
 
 		$this->emitMiddlewareResponse();
@@ -804,6 +806,46 @@ class OCore {
 			'X-Powered-By',
 			'Osumi Framework '
 				. OTools::getVersion()
+		);
+	}
+
+	/**
+	 * Execute the final middleware phase and handle a stop produced there.
+	 *
+	 * Stops raised during afterResponse cannot trigger another afterResponse pass.
+	 * Instead, the remaining middlewares in the phase are skipped and the final
+	 * body is replaced immediately with the corresponding middleware error
+	 * response.
+	 *
+	 * @param array<string, mixed> $middleware_data Middleware phase input data.
+	 * @param string $response_type Response type used to render a stop response.
+	 *
+	 * @return void
+	 *
+	 * @throws \JsonException If a JSON middleware error response cannot be encoded.
+	 * @throws \InvalidArgumentException If middleware data contains an invalid value.
+	 * @throws \UnexpectedValueException If a middleware returns an invalid result.
+	 * @throws \RuntimeException If the middleware error template cannot be read.
+	 */
+	private function runAfterResponsePhase(
+		array $middleware_data,
+		string $response_type
+	): void {
+		$after_response_result = OMiddleware::runPhase(
+			OMiddleware::PHASE_AFTER_RESPONSE,
+			$middleware_data
+		);
+
+		if (!$after_response_result['stop']) {
+			return;
+		}
+
+		OMiddleware::setFinalBody(
+			$this->buildMiddlewareErrorBody(
+				$response_type,
+				$after_response_result['status_code'],
+				$after_response_result['message']
+			)
 		);
 	}
 

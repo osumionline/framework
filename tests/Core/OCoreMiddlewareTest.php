@@ -113,6 +113,63 @@ final class ObserveErrorMiddleware {
     }
 }
 
+final class StopAfterResponseMiddleware {
+    /**
+     * Stop the request during the afterResponse phase.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase !== OMiddleware::PHASE_AFTER_RESPONSE) {
+            return [];
+        }
+
+        return [
+            'stop' => true,
+            'status_code' => 503,
+            'message' => 'Unavailable'
+        ];
+    }
+}
+
+final class NeverRunAfterResponseMiddleware {
+    public static bool $executed = false;
+
+    /**
+     * Reset middleware execution state.
+     *
+     * @return void
+     */
+    public static function reset(): void {
+        self::$executed = false;
+    }
+
+    /**
+     * Record execution of the middleware.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase === OMiddleware::PHASE_AFTER_RESPONSE) {
+            self::$executed = true;
+        }
+
+        return [];
+    }
+}
+
 final class NeverInstantiateComponent extends OComponent {
     /**
      * Fail if the component is instantiated.
@@ -283,6 +340,7 @@ final class OCoreMiddlewareTest extends TestCase {
         OMiddleware::setGlobal([]);
         OMiddleware::reset();
         ObserveErrorMiddleware::reset();
+        NeverRunAfterResponseMiddleware::reset();
 
         http_response_code(
             200
@@ -299,6 +357,7 @@ final class OCoreMiddlewareTest extends TestCase {
         OMiddleware::setGlobal([]);
         OMiddleware::reset();
         ObserveErrorMiddleware::reset();
+        NeverRunAfterResponseMiddleware::reset();
 
         $_SERVER = $this->previous_server;
         $_GET = $this->previous_get;
@@ -320,6 +379,54 @@ final class OCoreMiddlewareTest extends TestCase {
         $this->project->remove();
 
         parent::tearDown();
+    }
+
+    /**
+     * Test that an afterResponse stop replaces the final response and prevents
+     * later middlewares in the phase from running.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testAfterResponseStopProducesFinalErrorResponse(): void {
+        ORoute::get(
+            '/after-response-stop',
+            BasicComponent::class,
+            [
+                'afterResponse' => [
+                    StopAfterResponseMiddleware::class,
+                    NeverRunAfterResponseMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/after-response-stop';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            "<h1>Error 503</h1>\n<p>Unavailable</p>",
+            $output
+        );
+
+        self::assertSame(
+            503,
+            http_response_code()
+        );
+
+        self::assertTrue(
+            OMiddleware::isError()
+        );
+
+        self::assertSame(
+            OMiddleware::PHASE_AFTER_RESPONSE,
+            OMiddleware::getErrorPhase()
+        );
+
+        self::assertFalse(
+            NeverRunAfterResponseMiddleware::$executed
+        );
     }
 
     /**
