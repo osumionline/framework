@@ -86,7 +86,45 @@ final class StateStore {
     }
 
     /**
+     * Build the serialized migration state for a successfully migrated version.
+     *
+     * This method does not write anything to disk. It allows the migration runner
+     * to include state.json in the same FilePatcher transaction as application
+     * file changes.
+     *
+     * @param string $version Framework version.
+     *
+     * @return string Serialized migration state including the final newline.
+     *
+     * @throws \InvalidArgumentException If the version format is invalid.
+     * @throws \JsonException If the state data cannot be encoded.
+     */
+    public function buildLastMigratedContent(string $version): string {
+        if (!MigrationVersion::isValid($version)) {
+            throw new \InvalidArgumentException(
+                "Invalid migration version '{$version}'."
+            );
+        }
+
+        $content = json_encode(
+            [
+                'last_migrated' => $version
+            ],
+            JSON_PRETTY_PRINT |
+                JSON_UNESCAPED_SLASHES |
+                JSON_THROW_ON_ERROR
+        );
+
+        return $content
+            . "\n";
+    }
+
+    /**
      * Persist the last successfully migrated framework version.
+     *
+     * Direct writes remain available for callers that do not require a migration
+     * file transaction. Runner uses buildLastMigratedContent() together with
+     * FilePatcher so project changes and migration state are committed atomically.
      *
      * @param string $version Framework version.
      *
@@ -97,11 +135,9 @@ final class StateStore {
      * @throws \RuntimeException If the state directory or file cannot be written.
      */
     public function writeLastMigrated(string $version): void {
-        if (!MigrationVersion::isValid($version)) {
-            throw new \InvalidArgumentException(
-                "Invalid migration version '{$version}'."
-            );
-        }
+        $content = $this->buildLastMigratedContent(
+            $version
+        );
 
         if (
             !is_dir($this->state_directory) &&
@@ -117,21 +153,12 @@ final class StateStore {
             );
         }
 
-        $content = json_encode(
-            [
-                'last_migrated' => $version
-            ],
-            JSON_PRETTY_PRINT |
-                JSON_UNESCAPED_SLASHES |
-                JSON_THROW_ON_ERROR
-        );
-
         $state_file = $this->getStateFile();
 
         if (
             file_put_contents(
                 $state_file,
-                $content . "\n",
+                $content,
                 LOCK_EX
             ) === false
         ) {

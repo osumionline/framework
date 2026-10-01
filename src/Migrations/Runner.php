@@ -190,8 +190,9 @@ final class Runner {
     /**
      * Apply migration steps for a framework version range.
      *
-     * File changes are rolled back if a step or patch commit fails. Migration
-     * state is persisted only after the file transaction has committed.
+     * Project changes and migration state are staged in the same FilePatcher
+     * transaction. If a migration step, state write or patch commit fails, all
+     * staged changes are rolled back together.
      *
      * @param string $project_root Project root path.
      * @param string $from Source framework version.
@@ -200,7 +201,7 @@ final class Runner {
      *
      * @return void
      *
-     * @throws Throwable If a migration step, rollback or state update fails.
+     * @throws Throwable If a migration step, rollback or transaction commit fails.
      */
     public function migrate(
         string $project_root,
@@ -306,6 +307,24 @@ final class Runner {
                 );
             }
 
+            if (!$options->dry_run) {
+                $last_step = $steps[array_key_last(
+                    $steps
+                )];
+
+                $state_relative_path = self::getProjectRelativePath(
+                    $project_root,
+                    $state_store->getStateFile()
+                );
+
+                $patcher->write(
+                    $state_relative_path,
+                    $state_store->buildLastMigratedContent(
+                        $last_step->getVersion()
+                    )
+                );
+            }
+
             $patcher->commit();
         } catch (Throwable $exception) {
             try {
@@ -320,16 +339,6 @@ final class Runner {
             }
 
             throw $exception;
-        }
-
-        if (!$options->dry_run) {
-            $last_step = $steps[array_key_last(
-                $steps
-            )];
-
-            $state_store->writeLastMigrated(
-                $last_step->getVersion()
-            );
         }
 
         $this->write(
@@ -377,6 +386,70 @@ final class Runner {
 
         return new StateStore(
             $tmp_directory
+        );
+    }
+
+    /**
+     * Convert an absolute project path to the relative form required by FilePatcher.
+     *
+     * The absolute path must belong to the resolved project root. Comparisons are
+     * case-insensitive on Windows while the returned path preserves its original
+     * casing.
+     *
+     * @param string $project_root Resolved project root.
+     * @param string $absolute_path Absolute path inside the project.
+     *
+     * @return string Project-relative path using forward slashes.
+     *
+     * @throws \RuntimeException If the path is outside the project root.
+     */
+    private static function getProjectRelativePath(
+        string $project_root,
+        string $absolute_path
+    ): string {
+        $project_root = rtrim(
+            str_replace(
+                '\\',
+                '/',
+                $project_root
+            ),
+            '/'
+        );
+
+        $absolute_path = str_replace(
+            '\\',
+            '/',
+            $absolute_path
+        );
+
+        $comparison_root = $project_root;
+        $comparison_path = $absolute_path;
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $comparison_root = strtolower(
+                $comparison_root
+            );
+
+            $comparison_path = strtolower(
+                $comparison_path
+            );
+        }
+
+        if (
+            $comparison_path === $comparison_root ||
+            !str_starts_with(
+                $comparison_path,
+                $comparison_root . '/'
+            )
+        ) {
+            throw new \RuntimeException(
+                "Migration state path '{$absolute_path}' must be inside project root '{$project_root}'."
+            );
+        }
+
+        return substr(
+            $absolute_path,
+            strlen($project_root) + 1
         );
     }
 

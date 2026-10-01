@@ -142,4 +142,32 @@ final class StateStoreTest extends TestCase {
 
         $store->readLastMigrated();
     }
+
+    /**
+     * Test that migration state contents can be built without writing a file.
+     *
+     * @return void
+     */
+    public function testStateContentCanBeBuiltWithoutWriting(): void {
+        $store = new StateStore(
+            $this->project->getPath(
+                'ofw/tmp'
+            )
+        );
+
+        $content = $store->buildLastMigratedContent(
+            '9.9.0'
+        );
+
+        self::assertSame(
+            "{\n"
+                . "    \"last_migrated\": \"9.9.0\"\n"
+                . "}\n",
+            $content
+        );
+
+        self::assertFileDoesNotExist(
+            $store->getStateFile()
+        );
+    }
 }

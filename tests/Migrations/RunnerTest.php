@@ -314,4 +314,87 @@ final class RunnerTest extends TestCase {
             )
         );
     }
+
+    /**
+     * Test that migration state participates in the FilePatcher transaction.
+     *
+     * The committed backup manifest must list state.json together with application
+     * files so both can be restored as one migration transaction.
+     *
+     * @return void
+     *
+     * @throws \JsonException If the backup manifest cannot be decoded.
+     */
+    public function testMigrationStateIsIncludedInFileTransaction(): void {
+        $runner = new Runner(
+            new MigrationManifest([
+                [
+                    'since' => '9.9.0',
+                    'step' => RunnerSuccessfulStep::class
+                ]
+            ])
+        );
+
+        $runner->migrate(
+            $this->project->getBasePath(),
+            '9.8.5',
+            '9.9.0',
+            new MigrationOptions()
+        );
+
+        $manifest_files = glob(
+            $this->project->getPath(
+                'ofw/tmp/migrations/*/manifest.json'
+            )
+        );
+
+        if ($manifest_files === false) {
+            self::fail(
+                'Could not inspect migration backup manifests.'
+            );
+        }
+
+        self::assertCount(
+            1,
+            $manifest_files
+        );
+
+        $content = file_get_contents(
+            $manifest_files[0]
+        );
+
+        if ($content === false) {
+            self::fail(
+                'Could not read migration backup manifest.'
+            );
+        }
+
+        $manifest = json_decode(
+            $content,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        self::assertIsArray(
+            $manifest
+        );
+
+        $changed_files = $manifest['changed_files']
+            ?? null;
+
+        self::assertIsArray(
+            $changed_files
+        );
+
+        self::assertContains(
+            'src/Migrated.txt',
+            $changed_files
+        );
+
+        self::assertContains(
+            'ofw/tmp/state.json',
+            $changed_files
+        );
+    }
 }
