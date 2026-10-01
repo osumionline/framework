@@ -23,7 +23,8 @@
 	],
 	"require": {
 		"php": ">=8.5",
-		"ext-json": "*"
+		"ext-json": "*",
+		"osumionline/plugin-updater": "^1.0"
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^13.3"
@@ -40,6 +41,11 @@
 	},
 	"scripts": {
 		"test": "phpunit"
+	},
+	"config": {
+		"allow-plugins": {
+			"osumionline/plugin-updater": true
+		}
 	},
 	"extra": {
 		"version-description": "Cambios en firma de métodos run de componentes. Nuevo pipe plain."
