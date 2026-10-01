@@ -174,6 +174,18 @@ final class TemporaryProject {
                 is_file($item_path) ||
                 is_link($item_path)
             ) {
+                if (
+                    !is_link($item_path) &&
+                    !chmod(
+                        $item_path,
+                        0600
+                    )
+                ) {
+                    throw new \RuntimeException(
+                        "Could not make temporary file writable '{$item_path}'."
+                    );
+                }
+
                 if (!unlink($item_path)) {
                     throw new \RuntimeException(
                         "Could not remove temporary file '{$item_path}'."
@@ -185,6 +197,15 @@ final class TemporaryProject {
 
             self::removeDirectory(
                 $item_path
+            );
+        }
+
+        if (!chmod(
+            $path,
+            0700
+        )) {
+            throw new \RuntimeException(
+                "Could not make temporary directory writable '{$path}'."
             );
         }
 

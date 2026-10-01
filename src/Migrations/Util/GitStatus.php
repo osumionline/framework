@@ -8,26 +8,31 @@ use Closure;
 
 final class GitStatus {
     /**
-     * Ensure a Git-backed project has no uncommitted changes before migration.
+     * Ensure a Git-backed project has no unexpected uncommitted changes before migration.
      *
      * Projects without a .git directory or file are accepted because FilePatcher
-     * provides rollback backups independently of Git.
+     * provides rollback backups independently of Git. Explicitly ignored paths
+     * remain excluded from the cleanliness check, which allows Composer-managed
+     * files to change while protecting application source code.
      *
      * @param string $project_root Absolute project root path.
      * @param bool $force Whether the clean working tree check is bypassed.
      * @param (Closure(string): void)|null $logger Optional message writer.
      * @param bool $verbose Whether verbose messages are enabled.
+     * @param list<string> $ignored_paths Project-relative paths ignored by Git status.
      *
      * @return void
      *
+     * @throws \InvalidArgumentException If an ignored path is unsafe.
      * @throws \RuntimeException If Git cannot inspect the repository or the
-     *                           working tree contains changes.
+     *                           working tree contains unexpected changes.
      */
     public static function ensureCleanWorkingTree(
         string $project_root,
         bool $force = false,
         ?Closure $logger = null,
-        bool $verbose = false
+        bool $verbose = false,
+        array $ignored_paths = []
     ): void {
         if ($force) {
             self::writeVerbose(
@@ -42,7 +47,8 @@ final class GitStatus {
         $git_marker = rtrim(
             $project_root,
             '/\\'
-        ) . '/.git';
+        )
+            . '/.git';
 
         if (!file_exists($git_marker)) {
             self::writeVerbose(
@@ -54,17 +60,31 @@ final class GitStatus {
             return;
         }
 
+        $arguments = [
+            'status',
+            '--porcelain=v1',
+            '--untracked-files=normal'
+        ];
+
+        if ($ignored_paths !== []) {
+            $arguments[] = '--';
+            $arguments[] = '.';
+
+            foreach ($ignored_paths as $ignored_path) {
+                $arguments[] = ':(top,literal,exclude)'
+                    . self::normalizeIgnoredPath(
+                        $ignored_path
+                    );
+            }
+        }
+
         [
             $exit_code,
             $stdout,
             $stderr
         ] = self::runGit(
             $project_root,
-            [
-                'status',
-                '--porcelain=v1',
-                '--untracked-files=normal'
-            ]
+            $arguments
         );
 
         if ($exit_code !== 0) {
@@ -89,7 +109,94 @@ final class GitStatus {
         self::writeVerbose(
             $logger,
             $verbose,
-            '[OFW] Git working tree is clean.'
+            $ignored_paths === []
+                ? '[OFW] Git working tree is clean.'
+                : '[OFW] Git working tree is clean except for explicitly ignored paths.'
+        );
+    }
+
+    /**
+     * Normalize and validate a Git path excluded from the working tree check.
+     *
+     * Paths must be relative to the project root. Git receives them through a
+     * top-level literal pathspec, so glob characters have no special meaning.
+     *
+     * @param string $path Project-relative path.
+     *
+     * @return string Normalized project-relative path.
+     *
+     * @throws \InvalidArgumentException If the path is empty, absolute or escapes
+     *                                   the project root.
+     */
+    private static function normalizeIgnoredPath(string $path): string {
+        if (
+            str_contains(
+                $path,
+                "\0"
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                'Ignored Git path cannot contain null bytes.'
+            );
+        }
+
+        $path = str_replace(
+            '\\',
+            '/',
+            trim(
+                $path
+            )
+        );
+
+        if (
+            $path === '' ||
+            str_starts_with(
+                $path,
+                '/'
+            ) ||
+            preg_match(
+                '/^[A-Za-z]:\//D',
+                $path
+            ) === 1
+        ) {
+            throw new \InvalidArgumentException(
+                "Ignored Git path '{$path}' must be project-relative."
+            );
+        }
+
+        $parts = explode(
+            '/',
+            $path
+        );
+
+        $normalized = [];
+
+        foreach ($parts as $part) {
+            if (
+                $part === '' ||
+                $part === '.'
+            ) {
+                continue;
+            }
+
+            if ($part === '..') {
+                throw new \InvalidArgumentException(
+                    "Ignored Git path '{$path}' cannot contain parent segments."
+                );
+            }
+
+            $normalized[] = $part;
+        }
+
+        if ($normalized === []) {
+            throw new \InvalidArgumentException(
+                'Ignored Git path cannot be empty.'
+            );
+        }
+
+        return implode(
+            '/',
+            $normalized
         );
     }
 

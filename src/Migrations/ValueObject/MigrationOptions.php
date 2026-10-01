@@ -14,6 +14,8 @@ final readonly class MigrationOptions {
      * @param bool $force Whether migration safety checks may be bypassed.
      * @param bool $verbose Whether verbose migration messages are enabled.
      * @param bool $interactive Whether interactive migration behavior is allowed.
+     * @param list<string> $git_ignored_paths Project-relative paths ignored by the
+     *                                        Git clean working tree check.
      * @param array<string, mixed> $extra Additional migration-specific options.
      * @param (Closure(string): void)|null $logger Optional migration message writer.
      */
@@ -22,6 +24,7 @@ final readonly class MigrationOptions {
         public bool $force = false,
         public bool $verbose = false,
         public bool $interactive = true,
+        public array $git_ignored_paths = [],
         public array $extra = [],
         public ?Closure $logger = null
     ) {
@@ -35,6 +38,7 @@ final readonly class MigrationOptions {
      *     force?: bool,
      *     verbose?: bool,
      *     interactive?: bool,
+     *     gitIgnoredPaths?: list<string>,
      *     extra?: array<string, mixed>,
      *     logger?: Closure(string): void
      * } $options Migration options.
@@ -49,6 +53,7 @@ final readonly class MigrationOptions {
             'force',
             'verbose',
             'interactive',
+            'gitIgnoredPaths',
             'extra',
             'logger'
         ];
@@ -93,6 +98,29 @@ final readonly class MigrationOptions {
             }
         }
 
+        $git_ignored_paths = $options['gitIgnoredPaths']
+            ?? [];
+
+        if (
+            !is_array($git_ignored_paths) ||
+            !array_is_list($git_ignored_paths)
+        ) {
+            throw new \InvalidArgumentException(
+                "Migration option 'gitIgnoredPaths' must be a list of project-relative paths."
+            );
+        }
+
+        foreach ($git_ignored_paths as $path) {
+            if (
+                !is_string($path) ||
+                trim($path) === ''
+            ) {
+                throw new \InvalidArgumentException(
+                    "Migration option 'gitIgnoredPaths' must contain non-empty strings."
+                );
+            }
+        }
+
         $extra = $options['extra'] ?? [];
 
         if (!is_array($extra)) {
@@ -125,6 +153,7 @@ final readonly class MigrationOptions {
             force: $options['force'] ?? false,
             verbose: $options['verbose'] ?? false,
             interactive: $options['interactive'] ?? true,
+            git_ignored_paths: $git_ignored_paths,
             extra: $extra,
             logger: $logger
         );

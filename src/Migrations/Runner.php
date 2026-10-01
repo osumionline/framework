@@ -248,10 +248,11 @@ final class Runner {
 
         if (!$options->dry_run) {
             GitStatus::ensureCleanWorkingTree(
-                $project_root,
-                $options->force,
-                $options->logger,
-                $options->verbose
+                project_root: $project_root,
+                force: $options->force,
+                logger: $options->logger,
+                verbose: $options->verbose,
+                ignored_paths: $options->git_ignored_paths
             );
         }
 

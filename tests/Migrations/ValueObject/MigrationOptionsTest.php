@@ -22,6 +22,10 @@ final class MigrationOptionsTest extends TestCase {
             'force' => true,
             'verbose' => true,
             'interactive' => false,
+            'gitIgnoredPaths' => [
+                'composer.json',
+                'composer.lock'
+            ],
             'extra' => [
                 'example' => 'value'
             ],
@@ -41,9 +45,35 @@ final class MigrationOptionsTest extends TestCase {
         );
 
         self::assertSame(
+            [
+                'composer.json',
+                'composer.lock'
+            ],
+            $options->git_ignored_paths
+        );
+
+        self::assertSame(
             $logger,
             $options->logger
         );
+    }
+
+    /**
+     * Test that Git ignored paths must be a string list.
+     *
+     * @return void
+     */
+    public function testInvalidGitIgnoredPathsAreRejected(): void {
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        MigrationOptions::fromArray([
+            'gitIgnoredPaths' => [
+                'composer.json',
+                7
+            ]
+        ]);
     }
 
     /**

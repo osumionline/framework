@@ -123,6 +123,179 @@ final class GitStatusTest extends TestCase {
     }
 
     /**
+     * Test that explicitly ignored Composer files may be dirty.
+     *
+     * @return void
+     */
+    public function testIgnoredComposerFilesAreAccepted(): void {
+        if (!$this->isGitAvailable()) {
+            self::markTestSkipped(
+                'Git is not available in the test environment.'
+            );
+        }
+
+        $this->initializeCleanGitRepository();
+
+        if (
+            file_put_contents(
+                $this->project->getPath(
+                    'composer.json'
+                ),
+                "{}\n",
+                LOCK_EX
+            ) === false ||
+            file_put_contents(
+                $this->project->getPath(
+                    'composer.lock'
+                ),
+                "{}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create dirty Composer files.'
+            );
+        }
+
+        GitStatus::ensureCleanWorkingTree(
+            project_root: $this->project->getBasePath(),
+            ignored_paths: [
+                'composer.json',
+                'composer.lock'
+            ]
+        );
+
+        self::assertTrue(
+            true
+        );
+    }
+
+    /**
+     * Test that ignored Composer files do not hide application source changes.
+     *
+     * @return void
+     */
+    public function testIgnoredComposerFilesDoNotHideSourceChanges(): void {
+        if (!$this->isGitAvailable()) {
+            self::markTestSkipped(
+                'Git is not available in the test environment.'
+            );
+        }
+
+        $this->initializeCleanGitRepository();
+
+        if (
+            file_put_contents(
+                $this->project->getPath(
+                    'composer.json'
+                ),
+                "{}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create dirty Composer file.'
+            );
+        }
+
+        $source_path = $this->project->getPath(
+            'src/Dirty.php'
+        );
+
+        if (
+            file_put_contents(
+                $source_path,
+                "<?php\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create dirty source file.'
+            );
+        }
+
+        $this->expectException(
+            \RuntimeException::class
+        );
+
+        GitStatus::ensureCleanWorkingTree(
+            project_root: $this->project->getBasePath(),
+            ignored_paths: [
+                'composer.json',
+                'composer.lock'
+            ]
+        );
+    }
+
+    /**
+     * Initialize and commit the temporary project as a clean Git repository.
+     *
+     * Composer files are committed as part of the baseline so tests can simulate
+     * the tracked modifications produced by a real Composer update.
+     *
+     * @return void
+     */
+    private function initializeCleanGitRepository(): void {
+        $this->runGit([
+            'init',
+            '--quiet'
+        ]);
+
+        $this->runGit([
+            'config',
+            'user.email',
+            'ofw-tests@example.test'
+        ]);
+
+        $this->runGit([
+            'config',
+            'user.name',
+            'OFW Tests'
+        ]);
+
+        if (
+            file_put_contents(
+                $this->project->getPath(
+                    'composer.json'
+                ),
+                "{\"baseline\":true}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create baseline composer.json.'
+            );
+        }
+
+        if (
+            file_put_contents(
+                $this->project->getPath(
+                    'composer.lock'
+                ),
+                "{\"baseline\":true}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create baseline composer.lock.'
+            );
+        }
+
+        $this->runGit([
+            'add',
+            'composer.json',
+            'composer.lock'
+        ]);
+
+        $this->runGit([
+            'commit',
+            '--quiet',
+            '-m',
+            'Test baseline'
+        ]);
+    }
+
+    /**
      * Check whether the Git executable is available.
      *
      * @return bool Whether Git can be executed.
