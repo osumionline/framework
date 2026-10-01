@@ -56,11 +56,26 @@ class OColors {
 	public function getColoredString(string $string, string | null $foreground_color = null, string | null $background_color = null): string {
 		$colored_string = "";
 
-		if (isset($this->foreground_colors[$foreground_color])) {
-			$colored_string .= "\033[" . $this->foreground_colors[$foreground_color] . "m";
+		if (
+			$foreground_color !== null &&
+			isset(
+				$this->foreground_colors[$foreground_color]
+			)
+		) {
+			$colored_string .= "\033["
+				. $this->foreground_colors[$foreground_color]
+				. "m";
 		}
-		if (isset($this->background_colors[$background_color])) {
-			$colored_string .= "\033[" . $this->background_colors[$background_color] . "m";
+
+		if (
+			$background_color !== null &&
+			isset(
+				$this->background_colors[$background_color]
+			)
+		) {
+			$colored_string .= "\033["
+				. $this->background_colors[$background_color]
+				. "m";
 		}
 
 		// Add string and end coloring
