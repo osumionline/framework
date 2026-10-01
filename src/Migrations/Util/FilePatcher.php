@@ -180,17 +180,11 @@ final class FilePatcher {
             )
         );
 
-        if (
-            file_put_contents(
-                $absolute_path,
-                $content,
-                LOCK_EX
-            ) === false
-        ) {
-            throw new \RuntimeException(
-                "Unable to write migration file '{$relative_path}'."
-            );
-        }
+        $this->writeFileContents(
+            $absolute_path,
+            $content,
+            "Unable to write migration file '{$relative_path}'."
+        );
 
         $this->writeVerbose(
             "[OFW] write {$relative_path}"
@@ -282,17 +276,11 @@ final class FilePatcher {
             $manifest_file = $this->backup_root
                 . '/manifest.json';
 
-            if (
-                file_put_contents(
-                    $manifest_file,
-                    $manifest . "\n",
-                    LOCK_EX
-                ) === false
-            ) {
-                throw new \RuntimeException(
-                    "Unable to write migration backup manifest '{$manifest_file}'."
-                );
-            }
+            $this->writeFileContents(
+                $manifest_file,
+                $manifest . "\n",
+                "Unable to write migration backup manifest '{$manifest_file}'."
+            );
         }
 
         $this->finished = true;
@@ -397,6 +385,48 @@ final class FilePatcher {
      */
     public function getBackupRoot(): string {
         return $this->backup_root;
+    }
+
+    /**
+     * Write file contents while converting native filesystem failures into a
+     * stable migration exception.
+     *
+     * PHP filesystem functions may emit warnings that are converted to exceptions
+     * by the framework error handler. Those implementation details must not leak
+     * through the migration API.
+     *
+     * @param string $absolute_path Absolute target file path.
+     * @param string $content File contents.
+     * @param string $error_message Migration-specific error message.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If the file cannot be written.
+     */
+    private function writeFileContents(
+        string $absolute_path,
+        string $content,
+        string $error_message
+    ): void {
+        try {
+            $result = file_put_contents(
+                $absolute_path,
+                $content,
+                LOCK_EX
+            );
+        } catch (\Throwable $exception) {
+            throw new \RuntimeException(
+                $error_message,
+                0,
+                $exception
+            );
+        }
+
+        if ($result === false) {
+            throw new \RuntimeException(
+                $error_message
+            );
+        }
     }
 
     /**

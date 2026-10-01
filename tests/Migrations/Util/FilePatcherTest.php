@@ -245,6 +245,71 @@ final class FilePatcherTest extends TestCase {
     }
 
     /**
+     * Test that a native filesystem write failure is exposed as a stable
+     * migration exception and previous changes can still be rolled back.
+     *
+     * @return void
+     */
+    public function testWriteFailureUsesMigrationExceptionAndAllowsRollback(): void {
+        $state_path = $this->project->getPath(
+            'ofw/tmp/state.json'
+        );
+
+        if (
+            !mkdir(
+                $state_path,
+                0755,
+                true
+            ) &&
+            !is_dir($state_path)
+        ) {
+            self::fail(
+                'Could not create conflicting migration state directory.'
+            );
+        }
+
+        $patcher = new FilePatcher(
+            $this->project->getBasePath(),
+            $this->project->getPath(
+                'ofw/tmp'
+            )
+        );
+
+        $patcher->write(
+            'src/BeforeFailure.php',
+            'created-before-failure'
+        );
+
+        try {
+            $patcher->write(
+                'ofw/tmp/state.json',
+                '{}'
+            );
+
+            self::fail(
+                'Writing over a directory did not fail.'
+            );
+        } catch (\RuntimeException $exception) {
+            self::assertSame(
+                "Unable to write migration file 'ofw/tmp/state.json'.",
+                $exception->getMessage()
+            );
+        }
+
+        $patcher->rollback();
+
+        self::assertFileDoesNotExist(
+            $this->project->getPath(
+                'src/BeforeFailure.php'
+            )
+        );
+
+        self::assertDirectoryExists(
+            $state_path
+        );
+    }
+
+    /**
      * Write a test file, creating its parent directory when necessary.
      *
      * @param string $path Absolute file path.

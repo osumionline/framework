@@ -155,13 +155,21 @@ final class StateStore {
 
         $state_file = $this->getStateFile();
 
-        if (
-            file_put_contents(
+        try {
+            $result = file_put_contents(
                 $state_file,
                 $content,
                 LOCK_EX
-            ) === false
-        ) {
+            );
+        } catch (\Throwable $exception) {
+            throw new \RuntimeException(
+                "Unable to write migration state file '{$state_file}'.",
+                0,
+                $exception
+            );
+        }
+
+        if ($result === false) {
             throw new \RuntimeException(
                 "Unable to write migration state file '{$state_file}'."
             );
