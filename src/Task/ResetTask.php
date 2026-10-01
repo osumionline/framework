@@ -68,6 +68,16 @@ class ResetTask extends OTask {
 		}
 	}
 
+	/**
+	 * Remove application data and recreate the default project structure.
+	 *
+	 * The generated structure includes the Middleware directory and the global
+	 * Middlewares.php declaration file.
+	 *
+	 * @return void
+	 *
+	 * @throws \RuntimeException If a required directory or file operation fails.
+	 */
 	private function cleanData(): void {
 		$clean_list = [
 			'app' => true,
@@ -105,7 +115,7 @@ class ResetTask extends OTask {
 			'app_component',
 			'app_config',
 			'app_dto',
-			'app_filter',
+			'app_middleware',
 			'app_layout',
 			'app_model',
 			'app_routes',
@@ -138,6 +148,34 @@ class ResetTask extends OTask {
 		$default_config_json .= "}";
 		$config_file = $this->getConfig()->getDir('app_config') . 'Config.json';
 		file_put_contents($config_file, $default_config_json);
+
+		// Generate default global middleware configuration
+		$middlewares = "<?php\n\n";
+		$middlewares .= "declare(strict_types=1);\n\n";
+		$middlewares .= "namespace Osumi\\OsumiFramework\\App\\Middleware;\n\n";
+		$middlewares .= "use Osumi\\OsumiFramework\\Core\\OMiddleware;\n\n";
+		$middlewares .= "OMiddleware::setGlobal([\n";
+		$middlewares .= "\tOMiddleware::PHASE_BEFORE => [],\n";
+		$middlewares .= "\tOMiddleware::PHASE_AFTER_RENDER => [],\n";
+		$middlewares .= "\tOMiddleware::PHASE_AFTER_RESPONSE => []\n";
+		$middlewares .= "]);\n";
+
+		$middlewares_file = $this->getConfig()->getDir(
+			'app_middleware'
+		)
+			. 'Middlewares.php';
+
+		if (
+			file_put_contents(
+				$middlewares_file,
+				$middlewares,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not create default middleware configuration '{$middlewares_file}'."
+			);
+		}
 
 		// Generate default layout
 		$default_layout = "<" . "?php declare(strict_types=1);\n\n";

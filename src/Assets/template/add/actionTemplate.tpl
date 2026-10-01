@@ -9,7 +9,7 @@ class {{action}}Component extends OComponent {
 	/**
    * {{str_template}}
 	 *
-	 * @param ORequest $req Request object with method, headers, parameters and filters used
+	 * @param ORequest $req Request object with method, headers, parameters and middleware context.
 	 * @return void
 	 */
 	public function run(ORequest $req): void {}

@@ -166,9 +166,6 @@ msgstr "Create a component for a model"
 msgid "TASK_ADD_DEFAULT_COMPONENT"
 msgstr "Create a new component"
 
-msgid "TASK_ADD_DEFAULT_FILTER"
-msgstr "Create a new filter"
-
 msgid "TASK_ADD_ACTION_MESSAGE"
 msgstr "New action %s"
 
@@ -268,20 +265,20 @@ msgstr "New file "%s" created."
 msgid "TASK_ADD_COMPONENT_TEMPLATE"
 msgstr "Component "%s" works."
 
-msgid "TASK_ADD_FILTER_ERROR"
-msgstr "You must indicate the name of the filter you want to create, for example:"
+msgid "TASK_ADD_DEFAULT_MIDDLEWARE"
+msgstr "Create a new middleware"
 
-msgid "TASK_ADD_FILTER_EXISTS"
-msgstr "Filter "%s" already exists."
+msgid "TASK_ADD_MIDDLEWARE_ERROR"
+msgstr "You must indicate the name of the middleware you want to create, for example:"
 
-msgid "TASK_ADD_FILTER_NEW_FILTER"
-msgstr "New filter "%s" created:"
+msgid "TASK_ADD_MIDDLEWARE_EXISTS"
+msgstr "Middleware %s already exists."
 
-msgid "TASK_ADD_FILTER_NEW_FILE"
-msgstr "New file "%s" created."
+msgid "TASK_ADD_MIDDLEWARE_NEW_MIDDLEWARE"
+msgstr "New middleware %s created:"
 
-msgid "TASK_ADD_FILTER_TEMPLATE"
-msgstr "New "%s" filter."
+msgid "TASK_ADD_MIDDLEWARE_NEW_FILE"
+msgstr "New file %s created."
 
 msgid "TASK_RESET"
 msgstr "Cleans all non framework data, to be used on new installations."

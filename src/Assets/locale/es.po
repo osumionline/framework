@@ -166,9 +166,6 @@ msgstr "Crea un componente para un modelo"
 msgid "TASK_ADD_DEFAULT_COMPONENT"
 msgstr "Crea un nuevo componente"
 
-msgid "TASK_ADD_DEFAULT_FILTER"
-msgstr "Crea un nuevo filtro"
-
 msgid "TASK_ADD_ACTION_MESSAGE"
 msgstr "Nueva acción %s"
 
@@ -268,20 +265,20 @@ msgstr "Nuevo archivo "%s" creado."
 msgid "TASK_ADD_COMPONENT_TEMPLATE"
 msgstr "El componente "%s" funciona."
 
-msgid "TASK_ADD_FILTER_ERROR"
-msgstr "Debes indicar el nombre del filtro que quieres crear, por ejemplo:"
+msgid "TASK_ADD_DEFAULT_MIDDLEWARE"
+msgstr "Crea un nuevo middleware"
 
-msgid "TASK_ADD_FILTER_EXISTS"
-msgstr "El filtro "%s" ya existe."
+msgid "TASK_ADD_MIDDLEWARE_ERROR"
+msgstr "Debes indicar el nombre del middleware que quieres crear, por ejemplo:"
 
-msgid "TASK_ADD_FILTER_NEW_FILTER"
-msgstr "Nuevo filtro "%s" creado:"
+msgid "TASK_ADD_MIDDLEWARE_EXISTS"
+msgstr "El middleware %s ya existe."
 
-msgid "TASK_ADD_FILTER_NEW_FILE"
-msgstr "Nuevo archivo "%s" creado."
+msgid "TASK_ADD_MIDDLEWARE_NEW_MIDDLEWARE"
+msgstr "Nuevo middleware %s creado:"
 
-msgid "TASK_ADD_FILTER_TEMPLATE"
-msgstr "Nuevo filtro "%s"."
+msgid "TASK_ADD_MIDDLEWARE_NEW_FILE"
+msgstr "Nuevo archivo %s creado."
 
 msgid "TASK_RESET"
 msgstr "Limpia todos los datos que no son propios del framework, para usar en instalaciones nuevas."

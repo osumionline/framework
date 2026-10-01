@@ -420,31 +420,66 @@ class OBuild {
 	}
 
 	/**
-	 * Creates a empty filter file
+	 * Create an empty middleware class.
 	 *
-	 * @param array $values Information about the files that have to be created
+	 * @param array{
+	 *     middleware_name: string,
+	 *     middleware_file: string
+	 * } $values Middleware generation values.
 	 *
-	 * @return string Status of the operation
+	 * @return string Generation status.
+	 *
+	 * @throws \RuntimeException If the middleware directory or file cannot be
+	 *                           created.
 	 */
-	public static function addFilter(array $values): string {
+	public static function addMiddleware(array $values): string {
 		global $core;
 
-		// If filters folder does not exist I create it before doing anything else
-		if (!is_dir($core->config->getDir('app_filter'))) {
-			mkdir($core->config->getDir('app_filter'), 0755, true);
+		$middleware_path = $core->config->getDir(
+			'app_middleware'
+		);
+
+		if (
+			!is_dir($middleware_path) &&
+			!mkdir(
+				$middleware_path,
+				0755,
+				true
+			)
+		) {
+			throw new \RuntimeException(
+				"Could not create middleware directory '{$middleware_path}'."
+			);
 		}
 
-		// Check if component already exists
-		if (file_exists($values['filter_file'])) {
+		if (is_file($values['middleware_file'])) {
 			return 'exists';
 		}
 
-		$template_path = $core->config->getDir('ofw_template') . 'add/filterTemplate.tpl';
-		$str_component = OTools::getTemplate($template_path, '', [
-			'name'        => $values['filter_name'],
-			'description' => OTools::getMessage('TASK_ADD_FILTER_TEMPLATE', [$values['filter_name']])
-		]);
-		file_put_contents($values['filter_file'], $str_component);
+		$template_path = $core->config->getDir(
+			'ofw_template'
+		)
+			. 'add/middlewareTemplate.tpl';
+
+		$content = OTools::getTemplate(
+			$template_path,
+			'',
+			[
+				'name' => $values['middleware_name']
+			]
+		);
+
+		if (
+			file_put_contents(
+				$values['middleware_file'],
+				$content,
+				LOCK_EX
+			) === false
+		) {
+			throw new \RuntimeException(
+				"Could not create middleware file '{$values['middleware_file']}'."
+			);
+		}
 
 		return 'ok';
 	}

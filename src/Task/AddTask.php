@@ -9,7 +9,7 @@ use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
 
 /**
- * Add new actions, services, tasks, model components, components or filters
+ * Add new actions, services, tasks, model components, components or middlewares.
  */
 class AddTask extends OTask {
 	public function __toString(): string {
@@ -417,49 +417,78 @@ class AddTask extends OTask {
 	}
 
 	/**
-	 * Creates a new filter with the given parameters
+	 * Create a new middleware with the given parameters.
 	 *
-	 * @param array Array with the action "filter" and the name of the new component
+	 * @param array<string, string|false> $params Command line options containing
+	 *                                            the middleware name.
 	 *
 	 * @return void
 	 */
-	private function createFilter(array $params): void {
-		$path = $this->getConfig()->getDir('ofw_template') . 'add/createFilter.php';
+	private function createMiddleware(array $params): void {
+		$path = $this->getConfig()->getDir('ofw_template')
+			. 'add/createMiddleware.php';
+
 		$values = [
-			'colors'      => $this->getColors(),
-			'filter_name' => '',
-			'filter_file' => '',
-			'error'       => 0
+			'colors' => $this->getColors(),
+			'middleware_name' => '',
+			'middleware_file' => '',
+			'error' => 0
 		];
 
 		if (count($params) < 2) {
 			$values['error'] = 1;
-			echo OTools::getPartial($path, $values);
+			echo OTools::getPartial(
+				$path,
+				$values
+			);
 			exit;
 		}
 
 		if (
-			!array_key_exists('name', $params) ||
+			!array_key_exists(
+				'name',
+				$params
+			) ||
 			!is_string($params['name']) ||
-			!$this->isValidIdentifier($params['name'])
+			!$this->isValidIdentifier(
+				$params['name']
+			)
 		) {
 			$values['error'] = 1;
-			echo OTools::getPartial($path, $values);
+			echo OTools::getPartial(
+				$path,
+				$values
+			);
 			exit;
 		}
 
-		$values['filter_name'] = ucfirst($params['name']);
-		$values['filter_file'] = $this->getConfig()->getDir('app_filter') . $values['filter_name'] . 'Filter.php';
+		$values['middleware_name'] = ucfirst(
+			$params['name']
+		);
 
-		$add = OBuild::addFilter($values);
+		$values['middleware_file'] = $this->getConfig()->getDir(
+			'app_middleware'
+		)
+			. $values['middleware_name']
+			. 'Middleware.php';
+
+		$add = OBuild::addMiddleware(
+			$values
+		);
 
 		if ($add === 'exists') {
 			$values['error'] = 2;
-			echo OTools::getPartial($path, $values);
+			echo OTools::getPartial(
+				$path,
+				$values
+			);
 			exit;
 		}
 
-		echo OTools::getPartial($path, $values);
+		echo OTools::getPartial(
+			$path,
+			$values
+		);
 		exit;
 	}
 
@@ -471,7 +500,14 @@ class AddTask extends OTask {
 	 * @return void
 	 */
 	public function run(array $params): void {
-		$available_options = ['action', 'service', 'task', 'modelComponent', 'component', 'filter'];
+		$available_options = [
+			'action',
+			'service',
+			'task',
+			'modelComponent',
+			'component',
+			'middleware'
+		];
 		$option = (array_key_exists('option', $params)) ? $params['option'] : 'none';
 		$option = in_array($option, $available_options) ? $option : 'none';
 
@@ -496,8 +532,10 @@ class AddTask extends OTask {
 					$this->createComponent($params);
 				}
 				break;
-			case 'filter': {
-					$this->createFilter($params);
+			case 'middleware': {
+					$this->createMiddleware(
+						$params
+					);
 				}
 				break;
 			case 'none': {
