@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tests\DTO;
 
+use Osumi\OsumiFramework\Core\OMiddleware;
 use Osumi\OsumiFramework\DTO\ODTO;
 use Osumi\OsumiFramework\DTO\ODTOField;
 use Osumi\OsumiFramework\Web\ORequest;
@@ -55,7 +56,88 @@ final class IntegerDTO extends ODTO {
     public ?int $id = null;
 }
 
+final class MiddlewareDTO extends ODTO {
+    #[ODTOField(
+        required: true,
+        middleware: 'Auth',
+        middlewareProperty: 'id'
+    )]
+    public ?int $userId = null;
+}
+
+final class MissingMiddlewarePropertyDTO extends ODTO {
+    #[ODTOField(
+        middleware: 'Auth'
+    )]
+    public ?int $userId = null;
+}
+
+final class MissingMiddlewareNameDTO extends ODTO {
+    #[ODTOField(
+        middlewareProperty: 'id'
+    )]
+    public ?int $userId = null;
+}
+
+final class AmbiguousSourceDTO extends ODTO {
+    #[ODTOField(
+        middleware: 'Auth',
+        middlewareProperty: 'id',
+        header: 'X-User-Id'
+    )]
+    public ?int $userId = null;
+}
+
+final class AuthMiddleware {
+    /**
+     * Publish authenticated user test data during the before phase.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase !== OMiddleware::PHASE_BEFORE) {
+            return [];
+        }
+
+        return [
+            'context' => [
+                'id' => '25'
+            ]
+        ];
+    }
+}
+
 final class ODTOTest extends TestCase {
+    /**
+     * Reset middleware state before every test.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        parent::setUp();
+
+        OMiddleware::setGlobal([]);
+        OMiddleware::reset();
+    }
+
+    /**
+     * Reset middleware state after every test.
+     *
+     * @return void
+     */
+    protected function tearDown(): void {
+        OMiddleware::setGlobal([]);
+        OMiddleware::reset();
+
+        parent::tearDown();
+    }
+
     /**
      * Create a request for DTO testing.
      *
@@ -73,8 +155,7 @@ final class ODTOTest extends TestCase {
                 'method' => 'POST',
                 'headers' => $headers,
                 'params' => $params
-            ],
-            []
+            ]
         );
     }
 
@@ -267,6 +348,114 @@ final class ODTOTest extends TestCase {
 
         self::assertNull(
             $dto->id
+        );
+    }
+
+    /**
+     * Test that middleware context is normalized into the DTO property type.
+     *
+     * Client input for the same DTO property must not override the explicit
+     * middleware source.
+     *
+     * @return void
+     */
+    public function testMiddlewareFieldUsesMiddlewareContext(): void {
+        OMiddleware::setRoute(
+            [
+                'before' => [
+                    AuthMiddleware::class
+                ]
+            ]
+        );
+
+        OMiddleware::runPhase(
+            OMiddleware::PHASE_BEFORE,
+            []
+        );
+
+        $dto = new MiddlewareDTO(
+            $this->createRequest(
+                [
+                    'userId' => '999'
+                ]
+            )
+        );
+
+        self::assertTrue(
+            $dto->isValid()
+        );
+
+        self::assertSame(
+            25,
+            $dto->userId
+        );
+    }
+
+    /**
+     * Test that an explicit middleware source never falls back to request input.
+     *
+     * @return void
+     */
+    public function testMissingMiddlewareValueDoesNotFallBackToRequestParameter(): void {
+        $dto = new MiddlewareDTO(
+            $this->createRequest(
+                [
+                    'userId' => '999'
+                ]
+            )
+        );
+
+        self::assertFalse(
+            $dto->isValid()
+        );
+
+        self::assertNull(
+            $dto->userId
+        );
+    }
+
+    /**
+     * Test that middleware requires middlewareProperty.
+     *
+     * @return void
+     */
+    public function testMiddlewareRequiresMiddlewareProperty(): void {
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        new MissingMiddlewarePropertyDTO(
+            $this->createRequest()
+        );
+    }
+
+    /**
+     * Test that middlewareProperty requires middleware.
+     *
+     * @return void
+     */
+    public function testMiddlewarePropertyRequiresMiddleware(): void {
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        new MissingMiddlewareNameDTO(
+            $this->createRequest()
+        );
+    }
+
+    /**
+     * Test that a DTO field cannot define middleware and header sources together.
+     *
+     * @return void
+     */
+    public function testMiddlewareAndHeaderSourcesAreMutuallyExclusive(): void {
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        new AmbiguousSourceDTO(
+            $this->createRequest()
         );
     }
 }

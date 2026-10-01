@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Web;
 
+use Osumi\OsumiFramework\Core\OMiddleware;
+
 /**
- * ORequest - Container class with information about a user made request (method, headers, parameters and filters)
+ * Container with information about the current HTTP request.
+ *
+ * Besides the request method, headers and parameters, the request exposes
+ * context published by middlewares executed before the component.
  */
 class ORequest {
 	private string $method;
@@ -20,10 +25,8 @@ class ORequest {
 	 */
 	private array $params = [];
 
-	private array $filters = [];
-
 	/**
-	 * Create a request instance.
+	 * Create a request instance from processed route information.
 	 *
 	 * @param array{
 	 *     method: string,
@@ -31,25 +34,22 @@ class ORequest {
 	 *     params: array<string, mixed>,
 	 *     ...
 	 * } $url_result Processed route information.
-	 * @param array $filter_results Values returned by request filters.
 	 *
 	 * @throws \InvalidArgumentException If headers or parameters have invalid keys
 	 *                                   or values.
 	 */
 	public function __construct(
-		array $url_result,
-		array $filter_results
+		array $url_result
 	) {
 		$this->setMethod($url_result['method']);
 		$this->setHeaders($url_result['headers']);
 		$this->setParams($url_result['params']);
-		$this->setFilters($filter_results);
 	}
 
 	/**
-	 * Set HTTP method used in the call (GET/POST...)
+	 * Set HTTP method used in the call (GET/POST...).
 	 *
-	 * @param string $method HTTP method used in the call
+	 * @param string $method HTTP method used in the call.
 	 *
 	 * @return void
 	 */
@@ -324,45 +324,39 @@ class ORequest {
 	}
 
 	/**
-	 * Set filters returned values
+	 * Get the complete context published by a middleware.
 	 *
-	 * @param array $filters List of values returned by filters
+	 * Middleware names use their public short name without the Middleware suffix,
+	 * for example LoginMiddleware is exposed as Login.
 	 *
-	 * @return void
+	 * @param string $middleware Middleware public name.
+	 *
+	 * @return array<string, mixed> Middleware context, or an empty array if the
+	 *                              middleware has not published context.
 	 */
-	public function setFilters(array $filters): void {
-		$this->filters = $filters;
+	public function getMiddleware(
+		string $middleware
+	): array {
+		return OMiddleware::getMiddlewareContext(
+			$middleware
+		);
 	}
 
 	/**
-	 * Get list of filters returned values
+	 * Get one value from context published by a middleware.
 	 *
-	 * @return array List of filters returned values
+	 * @param string $middleware Middleware public name.
+	 * @param string $key Context key.
+	 *
+	 * @return mixed Context value or null if it does not exist.
 	 */
-	public function getFilters(): array {
-		return $this->filters;
-	}
-
-	/**
-	 * Set the values returned by a specific filter.
-	 *
-	 * @param string $key Filter name.
-	 * @param array $values Values returned by the filter.
-	 *
-	 * @return void
-	 */
-	public function setFilter(string $key, array $values): void {
-		$this->filters[$key] = $values;
-	}
-
-	/**
-	 * Get the values returned by a specific filter or null if not found
-	 *
-	 * @param string $key Name of the filter
-	 *
-	 * @return array | null Values returned by the filter or null if not found
-	 */
-	public function getFilter(string $key): array | null {
-		return array_key_exists($key, $this->filters) ? $this->filters[$key] : null;
+	public function getMiddlewareValue(
+		string $middleware,
+		string $key
+	): mixed {
+		return OMiddleware::getContext(
+			$middleware,
+			$key
+		);
 	}
 }

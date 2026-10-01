@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\DTO;
 
 use ReflectionClass;
-use ReflectionProperty;
 use ReflectionNamedType;
+use ReflectionProperty;
 use Osumi\OsumiFramework\Web\ORequest;
 
 class ODTO {
@@ -19,6 +19,9 @@ class ODTO {
    * Create a DTO and load its values from the request.
    *
    * DTO field definitions are validated before request values are assigned.
+   * Values may come from middleware context, an HTTP header or request
+   * parameters. Explicit middleware and header sources never fall back to
+   * request parameters when their value is missing.
    *
    * @param ORequest $req Request containing the values to load.
    *
@@ -52,8 +55,8 @@ class ODTO {
     $field_values = [];
 
     /*
-	 * First validate all DTO field definitions and store their types.
-	 */
+     * First validate all DTO field definitions and store their types.
+     */
     foreach ($properties as $property) {
       $attributes = $property->getAttributes(
         ODTOField::class
@@ -73,7 +76,7 @@ class ODTO {
     }
 
     /*
-     * Validate requiredIf references before loading any values.
+     * Validate field references and explicit data sources before loading values.
      */
     foreach ($properties as $property) {
       $attributes = $property->getAttributes(
@@ -82,34 +85,77 @@ class ODTO {
 
       foreach ($attributes as $attribute) {
         $field_definition = $attribute->newInstance();
+        $property_name = $property->getName();
 
-        if ($field_definition->requiredIf === null) {
-          continue;
+        if ($field_definition->requiredIf !== null) {
+          $dependency = $field_definition->requiredIf;
+
+          if ($dependency === $property_name) {
+            throw new \InvalidArgumentException(
+              "DTO property '{$property_name}' cannot use itself as requiredIf dependency."
+            );
+          }
+
+          if (!array_key_exists(
+            $dependency,
+            $field_names
+          )) {
+            throw new \InvalidArgumentException(
+              "DTO property '{$property_name}' references unknown requiredIf field '{$dependency}'."
+            );
+          }
         }
 
-        $property_name = $property->getName();
-        $dependency = $field_definition->requiredIf;
+        $has_middleware = $field_definition->middleware !== null;
+        $has_middleware_property = $field_definition->middlewareProperty !== null;
 
-        if ($dependency === $property_name) {
+        if ($has_middleware !== $has_middleware_property) {
           throw new \InvalidArgumentException(
-            "DTO property '{$property_name}' cannot use itself as requiredIf dependency."
+            "DTO property '{$property_name}' must define middleware and middlewareProperty together."
           );
         }
 
-        if (!array_key_exists(
-          $dependency,
-          $field_names
-        )) {
+        if (
+          $field_definition->middleware !== null &&
+          trim($field_definition->middleware) === ''
+        ) {
           throw new \InvalidArgumentException(
-            "DTO property '{$property_name}' references unknown requiredIf field '{$dependency}'."
+            "DTO property '{$property_name}' contains an empty middleware name."
+          );
+        }
+
+        if (
+          $field_definition->middlewareProperty !== null &&
+          trim($field_definition->middlewareProperty) === ''
+        ) {
+          throw new \InvalidArgumentException(
+            "DTO property '{$property_name}' contains an empty middlewareProperty."
+          );
+        }
+
+        if (
+          $field_definition->header !== null &&
+          trim($field_definition->header) === ''
+        ) {
+          throw new \InvalidArgumentException(
+            "DTO property '{$property_name}' contains an empty header name."
+          );
+        }
+
+        if (
+          $field_definition->middleware !== null &&
+          $field_definition->header !== null
+        ) {
+          throw new \InvalidArgumentException(
+            "DTO property '{$property_name}' cannot define both middleware and header sources."
           );
         }
       }
     }
 
     /*
-	 * Load DTO field values.
-	 */
+     * Load DTO field values.
+     */
     foreach ($properties as $property) {
       $attributes = $property->getAttributes(
         ODTOField::class
@@ -120,36 +166,28 @@ class ODTO {
         $property_name = $property->getName();
 
         /*
-			 * Get value from a filter if configured.
-			 */
-        if ($field_definition->filter !== null) {
-          $filter_values = $req->getFilter(
-            $field_definition->filter
+         * Middleware is an explicit source. If its context value is absent,
+         * the DTO value remains null and does not fall back to client input.
+         */
+        if ($field_definition->middleware !== null) {
+          $value = $this->normalizeFieldValue(
+            $req->getMiddlewareValue(
+              $field_definition->middleware,
+              $field_definition->middlewareProperty
+            ),
+            $field_types[$property_name]
           );
 
-          if (
-            is_array($filter_values) &&
-            $field_definition->filterProperty !== null &&
-            array_key_exists(
-              $field_definition->filterProperty,
-              $filter_values
-            )
-          ) {
-            $value = $this->normalizeFieldValue(
-              $filter_values[$field_definition->filterProperty],
-              $field_types[$property_name]
-            );
+          $this->$property_name = $value;
+          $field_values[$property_name] = $value;
 
-            $this->$property_name = $value;
-            $field_values[$property_name] = $value;
-
-            continue;
-          }
+          continue;
         }
 
         /*
-			 * Get value from an HTTP header if configured.
-			 */
+         * Header is also an explicit source and never falls back to request
+         * parameters when the header is absent or invalid.
+         */
         if ($field_definition->header !== null) {
           $value = $this->normalizeFieldValue(
             $req->getHeader(
@@ -165,9 +203,9 @@ class ODTO {
         }
 
         /*
-			 * Otherwise load the value from the request parameters using
-			 * the declared DTO property type.
-			 */
+         * Otherwise load the value from request parameters using the declared
+         * DTO property type.
+         */
         $type = $field_types[$property_name];
 
         $value = match ($type) {
@@ -406,9 +444,9 @@ class ODTO {
   }
 
   /**
-   * Checks if the DTO is valid checking if there are validation errors
+   * Check whether the DTO is valid.
    *
-   * @return bool True if it is a valid DTO or false otherwise
+   * @return bool True when the DTO has no validation errors.
    */
   public function isValid(): bool {
     return empty($this->validation_errors);

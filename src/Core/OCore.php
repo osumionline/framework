@@ -407,10 +407,7 @@ class OCore {
 					}
 
 					$param_class = $reflection_param_type->getName();
-					$request = new ORequest(
-						$url_result,
-						[]
-					);
+					$request = new ORequest($url_result);
 
 					if ($param_class === ORequest::class) {
 						$body = $component_instance->render(

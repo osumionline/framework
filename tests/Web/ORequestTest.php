@@ -4,10 +4,61 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tests\Web;
 
+use Osumi\OsumiFramework\Core\OMiddleware;
 use Osumi\OsumiFramework\Web\ORequest;
 use PHPUnit\Framework\TestCase;
 
+final class RequestContextMiddleware {
+    /**
+     * Publish request test context during the before phase.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase !== OMiddleware::PHASE_BEFORE) {
+            return [];
+        }
+
+        return [
+            'context' => [
+                'id' => 25,
+                'role' => 'admin'
+            ]
+        ];
+    }
+}
+
 final class ORequestTest extends TestCase {
+    /**
+     * Reset middleware state before every test.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        parent::setUp();
+
+        OMiddleware::setGlobal([]);
+        OMiddleware::reset();
+    }
+
+    /**
+     * Reset middleware state after every test.
+     *
+     * @return void
+     */
+    protected function tearDown(): void {
+        OMiddleware::setGlobal([]);
+        OMiddleware::reset();
+
+        parent::tearDown();
+    }
+
     /**
      * Create a request for testing.
      *
@@ -25,8 +76,7 @@ final class ORequestTest extends TestCase {
                 'method' => 'POST',
                 'headers' => $headers,
                 'params' => $params
-            ],
-            []
+            ]
         );
     }
 
@@ -164,6 +214,53 @@ final class ORequestTest extends TestCase {
             $request->getParamString(
                 'name',
                 'default'
+            )
+        );
+    }
+
+    /**
+     * Test access to context published by executed middlewares.
+     *
+     * @return void
+     */
+    public function testMiddlewareContextIsAvailable(): void {
+        OMiddleware::setRoute(
+            [
+                'before' => [
+                    RequestContextMiddleware::class
+                ]
+            ]
+        );
+
+        OMiddleware::runPhase(
+            OMiddleware::PHASE_BEFORE,
+            []
+        );
+
+        $request = $this->createRequest();
+
+        self::assertSame(
+            [
+                'id' => 25,
+                'role' => 'admin'
+            ],
+            $request->getMiddleware(
+                'RequestContext'
+            )
+        );
+
+        self::assertSame(
+            25,
+            $request->getMiddlewareValue(
+                'RequestContext',
+                'id'
+            )
+        );
+
+        self::assertNull(
+            $request->getMiddlewareValue(
+                'RequestContext',
+                'missing'
             )
         );
     }
