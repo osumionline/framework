@@ -10,6 +10,7 @@ use Osumi\OsumiFramework\Migrations\State\StateStore;
 use Osumi\OsumiFramework\Migrations\Util\FilePatcher;
 use Osumi\OsumiFramework\Migrations\Util\GitStatus;
 use Osumi\OsumiFramework\Migrations\ValueObject\MigrationOptions;
+use Osumi\OsumiFramework\Migrations\Util\MigrationVersion;
 use Throwable;
 
 final class Runner {
@@ -170,11 +171,11 @@ final class Runner {
                 continue;
             }
 
-            $version = self::normalizeVersion(
+            $version = MigrationVersion::normalize(
                 $version
             );
 
-            if (self::isValidVersion($version)) {
+            if (MigrationVersion::isValid($version)) {
                 return $version;
             }
         }
@@ -210,8 +211,8 @@ final class Runner {
         );
 
         $steps = $this->manifest->selectSteps(
-            self::normalizeVersion($from),
-            self::normalizeVersion($to)
+            MigrationVersion::normalize($from),
+            MigrationVersion::normalize($to)
         );
 
         if ($steps === []) {
@@ -404,51 +405,6 @@ final class Runner {
             ),
             '/'
         );
-    }
-
-    /**
-     * Normalize a framework version for migration comparisons.
-     *
-     * @param string $version Framework version.
-     *
-     * @return string Normalized framework version.
-     */
-    private static function normalizeVersion(string $version): string {
-        $version = trim(
-            $version
-        );
-
-        if (
-            strlen($version) > 1 &&
-            (
-                $version[0] === 'v' ||
-                $version[0] === 'V'
-            ) &&
-            ctype_digit(
-                $version[1]
-            )
-        ) {
-            return substr(
-                $version,
-                1
-            );
-        }
-
-        return $version;
-    }
-
-    /**
-     * Validate a framework migration version.
-     *
-     * @param string $version Framework version.
-     *
-     * @return bool Whether the version is valid.
-     */
-    private static function isValidVersion(string $version): bool {
-        return preg_match(
-            '/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/D',
-            $version
-        ) === 1;
     }
 
     /**

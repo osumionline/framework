@@ -1,0 +1,53 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Osumi\OsumiFramework\Migrations\Cli\MigrateCommand;
+
+$autoload_candidates = [
+    dirname(__DIR__) . '/vendor/autoload.php',
+    dirname(__DIR__, 3) . '/autoload.php'
+];
+
+$autoload_loaded = false;
+
+foreach ($autoload_candidates as $autoload_file) {
+    if (is_file($autoload_file)) {
+        require_once $autoload_file;
+        $autoload_loaded = true;
+        break;
+    }
+}
+
+if (!$autoload_loaded) {
+    fwrite(
+        STDERR,
+        "[OFW] ERROR: Composer autoloader could not be located."
+            . PHP_EOL
+    );
+
+    exit(1);
+}
+
+$project_root = getcwd();
+
+if ($project_root === false) {
+    fwrite(
+        STDERR,
+        "[OFW] ERROR: Current working directory could not be determined."
+            . PHP_EOL
+    );
+
+    exit(1);
+}
+
+$command = new MigrateCommand();
+
+exit($command->run(
+        array_slice(
+            $argv,
+            1
+        ),
+        $project_root
+    ));

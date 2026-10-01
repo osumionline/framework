@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Migrations\State;
 
+use Osumi\OsumiFramework\Migrations\Util\MigrationVersion;
+
 final class StateStore {
     private const string STATE_FILE = 'state.json';
 
@@ -71,7 +73,7 @@ final class StateStore {
                 $data
             ) ||
             !is_string($data['last_migrated']) ||
-            !$this->isValidVersion(
+            !MigrationVersion::isValid(
                 $data['last_migrated']
             )
         ) {
@@ -95,7 +97,7 @@ final class StateStore {
      * @throws \RuntimeException If the state directory or file cannot be written.
      */
     public function writeLastMigrated(string $version): void {
-        if (!$this->isValidVersion($version)) {
+        if (!MigrationVersion::isValid($version)) {
             throw new \InvalidArgumentException(
                 "Invalid migration version '{$version}'."
             );
@@ -137,19 +139,5 @@ final class StateStore {
                 "Unable to write migration state file '{$state_file}'."
             );
         }
-    }
-
-    /**
-     * Validate the version format stored by the migration engine.
-     *
-     * @param string $version Framework version.
-     *
-     * @return bool Whether the version is valid.
-     */
-    private function isValidVersion(string $version): bool {
-        return preg_match(
-            '/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/D',
-            $version
-        ) === 1;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\Migrations;
 
 use Osumi\OsumiFramework\Migrations\Contract\MigrationStepInterface;
+use Osumi\OsumiFramework\Migrations\Util\MigrationVersion;
 use ReflectionClass;
 
 final class MigrationManifest {
@@ -144,7 +145,7 @@ final class MigrationManifest {
 
             if (
                 !is_string($since) ||
-                !$this->isValidVersion($since)
+                !MigrationVersion::isValid($since)
             ) {
                 throw new \InvalidArgumentException(
                     "Migration manifest entry '{$index}' has an invalid 'since' version."
@@ -235,13 +236,13 @@ final class MigrationManifest {
         string $from,
         string $to
     ): void {
-        if (!$this->isValidVersion($from)) {
+        if (!MigrationVersion::isValid($from)) {
             throw new \InvalidArgumentException(
                 "Invalid source migration version '{$from}'."
             );
         }
 
-        if (!$this->isValidVersion($to)) {
+        if (!MigrationVersion::isValid($to)) {
             throw new \InvalidArgumentException(
                 "Invalid target migration version '{$to}'."
             );
@@ -258,19 +259,5 @@ final class MigrationManifest {
                 "Framework migrations do not support downgrades ('{$from}' -> '{$to}')."
             );
         }
-    }
-
-    /**
-     * Validate a framework migration version.
-     *
-     * @param string $version Framework version.
-     *
-     * @return bool Whether the version is valid.
-     */
-    private function isValidVersion(string $version): bool {
-        return preg_match(
-            '/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/D',
-            $version
-        ) === 1;
     }
 }

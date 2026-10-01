@@ -3,6 +3,9 @@
 	"description": "Framework PHP de Osumi para aplicaciones web.",
 	"version": "9.8.5",
 	"type": "library",
+	"bin": [
+		"bin/ofw-migrate"
+	],
 	"keywords": [
 		"framework",
 		"php",
