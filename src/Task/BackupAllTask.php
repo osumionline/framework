@@ -10,7 +10,7 @@ use Osumi\OsumiFramework\Tools\OTools;
 /**
  * Generate a backup file (composer file) of the whole application (database and code). Calls internally to "backupDB" and "composer" tasks.
  */
-class backupAllTask extends OTask {
+class BackupAllTask extends OTask {
 	public function __toString(): string {
 		return $this->getColors()->getColoredString("backupAll", "light_green") . ": " . OTools::getMessage('TASK_BACKUP_ALL');
 	}
