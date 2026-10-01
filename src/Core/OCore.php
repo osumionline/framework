@@ -701,19 +701,22 @@ class OCore {
 	}
 
 	/**
-	 * Build a middleware stop response body for the requested response type.
+	 * Build a middleware stop response using the framework template associated
+	 * with the requested response type.
 	 *
-	 * The temporary F3 implementation generates minimal valid HTML, JSON or XML
-	 * responses. Dedicated framework error templates will replace this fallback
-	 * in the later middleware error-response block.
+	 * HTML and XML messages are escaped before template substitution. JSON
+	 * messages are encoded as complete JSON string values so quotes, slashes,
+	 * Unicode characters and control characters remain valid JSON.
 	 *
 	 * @param string $type Requested response type.
 	 * @param int $status_code HTTP status code returned by the middleware.
 	 * @param string $message Public middleware error message.
 	 *
-	 * @return string Encoded middleware error response body.
+	 * @return string Rendered middleware error response body.
 	 *
-	 * @throws \JsonException If the JSON response cannot be encoded.
+	 * @throws \JsonException If the JSON message cannot be encoded.
+	 * @throws \InvalidArgumentException If a template replacement value is invalid.
+	 * @throws \RuntimeException If the middleware error template cannot be read.
 	 */
 	private function buildMiddlewareErrorBody(
 		string $type,
@@ -724,44 +727,43 @@ class OCore {
 			$type
 		);
 
-		if ($type === 'json') {
-			return json_encode(
-				[
-					'status' => 'error',
-					'status_code' => $status_code,
-					'message' => $message
-				],
+		$template_path = $this->config->getDir(
+			'ofw_template'
+		) . 'error.' . $type;
+
+		$template_message = match ($type) {
+			'json' => json_encode(
+				$message,
 				JSON_UNESCAPED_UNICODE |
 					JSON_UNESCAPED_SLASHES |
 					JSON_THROW_ON_ERROR
-			);
-		}
+			),
 
-		if ($type === 'xml') {
-			return '<error><status>error</status><status_code>'
-				. $status_code
-				. '</status_code><message>'
-				. htmlspecialchars(
-					$message,
-					ENT_QUOTES |
-						ENT_XML1 |
-						ENT_SUBSTITUTE,
-					'UTF-8'
-				)
-				. '</message></error>';
-		}
+			'xml' => htmlspecialchars(
+				$message,
+				ENT_QUOTES |
+					ENT_XML1 |
+					ENT_SUBSTITUTE,
+				'UTF-8'
+			),
 
-		return '<h1>Error '
-			. $status_code
-			. '</h1><p>'
-			. htmlspecialchars(
+			default => htmlspecialchars(
 				$message,
 				ENT_QUOTES |
 					ENT_SUBSTITUTE |
 					ENT_HTML5,
 				'UTF-8'
 			)
-			. '</p>';
+		};
+
+		return OTools::getTemplate(
+			$template_path,
+			'',
+			[
+				'status_code' => $status_code,
+				'message' => $template_message
+			]
+		);
 	}
 
 	/**

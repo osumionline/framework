@@ -201,6 +201,51 @@ final class OCoreMiddlewareTest extends TestCase {
             );
         }
 
+        $template_path = $framework_path
+            . '/src/Assets/template';
+
+        if (
+            !mkdir(
+                $template_path,
+                0755,
+                true
+            ) &&
+            !is_dir($template_path)
+        ) {
+            throw new \RuntimeException(
+                "Could not create temporary template directory '{$template_path}'."
+            );
+        }
+
+        $middleware_error_templates = [
+            'html' => "<h1>Error {{status_code}}</h1>\n<p>{{message}}</p>",
+            'json' => '{"status":"error","status_code":{{status_code}},"message":{{message}}}',
+            'xml' => "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                . "<error>\n"
+                . "\t<status>error</status>\n"
+                . "\t<status_code>{{status_code}}</status_code>\n"
+                . "\t<message>{{message}}</message>\n"
+                . "</error>"
+        ];
+
+        foreach ($middleware_error_templates as $type => $content) {
+            $file = $template_path
+                . '/error.'
+                . $type;
+
+            if (
+                file_put_contents(
+                    $file,
+                    $content,
+                    LOCK_EX
+                ) === false
+            ) {
+                throw new \RuntimeException(
+                    "Could not create temporary middleware error template '{$file}'."
+                );
+            }
+        }
+
         $this->core_existed = array_key_exists(
             'core',
             $GLOBALS
@@ -352,6 +397,117 @@ final class OCoreMiddlewareTest extends TestCase {
         self::assertSame(
             401,
             http_response_code()
+        );
+    }
+
+    /**
+     * Test that middleware stops use the HTML error template.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testBeforeStopUsesHtmlErrorTemplate(): void {
+        ORoute::view(
+            '/blocked-html',
+            'blocked.html',
+            [
+                'before' => [
+                    StopBeforeMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/blocked-html';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            "<h1>Error 401</h1>\n<p>Denied</p>",
+            $output
+        );
+    }
+
+    /**
+     * Test that middleware stops use the JSON error template.
+     *
+     * @return void
+     *
+     * @throws \JsonException If the response cannot be decoded.
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testBeforeStopUsesJsonErrorTemplate(): void {
+        ORoute::view(
+            '/blocked-json',
+            'blocked.json',
+            [
+                'before' => [
+                    StopBeforeMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/blocked-json';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        $response = json_decode(
+            $output,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        self::assertSame(
+            [
+                'status' => 'error',
+                'status_code' => 401,
+                'message' => 'Denied'
+            ],
+            $response
+        );
+    }
+
+    /**
+     * Test that middleware stops use the XML error template.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testBeforeStopUsesXmlErrorTemplate(): void {
+        ORoute::view(
+            '/blocked-xml',
+            'blocked.xml',
+            [
+                'before' => [
+                    StopBeforeMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/blocked-xml';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertStringStartsWith(
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            $output
+        );
+
+        self::assertStringContainsString(
+            '<status_code>401</status_code>',
+            $output
+        );
+
+        self::assertStringContainsString(
+            '<message>Denied</message>',
+            $output
+        );
+
+        self::assertStringNotContainsString(
+            '<h1>',
+            $output
         );
     }
 
