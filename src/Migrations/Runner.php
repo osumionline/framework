@@ -37,6 +37,7 @@ final class Runner {
      *     force?: bool,
      *     verbose?: bool,
      *     interactive?: bool,
+     *     gitIgnoredPaths?: list<string>,
      *     extra?: array<string, mixed>,
      *     logger?: \Closure(string): void
      * } $options Migration options.
@@ -72,6 +73,7 @@ final class Runner {
      *     force?: bool,
      *     verbose?: bool,
      *     interactive?: bool,
+     *     gitIgnoredPaths?: list<string>,
      *     extra?: array<string, mixed>,
      *     logger?: \Closure(string): void
      * } $options Migration options.
