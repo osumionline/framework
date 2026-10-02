@@ -1,253 +1,215 @@
-# Subida de Archivos
+# Subida de archivos
 
-La gestión de la subida de archivos en **Osumi Framework** sigue los mismos principios de diseño que el resto del sistema:
+Las subidas de archivos en **Osumi Framework 9.9** siguen la misma estructura que el resto del manejo de peticiones:
 
-- Los **DTO** gestionan y validan los datos entrantes
-- Los **componentes** orquestan la operación
-- El archivo subido está disponible a través de **`ORequest`**
-- Usted decide dónde y cómo se almacenarán los archivos
-
-Esta receta muestra cómo aceptar un archivo subido (por ejemplo, desde un HTML `<input type="file" name="photo">`), procesarlo en un componente y almacenarlo correctamente.
-
----
-
-# 1. Resumen del funcionamiento de la subida de archivos
-
-Cuando un usuario envía un formulario con un archivo, PHP coloca la información del archivo subido dentro de `$_FILES`.
-
-Osumi Framework fusiona los datos de la solicitud (parámetros, cabeceras, filtros, archivos) en una instancia de **`ORequest`**.
-
-Desde el método `run()` de su componente, puede acceder a:
-
-```php
-$req->getFile("photo");
-```
-
-Esto devuelve la matriz de carga estándar de PHP:
-
-```php
-[
-  'name'     => 'example.png',
-  'type'     => 'image/png',
-  'tmp_name' => '/tmp/phpXYZ123',
-  'error'    => 0,
-  'size'     => 123456
-]
-```
-
-Para mantener la coherencia con el resto del framework, normalmente se encapsula este acceso dentro de un **DTO**, de modo que la validación y la estructura se mantengan limpias.
+- `ORequest` expone los archivos subidos.
+- Los DTOs pueden validar los datos relacionados con la subida.
+- Los componentes orquestan la petición.
+- Los servicios son adecuados para lógica reutilizable de procesamiento de archivos.
+- Los Middlewares pueden proteger las rutas de subida.
 
 ---
 
-# 2. Creación de un DTO para la carga de archivos
+# 1. Acceder a un archivo subido
 
-Los DTO pueden aceptar cualquier parámetro de solicitud, incluidos los archivos.
-Dado que los archivos subidos no provienen de encabezados ni filtros, se leen directamente desde `ORequest` dentro del constructor del DTO.
+PHP almacena la información de los archivos subidos en `$_FILES`.
 
-DTO de ejemplo:
+Osumi Framework la expone mediante:
 
 ```php
-<?php declare(strict_types=1);
+$file = $req->getFile(
+	'photo'
+);
+```
+
+El valor devuelto sigue la estructura estándar de subida de PHP.
+
+El contexto de Middleware está disponible de forma independiente mediante `getMiddleware()` y `getMiddlewareValue()`.
+
+---
+
+# 2. DTO de subida
+
+Ejemplo:
+
+```php
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\DTO;
 
 use Osumi\OsumiFramework\DTO\ODTO;
-use Osumi\OsumiFramework\DTO\ODTOField;
 use Osumi\OsumiFramework\Web\ORequest;
 
 class PhotoUploadDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?array $photo = null;
+	public ?array $photo = null;
 
-  public function __construct(ORequest $req) {
-    parent::__construct($req);
+	/**
+	 * Build the upload DTO.
+	 *
+	 * @param ORequest $req Current request.
+	 */
+	public function __construct(ORequest $req) {
+		parent::__construct(
+			$req
+		);
 
-    // Cargar el archivo subido
-    $this->photo = $req->getFile('photo');
-
-    // Validar la presencia del archivo
-    if ($this->photo === null || $this->photo['error'] !== 0) {
-      $this->validation_errors[] = "A valid file is required.";
-    }
-  }
+		$this->photo = $req->getFile(
+			'photo'
+		);
+	}
 }
 ```
 
-### Notas:
-
-- `required: true` garantiza que el DTO no sea válido si falta el archivo.
-- `getFile('photo')` recupera la carga.
-- Se puede ampliar la validación (tamaño del archivo, tipo MIME, etc.).
+Valida la presencia del archivo, el error de subida, el tipo MIME, la extensión y el tamaño antes de almacenarlo.
 
 ---
 
-# 3. Creación del componente de carga
-
-El componente recibe el DTO y procesa el archivo subido.
+# 3. Componente de subida
 
 ```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Module\Api\UploadPhoto;
-
-use Osumi\OsumiFramework\Core\OComponent;
-use Osumi\OsumiFramework\App\DTO\PhotoUploadDTO;
-
 class UploadPhotoComponent extends OComponent {
-  public string $status = 'ok';
-  public string $message = '';
-  public ?string $filename = null;
+	public string $status = 'ok';
+	public string $message = '';
+	public ?string $filename = null;
 
-  public function run(PhotoUploadDTO $dto): void {
-    if (!$dto->isValid()) {
-      $this->status = 'error';
-      $this->message = implode(", ", $dto->getValidationErrors());
-      return;
-    }
+	/**
+	 * Store the uploaded file.
+	 *
+	 * @param PhotoUploadDTO $dto Upload DTO.
+	 *
+	 * @return void
+	 */
+	public function run(PhotoUploadDTO $dto): void {
+		$file = $dto->photo;
 
-    // Acceder a los datos del archivo subido
-    $file = $dto->photo;
+		if (
+			!is_array($file) ||
+			!array_key_exists('error', $file) ||
+			$file['error'] !== UPLOAD_ERR_OK ||
+			!isset(
+				$file['tmp_name'],
+				$file['name']
+			)
+		) {
+			$this->status = 'error';
+			$this->message = 'Se requiere un archivo válido.';
 
-    // Generar una ruta de archivo de destino
-    $new_name = uniqid("photo_") . "_" . basename($file['name']);
-    $upload_dir = $this->getConfig()->getDir('uploads');
-    $dest = $upload_dir . $new_name;
+			return;
+		}
 
-    // Mover el archivo subido
-    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-      $this->status = 'error';
-      $this->message = 'Error al almacenar el archivo.';
-      return;
-    }
+		$new_name = uniqid(
+			'photo_',
+			true
+		)
+			. '_'
+			. basename(
+				(string) $file['name']
+			);
 
-    $this->filename = $new_name;
-    $this->message = 'Archivo subido correctamente.';
-  }
-}
-```
+		$upload_dir = $this->getConfig()->getDir(
+			'uploads'
+		);
 
-### Puntos clave:
+		$destination = $upload_dir
+			. $new_name;
 
-- `run()` recibe un `PhotoUploadDTO`
-- El DTO garantiza la validez
-- `move_uploaded_file()` almacena el archivo de forma segura
-- Debe almacenar las subidas en un directorio configurado (`uploads` o similar)
-- Los componentes se mantienen limpios y legibles
+		if (
+			!move_uploaded_file(
+				(string) $file['tmp_name'],
+				$destination
+			)
+		) {
+			$this->status = 'error';
+			$this->message = 'No se ha podido guardar el archivo.';
 
----
+			return;
+		}
 
-# 4. Ejemplo de formulario HTML
-
-Al consumir este endpoint desde una página web:
-
-### Importante:
-
-`enctype="multipart/form-data"` es necesario para que PHP rellene `$_FILES`.
-
----
-
-# 5. Definición de la ruta
-
-Agregue una ruta que reciba una solicitud POST y se asigne a su componente de subida:
-
-```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Module\Api\UploadPhoto\UploadPhotoComponent;
-
-ORoute::post('/api/upload-photo', UploadPhotoComponent::class);
-```
-
-Si la subida requiere autenticación, simplemente añada su filtro:
-
-```php
-ORoute::post('/api/upload-photo', UploadPhotoComponent::class, [LoginFilter::class]);
-```
-
----
-
-# 6. Ejemplo de plantilla de respuesta JSON
-
-Si su componente utiliza una plantilla `.json`, el resultado podría ser:
-
-```json
-{
-	"status": "{{ status }}",
-	"message": "{{ message }}",
-	"filename": "{{ filename }}"
+		$this->filename = $new_name;
+		$this->message = 'Archivo subido correctamente.';
+	}
 }
 ```
 
 ---
 
-# 7. Ampliación de la validación
-
-Patrones de validación comunes:
-
-### Extensiones permitidas:
+# 4. Proteger la ruta de subida
 
 ```php
-$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if (!in_array($ext, ['png','jpg','jpeg'])) {
-  $this->validation_errors[] = "Invalid file extension.";
-}
+ORoute::post(
+	'/api/upload-photo',
+	UploadPhotoComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-### Tamaño máximo de archivo:
+El componente de subida no se ejecutará si el Middleware de autenticación detiene la petición.
+
+El contexto autenticado se puede leer mediante:
 
 ```php
-if ($file['size'] > 2 * 1024 * 1024) { // 2MB
-  $this->validation_errors[] = "File is too large.";
-}
+$id_user = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
 ```
 
-### Tipos MIME válidos:
-
-```php
-$allowed = ['image/png','image/jpeg'];
-if (!in_array($file['type'], $allowed)) {
-  $this->validation_errors[] = "Invalid file type.";
-}
-```
-
-Puedes almacenar estas reglas en un servicio dedicado para mantener los DTO limpios.
+o asignar directamente a un DTO mediante `middleware` y `middlewareProperty`.
 
 ---
 
-# 8. Almacenamiento de metadatos de archivos en modelos
+# 5. Validación
 
-Si quieres almacenar la información de carga en una base de datos:
+Las comprobaciones habituales incluyen:
+
+- `UPLOAD_ERR_OK`
+- Tamaño máximo
+- Tipo MIME
+- Extensión
+- Normalización del nombre
+- Permisos del destino
+
+No confíes únicamente en los metadatos MIME proporcionados por el cliente.
+
+---
+
+# 6. Almacenar metadatos
 
 ```php
 $photo = new Photo();
 $photo->filename = $new_name;
-$photo->user_id = $userId; // si se usa LoginFilter
+$photo->user_id = $id_user;
 $photo->save();
 ```
 
-Esto suele hacerse dentro de un servicio en lugar de directamente en un componente.
+Para lógica de almacenamiento reutilizable, usa un servicio.
 
 ---
 
-# 9. Buenas prácticas
+# 7. Buenas prácticas
 
-- **Usar DTO** para validar los archivos subidos
-- **Usar servicios** para la lógica relacionada con los archivos si estos crecen (cambiar el tamaño de las imágenes, generar miniaturas, etc.)
-- **Nunca confiar en los metadatos proporcionados por el cliente** (inspeccionar siempre el tipo MIME, la extensión y el tamaño)
-- **Mantener los directorios de subida fuera del acceso público** a menos que sea necesario exponer los archivos
-- **Nombrar los archivos de forma única** para evitar sobrescribir los archivos de usuario
-- **Usar filtros** si solo los usuarios autenticados pueden subir archivos
+- Mantén los directorios de subida fuera del acceso público salvo que los archivos deban ser públicos.
+- Genera nombres únicos.
+- Valida tamaño, tipo MIME y extensión.
+- Usa servicios cuando crezca la lógica de procesamiento de archivos.
+- Usa Middlewares cuando las subidas requieran autenticación o autorización.
+- Usa contexto de Middleware en lugar de IDs de usuario proporcionados por el cliente.
 
 ---
 
-# 10. Resumen
+# 8. Resumen
 
-Para implementar subidas en Osumi Framework:
+Un flujo canónico de subida es:
 
-1. Crear un **DTO** para recibir y validar el archivo
-2. Crear un **componente** para procesarlo y almacenarlo
-3. Agregar una **ruta** que apunte al componente
-4. Usar `ORequest->getFile(name)` para acceder a los archivos subidos
-5. Almacenarlos usando `move_uploaded_file()`
-6. Agregar filtros de autenticación si es necesario
-
-Este enfoque Mantiene la lógica de carga consistente con el diseño del marco: limpio, modular y predecible.
+1. Proteger la ruta con Middleware si es necesario.
+2. Leer el archivo con `ORequest::getFile()`.
+3. Validar la subida.
+4. Guardar el archivo de forma segura.
+5. Persistir metadatos si es necesario.
+6. Usar contexto de Middleware de confianza para asociar la propiedad autenticada.

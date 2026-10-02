@@ -1,45 +1,33 @@
-# Tareas Comunes
+# Tareas comunes
 
-Este documento describe **tareas comunes del mundo real** en Osumi Framework y la **forma recomendada (canónica)** de resolverlas.
-
-Si existen varios enfoques posibles, solo se muestra la solución idiomática de Osumi Framework.
+Este documento muestra la forma canónica de resolver tareas habituales en **Osumi Framework 9.9**.
 
 Todos los ejemplos asumen:
 
-- PHP 8.3+
+- PHP 8.5+
 - `declare(strict_types=1);`
-- Espacios de nombres adecuados
+- Tipado estricto siempre que sea posible
 
 ---
 
-# 1. Crear un punto final JSON simple
-
-## Objetivo
-
-Devolver JSON desde `/api/ping`.
-
-### Ruta
+# 1. Crear un endpoint JSON sencillo
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Module\Api\Ping\PingComponent;
-
-ORoute::get('/api/ping', PingComponent::class);
+ORoute::get(
+	'/api/ping',
+	PingComponent::class
+);
 ```
-
-### Componente
 
 ```php
 class PingComponent extends OComponent {
-  public string $status = 'ok';
+	public string $status = 'ok';
 }
 ```
 
-### Plantilla (`PingTemplate.json`)
-
 ```json
 {
-	"status": "{{ status }}"
+	"status": {{ status | plain }}
 }
 ```
 
@@ -47,39 +35,38 @@ class PingComponent extends OComponent {
 
 # 2. Recibir entrada mediante un DTO
 
-## Objetivo
-
-Crear un usuario utilizando la entrada validada.
-
-### DTO
-
 ```php
 class CreateUserDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?string $name = null;
+	#[ODTOField(required: true)]
+	public ?string $name = null;
 
-  #[ODTOField(required: true)]
-  public ?string $email = null;
+	#[ODTOField(required: true)]
+	public ?string $email = null;
 }
 ```
 
-### Componente
-
 ```php
 class CreateUserComponent extends OComponent {
-  public string $status = 'ok';
+	public string $status = 'ok';
 
-  public function run(CreateUserDTO $dto): void {
-    if (!$dto->isValid()) {
-      $this->status = 'error';
-      return;
-    }
+	/**
+	 * Create a user from validated input.
+	 *
+	 * @param CreateUserDTO $dto Request DTO.
+	 *
+	 * @return void
+	 */
+	public function run(CreateUserDTO $dto): void {
+		if (!$dto->isValid()) {
+			$this->status = 'error';
+			return;
+		}
 
-    $u = new User();
-    $u->name = $dto->name;
-    $u->email = $dto->email;
-    $u->save();
-  }
+		$user = new User();
+		$user->name = $dto->name;
+		$user->email = $dto->email;
+		$user->save();
+	}
 }
 ```
 
@@ -87,81 +74,69 @@ class CreateUserComponent extends OComponent {
 
 # 3. Proteger un endpoint con autenticación
 
-## Objetivo
-
-Solo los usuarios autenticados pueden acceder a `/api/profile`.
-
-### Ruta
-
 ```php
-ORoute::get('/api/profile', ProfileComponent::class, [LoginFilter::class]);
+ORoute::get(
+	'/api/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-### Acceder a los datos del filtro
+Acceder a un valor publicado:
 
 ```php
-public function run(ORequest $req): void {
-  $login = $req->getFilter('Login');
-  $user_id = $login['id'];
-}
+$id_user = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
+```
+
+O asignarlo directamente a un campo DTO:
+
+```php
+#[ODTOField(
+	required: true,
+	middleware: 'Login',
+	middlewareProperty: 'id'
+)]
+public ?int $idUser = null;
 ```
 
 ---
 
 # 4. Leer un parámetro de URL
 
-## Objetivo
-
-Acceder a `/user/:id`.
-
-### Ruta
-
 ```php
-ORoute::get('/user/:id', UserComponent::class);
+ORoute::get(
+	'/user/:id',
+	UserComponent::class
+);
 ```
 
-### Componente
-
 ```php
-public function run(ORequest $req): void {
-  $id = $req->getParamInt('id');
-  $this->user = User::findOne(['id' => $id]);
-}
+$id = $req->getParamInt(
+	'id'
+);
 ```
 
 ---
 
 # 5. Usar un servicio dentro de un componente
 
-## Objetivo
-
-Extraer la lógica de negocio del componente.
-
-### Servicio
-
 ```php
 class UserService extends OService {
-  public function getAll(): array {
-    return User::where([]);
-  }
-}
-```
-
-### Componente
-
-```php
-class UsersComponent extends OComponent {
-  private ?UserService $us = null;
-  public array $users = [];
-
-  public function __construct() {
-    parent::__construct();
-    $this->us = inject(UserService::class);
-  }
-
-  public function run(): void {
-    $this->users = $this->us->getAll();
-  }
+	/**
+	 * Return all users.
+	 *
+	 * @return array<int, User> Users.
+	 */
+	public function getAll(): array {
+		return User::where([]);
+	}
 }
 ```
 
@@ -169,132 +144,78 @@ class UsersComponent extends OComponent {
 
 # 6. Guardar o actualizar un modelo
 
-## Objetivo
-
-Insertar o actualizar automáticamente usando `save()`.
-
 ```php
 $user = new User();
 $user->name = 'Alice';
 $user->email = 'alice@mail.com';
-$user->save(); // INSERTAR
+$user->save();
 
-$user = User::findOne(['id' => 1]);
-$user->name = 'Updated Name';
-$user->save(); // ACTUALIZAR
+$user = User::findOne([
+	'id' => 1
+]);
+
+if ($user !== null) {
+	$user->name = 'Nombre actualizado';
+	$user->save();
+}
 ```
 
 ---
 
-# 7. Devolver una lista de modelos (JSON)
-
-## Objetivo
-
-Devolver usuarios usando un componente de modelo.
-
-### Dentro del componente
+# 7. Devolver una lista de modelos
 
 ```php
 public ?UserListComponent $list = null;
+```
 
+```php
+/**
+ * Load users.
+ *
+ * @return void
+ */
 public function run(): void {
-  $this->list = new UserListComponent();
-  $this->list->list = User::where([]);
-}
-```
-
-### Plantilla
-
-```json
-{
-  "users": [
-    {{ list }}
-  ]
+	$this->list = new UserListComponent();
+	$this->list->list = User::where([]);
 }
 ```
 
 ---
 
-# 8. Gestionar la subida de archivos
+# 8. Gestionar subidas de archivos
 
-## Objetivo
+Usa `ORequest::getFile()` para obtener un archivo subido y valídalo antes de moverlo.
 
-Subir un archivo de forma segura.
-
-### DTO
-
-```php
-class UploadDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?array $file = null;
-
-  public function __construct(ORequest $req) {
-    parent::__construct($req);
-    $this->file = $req->getFile('file');
-  }
-}
-```
-
-### Componente
-
-```php
-public function run(UploadDTO $dto): void {
-  if (!$dto->isValid()) return;
-
-  $file = $dto->file;
-  $dest = $this->getConfig()->getDir('uploads') . basename($file['name']);
-  move_uploaded_file($file['tmp_name'], $dest);
-}
-```
+Consulta `recipes/uploads.md` para ejemplos completos.
 
 ---
 
-# 9. Usar un diseño personalizado
-
-## Objetivo
-
-Aplicar un diseño a un grupo de rutas.
+# 9. Usar un layout personalizado
 
 ```php
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-});
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get(
+			'/home',
+			HomeComponent::class
+		);
+	}
+);
 ```
 
-O combinar prefijo + diseño:
-
-```php
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-});
-```
-
-Los diseños envuelven la salida del componente renderizado y reciben:
-
-- `title`
-- `body`
+Los Middlewares también pueden aplicarse a grupos de rutas creados con `layout()`, `prefix()` y `group()`.
 
 ---
 
-# 10. Gestionar correctamente los errores de validación
-
-## Validación de DTO
+# 10. Gestionar errores de validación
 
 ```php
 if (!$dto->isValid()) {
-  $this->status = 'error';
-  $this->errors = $dto->getValidationErrors();
-  return;
-}
-```
+	$this->status = 'error';
+	$this->errors = $dto->getValidationErrors();
 
-## Modelo no encontrado
-
-```php
-$user = User::findOne(['id' => $id]);
-if (is_null($user)) {
-  $this->status = 'error';
-  return;
+	return;
 }
 ```
 
@@ -302,13 +223,12 @@ if (is_null($user)) {
 
 # Resumen
 
-Estas recetas muestran la **forma canónica** de realizar tareas comunes en Osumi Framework:
+Patrones canónicos de 9.9:
 
-- Usar DTO para la validación de entrada
-- Usar filtros para la autenticación
-- Usar servicios para la lógica de negocio
-- Mantener componentes delgados
-- Usar componentes de modelo para la representación JSON
-- Aplicar diseños mediante enrutamiento
-
-Siga estos patrones para lograr aplicaciones consistentes y predecibles.
+- DTOs para entrada tipada y validada.
+- Middlewares para lógica transversal de petición/respuesta.
+- Contexto de Middleware para valores de confianza del servidor.
+- Servicios para lógica de negocio.
+- Componentes ligeros para orquestación.
+- Componentes de modelo para representación.
+- Layouts configurados desde routing.
