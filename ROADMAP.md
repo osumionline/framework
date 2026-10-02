@@ -1,6 +1,6 @@
 Proximamente en Osumi Framework:
 
-**9.9.0**
+**~~9.9.0~~**
 
 - Nuevo sistema de `middlewares`.
 - Sustituyen a los filtros actuales.
@@ -9,11 +9,11 @@ Proximamente en Osumi Framework:
 
 Por ejemplo:
 
-```
-ORoute::get('/get-book-cover', GetBookCoverComponent::class)
-	->addMiddlewareBefore(CheckUserMiddleware::class)
-	->addMiddlewareBefore(GetBookMiddleware::class)
-	->addMiddlewareAfter(MinifyJSONMiddleware::class);
+```php
+ORoute::prefix('/admin', static function(): void {
+    ORoute::post('/login', LoginComponent::class);
+    ORoute::get('/me',     MeComponent::class, ['before' => [AdminAuthMiddleware::class]]);
+});
 ```
 
 **~~9.8.0~~**
