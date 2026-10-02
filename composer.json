@@ -1,7 +1,7 @@
 {
 	"name": "osumionline/framework",
 	"description": "Framework PHP de Osumi para aplicaciones web.",
-	"version": "9.8.5",
+	"version": "9.9.0",
 	"type": "library",
 	"bin": [
 		"bin/ofw-migrate"
@@ -48,6 +48,6 @@
 		}
 	},
 	"extra": {
-		"version-description": "Cambios en firma de métodos run de componentes. Nuevo pipe plain."
+		"version-description": "Nuevo sistema de Middlewares y migraciones automáticas de proyectos."
 	}
 }
