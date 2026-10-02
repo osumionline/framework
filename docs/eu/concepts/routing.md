@@ -1,16 +1,16 @@
 # Bideratzea
 
-**Osumi Framework**-en bideratzea `ORoute` klaseak kudeatzen du. Sarrerako HTTP eskaerak (URLak) ekintza gisa jokatzen duten osagai espezifikoetara mapatzen ditu.
+Osumi Framework-en bideratzea `ORoute` klaseak kudeatzen du. Klase horrek sarrerako HTTP eskaerak (URLak) ekintza gisa jarduten duten osagai espezifikoekin lotzen ditu.
 
-Ibilbideak normalean `src/Routes/` direktorioan dauden PHP fitxategietan definitzen dira. Karpeta honetan hainbat fitxategi sor ditzakezu zure ibilbideak logikoki antolatzeko (adibidez, fitxategi bat modulu bakoitzeko).
+Ibilbideak normalean `src/Routes/` direktorioko PHP fitxategietan definitzen dira. Karpeta horretan hainbat fitxategi sor daitezke ibilbideak modu logikoan antolatzeko, adibidez modulu bakoitzeko fitxategi bat.
 
-Erabiltzaile batek URL batera sartzen denean, `ORoute`-k bidea aurkitzen du, iragazkiak exekutatzen ditu, gero osagaia instantziatzen du eta `run()` deitzen du, erabiltzaileak definitutako `DTO` bat edo `ORequest` generiko bat pasatuz.
+Erabiltzaile batek URL batera sartzen denean, `ORoute`-k ibilbidea aurkitzen du, Middleware pipeline eraginkorra ebazten du, osagaia instantziatzen du eta `run()` deitzen du, erabiltzaileak definitutako `DTO` bat, `ORequest` generiko bat edo parametrorik gabe, osagaiaren sinaduraren arabera.
 
 ---
 
 ## Ibilbideak definitzea
 
-Ibilbide bat definitzeko, erabili `ORoute`-ren metodo estatikoak HTTP aditzei dagozkienak: `get()`, `post()`, `put()` edo `delete()`.
+Ibilbide bat definitzeko, erabili HTTP aditzei dagozkien `ORoute` metodo estatikoak: `get()`, `post()`, `put()` edo `delete()`.
 
 ### Oinarrizko sintaxia
 
@@ -19,140 +19,204 @@ use Osumi\OsumiFramework\Routing\ORoute;
 use Osumi\OsumiFramework\App\Module\Home\Index\IndexComponent;
 
 ORoute::get('/', IndexComponent::class);
-
 ```
 
-### Ibilbidearen Parametroak
+### Ibilbide-parametroak
+
+`get()`, `post()`, `put()` eta `delete()` bezalako metodoek honako parametro hauek onartzen dituzte:
 
 - **URL (string)**: Erantzun beharreko bidea.
-- **Component (string)**: Exekutatzeko osagaiaren FQCN (Fully Qualified Class Name).
-- **Filters (array, aukerakoa)**: Osagaia baino lehen exekutatzeko iragazki klaseen zerrenda.
-- **Layout (string, aukerakoa)**: Ibilbide honetarako diseinu osagai espezifikoa.
+- **Component (string)**: Exekutatuko den osagaiaren FQCN.
+- **Middlewares (array, aukerakoa)**: Exekuzio-fasearen arabera taldekatutako Middleware klaseak.
+- **Layout (string|null, aukerakoa)**: Ibilbiderako layout osagai espezifikoa.
 
 ---
 
-## Iragazkiak
+## Middlewareak
 
-Iragazkiak osagai nagusiaren aurretik exekutatutako klaseak dira. Normalean autentifikaziorako (tokenak egiaztatzeko), erregistroetarako edo eskaeren baliozkotzerako erabiltzen dira.
+Middlewareek eskaeraren bizi-zikloan parte hartzen dute hiru fasetan:
 
-Dokumentuak: /docs/eu/concepts/filters.md
+- `before`
+- `afterRender`
+- `afterResponse`
+
+Ikusi `/docs/eu/concepts/middlewares.md` Middlewareen bizi-ziklo osoa eta emaitza-formatua ezagutzeko.
+
+Adibidea:
 
 ```php
-use Osumi\OsumiFramework\App\Filter\LoginFilter;
+use Osumi\OsumiFramework\App\Middleware\AuditMiddleware;
+use Osumi\OsumiFramework\App\Middleware\LoginMiddleware;
 use Osumi\OsumiFramework\App\Module\User\Profile\ProfileComponent;
+use Osumi\OsumiFramework\Core\OMiddleware;
+use Osumi\OsumiFramework\Routing\ORoute;
 
-ORoute::post('/profile', ProfileComponent::class, [LoginFilter::class]);
-
+ORoute::post(
+	'/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		],
+		OMiddleware::PHASE_AFTER_RESPONSE => [
+			AuditMiddleware::class
+		]
+	]
+);
 ```
 
 ---
 
-## Ibilbideak Taldekatzea
+## Ibilbideak taldekatzea
 
-Osumi Framework-ek hiru modu eskaintzen ditu ezaugarri komunak dituzten ibilbideak taldekatzeko:
+Osumi Framework-ek ezaugarri komunak dituzten ibilbideak taldekatzea ahalbidetzen du.
+
+Ibilbide-taldeei esleitutako Middleware definizioak habiaratutako taldeekin eta ibilbideko Middleware espezifikoekin metatzen dira.
+
+Fase bakoitzean exekuzio-ordena hau da:
+
+```text
+globala
+↓
+kanpoko taldea
+↓
+barneko taldea
+↓
+ibilbidea
+```
 
 ### 1. Aurrizkiak
 
-Ibilbide anitzek URLaren hasiera bera partekatzen dutenean erabiltzen dira (adibidez, API batean). Aurrizkiak habiaratu daitezke; habiaratutako aurrizki bakoitza aktibo dagoen aurrizkiari gehitzen zaio.
+Aurrizkiak hainbat ibilbidek URL hasiera bera partekatzen dutenean erabiltzen dira. Habiaratu daitezke eta aurrizki bakoitza aktibo dagoenari gehitzen zaio.
 
 ```php
-ORoute::prefix('/api', function(): void {
-  ORoute::get('/health', HealthComponent::class);
+use Osumi\OsumiFramework\App\Middleware\AdminAuthMiddleware;
+use Osumi\OsumiFramework\Core\OMiddleware;
 
-  ORoute::prefix('/admin', function(): void {
-    ORoute::post('/login', LoginComponent::class);
-    ORoute::get('/me', MeComponent::class, [AdminAuthFilter::class]);
-  });
-});
+ORoute::prefix(
+	'/api',
+	static function (): void {
+		ORoute::get('/health', HealthComponent::class);
 
+		ORoute::prefix(
+			'/admin',
+			static function (): void {
+				ORoute::post('/login', LoginComponent::class);
+				ORoute::get('/me', MeComponent::class);
+			},
+			[
+				OMiddleware::PHASE_BEFORE => [
+					AdminAuthMiddleware::class
+				]
+			]
+		);
+	}
+);
 ```
 
-Honek `/api/health`, `/api/admin/login` eta `/api/admin/me` erregistratzen ditu.
+Horrek `/api/health`, `/api/admin/login` eta `/api/admin/me` erregistratzen ditu.
 
-### 2. Diseinuak
+### 2. Layout-ak
 
-Ibilbide anitzek egitura bisual bera partekatzen dutenean erabiltzen da (goiburua, orri-oina, etab.).
+Erabili `ORoute::layout()` hainbat ibilbidek egitura bisual bera partekatzen dutenean.
 
 ```php
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-  ORoute::get('/contact', ContactComponent::class);
-});
-
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/home', HomeComponent::class);
+		ORoute::get('/contact', ContactComponent::class);
+	}
+);
 ```
 
-### 3. Taldeak (Aurrizkia + Diseinua)
+`layout()` metodoak Middleware definizioak ere jaso ditzake hirugarren argumentu gisa.
 
-Aurrizkia eta diseinuaren esleipena bloke bakarrean konbinatzen ditu. Taldeak beste talde edo aurrizki batzuekin habiaratu daitezke; haien URL aurrizkiak metatu egiten dira, eta talde bakoitzak bere barruan deklaratutako ibilbideei aplikatzen die bere diseinua.
+### 3. Taldeak (aurrizkia + layout-a)
+
+`ORoute::group()`-ek aurrizki bat eta layout bat konbinatzen ditu. Taldeak beste talde edo aurrizki batzuekin habiaratu daitezke.
 
 ```php
-ORoute::group('/admin', AdminLayoutComponent::class, function(): void {
-  ORoute::group('/users', UserLayoutComponent::class, function(): void {
-    ORoute::get('/profile', ProfileComponent::class);
-  });
-});
-
+ORoute::group(
+	'/admin',
+	AdminLayoutComponent::class,
+	static function (): void {
+		ORoute::group(
+			'/users',
+			UserLayoutComponent::class,
+			static function (): void {
+				ORoute::get('/profile', ProfileComponent::class);
+			}
+		);
+	}
+);
 ```
 
 Aurreko ibilbidea `/admin/users/profile` helbidean erregistratzen da eta `UserLayoutComponent` erabiltzen du.
 
-### URLen normalizazioa
+`group()` metodoak Middleware definizioak ere jaso ditzake laugarren argumentu gisa.
 
-`ORoute`-ren metodo estatiko guztiek URLak normalizatzen dituzte. Hasierako barrak bateratu egiten dira, barra errepikatuak bakarrera murrizten dira, eta amaierako barrak kentzen dira, erroko `/` URLan izan ezik. Hau metodo hauei aplikatzen zaie: `get()`, `post()`, `put()`, `delete()`, `view()`, `group()` eta `prefix()`.
+### URL normalizazioa
 
-Adibidez, barra gehigarriak dituzten aurrizki habiaratuak:
+`ORoute`-ren metodo estatiko guztiek URLak normalizatzen dituzte. Hasierako barrak bateratzen dira, barra errepikatuak bakarrera murrizten dira eta amaierako barrak kentzen dira, erroko `/` URLan izan ezik.
+
+Adibidez:
 
 ```php
-ORoute::prefix('/api/', function(): void {
-  ORoute::prefix('//admin///', function(): void {
-    ORoute::get('//users/', UsersComponent::class);
-  });
+ORoute::prefix('/api/', static function (): void {
+	ORoute::prefix('//admin///', static function (): void {
+		ORoute::get('//users/', UsersComponent::class);
+	});
 });
 ```
 
-Ibilbidea `/api/admin/users` helbidean erregistratzen da.
+Horrek `/api/admin/users` erregistratzen du.
 
 ---
 
-## Ikuspegi Estatikoak
+## Ikuspegi estatikoak
 
-Ekintza-osagai oso baten logikarik gabeko fitxategi estatiko bat edo txantiloi sinple bat zerbitzatu behar baduzu, erabili `ORoute::view()`.
+Erabili `ORoute::view()` fitxategi estatiko bat edo txantiloi sinple bat zerbitzatzeko ekintza-osagai oso bat behar izan gabe.
 
 ```php
 ORoute::view('/about-us', 'about-us.html');
-
 ```
+
+Ikuspegi estatikoen ibilbideek Middleware definizioak ere jaso ditzakete.
+
+---
 
 ## Ibilbideetako parametroak
 
-URLak parametroak izateko defini daitezke `:izena` sintaxia erabiliz.
+URLek parametroak defini ditzakete `:name` sintaxia erabiliz.
 
 ```php
 ORoute::get('/user/:id', UserComponent::class);
 ORoute::get('/location/:name', LocationComponent::class);
 ```
 
-Osagaiaren `run(ORequest $req)` metodoak parametro horretara sar daiteke `getParamInt('id')` edo `getParamString('name')` bezalako metodoak erabiliz.
+`run(ORequest $req)` erabiltzen duen osagai batek `getParamInt('id')` edo `getParamString('name')` bezalako metodoekin atzitu ditzake.
 
 ---
 
 ## `ORoute` metodoen laburpena
 
-| Metodoa    | Deskribapena                                                                     |
-| ---------- | -------------------------------------------------------------------------------- |
-| `get()`    | GET ibilbide bat erregistratzen du.                                              |
-| `post()`   | POST ibilbide bat erregistratzen du.                                             |
-| `put()`    | PUT ibilbide bat erregistratzen du.                                              |
-| `delete()` | DELETE ibilbide bat erregistratzen du.                                           |
-| `view()`   | Fitxategi estatiko bat zuzenean errendatzen duen ibilbide bat erregistratzen du. |
-| `prefix()` | Ibilbideak URL aurrizki metatu eta habiaragarri baten pean taldekatzen ditu.     |
-| `layout()` | Ibilbideak diseinu osagai komun baten pean taldekatzen ditu.                     |
-| `group()`  | Ibilbideak aurrizki habiaragarri batekin eta diseinu batekin taldekatzen ditu.   |
+| Metodoa | Deskribapena |
+| ------- | ------------ |
+| `get()` | GET ibilbide bat erregistratzen du. |
+| `post()` | POST ibilbide bat erregistratzen du. |
+| `put()` | PUT ibilbide bat erregistratzen du. |
+| `delete()` | DELETE ibilbide bat erregistratzen du. |
+| `view()` | Fitxategi estatiko bat zuzenean errendatzen duen ibilbidea erregistratzen du. |
+| `prefix()` | Ibilbideak aurrizki metagarri eta habiaragarri baten eta aukerako Middlewareen azpian taldekatzen ditu. |
+| `layout()` | Ibilbideak layout komun baten eta aukerako Middlewareen azpian taldekatzen ditu. |
+| `group()` | Ibilbideak aurrizki habiaragarri, layout eta aukerako Middlewareekin taldekatzen ditu. |
 
 ---
 
 ## Praktika onak
 
-- **Antolatu fitxategiaren arabera**: Sortu fitxategi desberdinak `src/Routes/`-en zure aplikazioaren modulu edo funtzio-eremu bakoitzerako.
-- **Erabili iragazkiak**: Mantendu zure osagaiak garbi autentifikazio eta balidazio logika iragazkietara deskargatuz.
-- **Klase konstanteak**: Erabili beti `::class` notazioa osagai eta iragazkietarako IDE autoosatze eta analisi estatikotik etekina ateratzeko.
+- **Fitxategika antolatu**: Sortu `src/Routes/` barruan fitxategi desberdinak modulu edo funtzio-eremu bakoitzerako.
+- **Erabili Middlewareak**: Mantendu osagaiak garbi eskaera/erantzun logika zeharkakoa Middlewareetara eramanez.
+- **Erabili fase-konstanteak**: Hobetsi `OMiddleware::PHASE_*` konstanteak.
+- **Klase-konstanteak**: Erabili `::class` osagai, layout eta Middlewareetarako.

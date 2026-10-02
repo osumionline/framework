@@ -1,31 +1,27 @@
 # Konfigurazioa
 
-Osumi Framework-aren konfigurazioa `src/Config/`-n dauden JSON fitxategien bidez kudeatzen da. Ezarpen hauek aplikazioaren portaera, datu-basearen konexioak, ingurune-aldagai espezifikoak eta gehiago kontrolatzen dituzte.
+Osumi Framework-en konfigurazioa `src/Config/` barruko JSON fitxategien bidez kudeatzen da.
 
 ---
 
-## Konfigurazio Fitxategiak
+## Konfigurazio-fitxategiak
 
-Framework-ak kargatzeko eredu hierarkiko bat jarraitzen du:
-
-1. **`Config.json`**: Balio lehenetsiak dituen konfigurazio fitxategi nagusia.
-2. **`Config_{environment}.json`**: Fitxategi nagusiko balioak gainidazten dituen ingurune-fitxategi espezifiko aukerakoa (adibidez, `Config_prod.json`).
+1. `Config.json`: konfigurazio nagusia.
+2. `Config_{environment}.json`: ingurunearen araberako aukerako gainidazketak.
 
 ---
 
-## Oinarrizko Konfigurazio Blokeak
+## Oinarrizko konfigurazio blokeak
 
-### Aplikazioaren Ezarpenak
-
-Aplikazioaren oinarrizko portaeraren parametro globalak.
+### Aplikazioaren konfigurazioa
 
 ```json
 {
-	"izena": "Nire aplikazio bikaina",
+	"name": "Nire aplikazioa",
 	"lang": "eu",
 	"use-session": true,
 	"allow-cross-origin": true,
-	"base_url": "https://adibidea.com",
+	"base_url": "https://example.com",
 	"css_list": [],
 	"js_list": [],
 	"head_elements": []
@@ -34,8 +30,6 @@ Aplikazioaren oinarrizko portaeraren parametro globalak.
 
 ### Datu-basea (`db`)
 
-PDO konexioaren konfigurazioa.
-
 ```json
 {
 	"db": {
@@ -43,16 +37,14 @@ PDO konexioaren konfigurazioa.
 		"host": "localhost",
 		"user": "root",
 		"pass": "secret",
-		"izena": "nire_datu-basea",
+		"name": "my_database",
 		"charset": "utf8mb4",
 		"collate": "utf8mb4_unicode_ci"
 	}
 }
 ```
 
-### Erregistroa (`log`)
-
-Aplikazioen erregistroen ezarpenak.
+### Logging-a (`log`)
 
 ```json
 {
@@ -65,9 +57,7 @@ Aplikazioen erregistroen ezarpenak.
 }
 ```
 
-### Direktorio Pertsonalizatuak (`dir`)
-
-Bide pertsonalizatuak defini ditzakezu dauden direktorioetako leku-markak erabiliz.
+### Direktorio pertsonalizatuak (`dir`)
 
 ```json
 {
@@ -78,9 +68,7 @@ Bide pertsonalizatuak defini ditzakezu dauden direktorioetako leku-markak erabil
 }
 ```
 
-### Ezarpen Gehigarriak (`extra`)
-
-Zure aplikazioak behar dituen datu pertsonalizatuentzako gako-balio biltegi bat (API gakoak, sekretuak, etab.).
+### Konfigurazio gehigarria (`extra`)
 
 ```json
 {
@@ -93,150 +81,67 @@ Zure aplikazioak behar dituen datu pertsonalizatuentzako gako-balio biltegi bat 
 
 ---
 
-### Fitxategiak eta `head` elementuak
+## Baliabideak eta `head` elementuak
 
-`css_list` eta `js_list` izenekoak string multzoak dira. Multzo bakoitzeko string-a aplikazioaren `public` direktorioan egon behar duen fitxategi izena bezala interpretatzen da.
+`css_list` eta `js_list` arrayek `public` azpian ebazten diren izenak onartzen dituzte.
 
-- `css_list`-erako: balioa `"name"` bada, `/public/css/name.css` fitxategira mapatuko da eta honela renderezatuko da:
+`head_elements`-ek `item` bat eta `attributes` objektu bat dituzten sarrerak onartzen ditu.
 
-    `<link rel="stylesheet" type="text/css" href="css/name.css">`
+---
 
-    Adibidez: `"css_list": ["main", "lib"]` honek barne hartzen ditu:
-    - `/public/css/main.css` → `<link rel="stylesheet" type="text/css" href="css/main.css">`
-    - `/public/css/lib.css` → `<link rel="stylesheet" type="text/css" href="css/lib.css">`
-
-- `js_list`-erako: balioa `"name"` bada, `/public/js/name.js` fitxategira mapatuko da eta honela renderezatuko da:
-
-    `<script src="js/name.js"></script>`
-
-    Adibidez: `"js_list": ["app"]` honek barne hartzen du:
-    - `/public/js/app.js` → `<script src="js/app.js"></script>`
-
-`head_elements` aukera objektu multzo bat jasotzen du, eta `<head>`-ean elementu arbitrarioak inprimatzeko erabiltzen da egitura erraz baten bidez.
-
-Adibidea:
-
-```json
-{
-	"head_elements": [
-		{
-			"item": "meta",
-			"attributes": { "name": "theme-color", "content": "#000" }
-		},
-		{
-			"item": "link",
-			"attributes": {
-				"rel": "icon",
-				"href": "/fav.svg",
-				"type": "image/svg+xml"
-			}
-		},
-		{
-			"item": "script",
-			"attributes": {
-				"src": "https://cdn.example.com/lib.js",
-				"async": true
-			}
-		}
-	]
-}
-```
-
-`css_list` eta `js_list` erabiliz proiektu-mailako CSS eta JS fitxategiak gehitu ditzakezu (ruta edo URL multzoak). Gainera, `head_elements` erabilita elementuak inprimatu ditzakezu dokumentuaren `<head>`-ean egitura sinple batekin.
-`head_elements`-eko sarrera bakoitza `item` (etiketa-izena) eta `attributes` (gako-balio objektua) dituen objektua izan behar da. `script`-ek itxi beharreko etiketa izango dute (`<script></script>`), besteak auto-itxikoak izango dira.
-
-## Kodean Konfiguraziora Sartzea
-
-`OConfig` objektua normalean framework-aren oinarrizko klaseetan dago eskuragarri (Osagaiak edo Atazak bezala).
+## Konfigurazioa kodetik atzitzea
 
 ```php
-// Adibidea: "Extra" balio batera sartzea
 $apiKey = $this->getConfig()->getExtra('api_key');
-
-// Adibidea: Direktorio bide batera sartzea
 $uploadPath = $this->getConfig()->getDir('uploads');
-
-// Adibidea: DB informazioa sartzea
 $dbName = $this->getConfig()->getDB('name');
-
 ```
-
-## Balioak gainidazten
-
-Giltza bat `Config.json` fitxategian dagoenean, baina ingurune espezifikoko fitxategian ere definituta dagoenean, azkena aplikatzen da. Hautatutako ingurunea `env` gakoa erabiliz definitzen da:
-
-```json
-// Config.json fitxategia
-{
-	"log_level": "DEBUG",
-	"env": "prod"
-}
-
-// Config_prod.json fitxategia
-{
-	"log_level": "ERROR"
-}
-```
-
-Kasu honetan, "ERROR" izango litzateke `log_level`-ren balioa, gakoa fitxategi globaleko gako gisa eta ingurune espezifikoko gisa definituta baitago.
 
 ---
 
-## Aplikazioen bideak
+## Inguruneko gainidazketak
 
-Aplikazioa kargatzen denean, bide lehenetsi multzo bat kargatzen da `OConfig`-en:
-
-| Giltza          | Bidea                                              | Deskribapena                                                               |
-| --------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
-| `base`          | /                                                  | Aplikazioen oinarrizko bidea                                               |
-| `app`           | /src/                                              | Erabiltzaile kodea                                                         |
-| `app_component` | /src/Component/                                    | Berrerabilgarriak diren osagaiak                                           |
-| `app_config`    | /src/Config/                                       | Konfigurazio fitxategiak                                                   |
-| `app_dto`       | /src/DTO/                                          | Ekintzetan erabilitako DTOak                                               |
-| `app_filter`    | /src/Filter/                                       | Ekintzetan erabilitako iragazkiak                                          |
-| `app_layout`    | /src/Layout/                                       | Berrerabilgarriak diren diseinuak                                          |
-| `app_mode`      | /src/Model/                                        | Datu-basearen eredu fitxategiak                                            |
-| `app_routes`    | /src/Routes/                                       | Erabiltzaileak definitutako URLak                                          |
-| `app_service`   | /src/Service/                                      | Berrerabilgarriak diren zerbitzu fitxategiak                               |
-| `app_task`      | /src/Task/                                         | Erabiltzaileak definitutako zereginak CLIrako                              |
-| `app_utils`     | /src/Utils/                                        | Erabilgarritasun klase generikoak                                          |
-| `ofw`           | /ofw/                                              | Aplikazioak sortutako fitxategien kokapena (erregistroak, esportazioak...) |
-| `ofw_cache`     | /ofw/cache/                                        | Aplikazioaren cache fitxategien bidea                                      |
-| `ofw_export`    | /ofw/export/                                       | Esportatutako fitxategien bidea model.sql gisa                             |
-| `ofw_tmp`       | /ofw/tmp/                                          | tmp fitxategien bidea                                                      |
-| `ofw_logs`      | /ofw/logs/                                         | Sortutako erregistro fitxategien bidea                                     |
-| `ofw_base`      | /vendor/osumionline/framework/                     | Framework-aren oinarrizko bidea                                            |
-| `ofw_vendor`    | /vendor/osumionline/framework/src/                 | Framework-aren kodea                                                       |
-| `ofw_assets`    | /vendor/osumionline/framework/src/Assets/          | Framework-aren aktiboak (locale-ak, txantiloiak)                           |
-| `ofw_locale`    | /vendor/osumionline/framework/src/Assets/locale/   | Framerowk-en lokalizazio fitxategiak (en, es, eu)                          |
-| `ofw_template`  | /vendor/osumionline/framework/src/Assets/template/ | Fitxategi berriak sortzeko framework txantiloiak                           |
-| `ofw_task`      | /vendor/osumionline/framework/src/Task/            | Framework CLI zereginak                                                    |
-| `ofw_tools`     | /vendor/osumionline/framework/src/Tools/           | Framework barne tresnak                                                    |
-| `public`        | /public/                                           | Aplikazioaren DocumentRoot                                                 |
+Balio bat `Config.json`-en eta hautatutako inguruneko fitxategian agertzen bada, inguruneko balioak nagusia gainidazten du.
 
 ---
 
-## Konfigurazio-giltzen laburpena
+## Aplikazioaren bideak
 
-| Giltza          | Mota      | Deskribapena                                                                         |
-| --------------- | --------- | ------------------------------------------------------------------------------------ |
-| `name`          | Katea     | Aplikazioaren izena.                                                                 |
-| `lang`          | Katea     | Hizkuntza lehenetsia (adibidez, "en", "es").                                         |
-| `use-session`   | Boolearra | PHP saioak gaitu ala ez.                                                             |
-| `db`            | Objektua  | Datu-basearen konexioaren xehetasunak.                                               |
-| `dir`           | Objektua  | Direktorio pertsonalizatuen definizioak.                                             |
-| `extra`         | Objektua  | Giltza-balio bikote pertsonalizatuak.                                                |
-| `error_pages`   | Objektua  | 403, 404 edo 500 erroreetarako URL pertsonalizatuak.                                 |
-| `css_list`      | Matrizea  | Sartu beharreko CSS fitxategien zerrenda.                                            |
-| `js_list`       | Matrizea  | Sartu beharreko JavaScript fitxategien zerrenda.                                     |
-| `head_elements` | Matrizea  | HTML elementuen zerrenda dokumentuaren <head>-ean injektatzeko (meta, link, script). |
-| `libs`          | Matrizea  | Kargatzeko hirugarrenen liburutegien zerrenda.                                       |
+`OConfig`-ek honako bide lehenetsi hauek definitzen ditu:
+
+| Giltza | Bidea | Deskribapena |
+| ------ | ----- | ------------ |
+| `base` | `/` | Aplikazioaren oinarrizko bidea |
+| `app` | `/src/` | Aplikazioaren kodea |
+| `app_component` | `/src/Component/` | Osagai berrerabilgarriak |
+| `app_config` | `/src/Config/` | Konfigurazio-fitxategiak |
+| `app_dto` | `/src/DTO/` | DTO klaseak |
+| `app_layout` | `/src/Layout/` | Layout osagaiak |
+| `app_middleware` | `/src/Middleware/` | Middleware klaseak eta Middleware globalen konfigurazioa |
+| `app_model` | `/src/Model/` | Datu-baseko modelo-fitxategiak |
+| `app_routes` | `/src/Routes/` | Aplikazioaren ibilbideak |
+| `app_service` | `/src/Service/` | Zerbitzu berrerabilgarriak |
+| `app_task` | `/src/Task/` | Aplikazioaren CLI zereginak |
+| `app_utils` | `/src/Utils/` | Erabilgarritasun-klaseak |
+| `ofw` | `/ofw/` | Framework-ak sortutako fitxategiak |
+| `ofw_cache` | `/ofw/cache/` | Cache fitxategiak |
+| `ofw_export` | `/ofw/export/` | Esportatutako fitxategiak |
+| `ofw_tmp` | `/ofw/tmp/` | Aldi baterako fitxategiak |
+| `ofw_logs` | `/ofw/logs/` | Log fitxategiak |
+| `ofw_base` | `/vendor/osumionline/framework/` | Framework-aren oinarrizko bidea |
+| `ofw_vendor` | `/vendor/osumionline/framework/src/` | Framework-aren kodea |
+| `ofw_assets` | `/vendor/osumionline/framework/src/Assets/` | Framework-aren baliabideak |
+| `ofw_locale` | `/vendor/osumionline/framework/src/Assets/locale/` | Framework-aren hizkuntza-fitxategiak |
+| `ofw_template` | `/vendor/osumionline/framework/src/Assets/template/` | Framework-aren txantiloiak |
+| `ofw_task` | `/vendor/osumionline/framework/src/Task/` | Framework-aren CLI zereginak |
+| `ofw_tools` | `/vendor/osumionline/framework/src/Tools/` | Framework-aren tresnak |
+| `public` | `/public/` | Aplikazioaren document root-a |
 
 ---
 
 ## Praktika onak
 
-- **Segurtasuna**: Ez bidali inoiz informazio sentikorra (pasahitzak, API giltzak) `Config.json` fitxategian. Erabili bertsio-kontroletik kanpo dauden ingurune-fitxategi espezifikoak.
-- **Ingurune aldagaia**: Ziurtatu `environment` gakoa zure `Config.json` nagusian ezarrita dagoela bigarren mailako konfigurazio fitxategien karga abiarazteko.
-- **Idatzitako gehigarriak**: Gogoratu `getExtra()`-k hainbat mota itzul ditzakeela; beharrezkoa bada, balioztatu itzazu.
-- **Formatu zorrotza**: Konfigurazio fitxategiak JSON formatuarekin zorrotz bateragarriak izan behar dira. Edozein errore, koma gehigarri edo antzekoek aplikazioaren errore bat eragingo lukete, ezingo baititu kargatu.
+- Ez igo sekreturik biltegira.
+- Erabili ingurunearen araberako konfigurazioa beharrezkoa denean.
+- Balidatu getter generikoek itzulitako balioak haien mota garrantzitsua denean.
+- Mantendu JSON fitxategiak sintaktikoki zuzen.

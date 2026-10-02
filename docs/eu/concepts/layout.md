@@ -1,118 +1,119 @@
-# Diseinuak
+# Layout-ak
 
-**Osumi Framework**-en, **diseinua** osagai mota berezi bat da, ekintza nagusiko osagaiaren irteera biltzen duena.
+**Osumi Framework**-en, layout bat ibilbideko osagai nagusiaren irteera inguratzen duen osagai berezi bat da.
 
-Diseinuak normalean HTML egitura bera hainbat ibilbidetan partekatzeko erabiltzen dira (adibidez: `<head>`, metadatuak, goiburua/oina, script/estilo injekzioa, etab.).
+Layout-ak normalean hainbat ibilbidetan HTML egitura bera partekatzeko erabiltzen dira.
 
-Diseinu bat aplikatzen da ibilbide osagaia exekutatu eta errendatu ondoren, eta errendatutako irteera jasotzen du bere `body` gisa.
+Layout-a ibilbideko osagaiaren eta `afterRender` Middleware fasearen ondoren aplikatzen da. Uneko osagaiaren irteera `body` gisa jasotzen du.
 
 ---
 
-## 1. Diseinuek nola funtzionatzen duten (Errendatze fluxua)
+## 1. Errendatze-fluxua
 
-Ibilbide bat bat datorrenean, Osumi Framework-ek sekuentzia hau exekutatzen du:
+Bat datorren ibilbide normal batean, fluxua hau da:
 
-1. Ibilbidea ebazten da (Bideratzea).
-2. Iragazkiak exekutatzen dira (baldin badaude).
-3. Ibilbide osagaia instantziatu eta errendatu egiten da.
-4. Ibilbiderako diseinu bat definituta badago, diseinua instantziatu egiten da eta hau jasotzen du:
-    - `title`: konfigurazioko izenburu lehenetsia
-    - `body`: ibilbide osagaiaren errendatutako irteera
-5. Diseinu txantiloia errendatzen da, azken erantzuna sortuz.
+```text
+Bideratzea
+↓
+before Middlewareak
+↓
+Osagaia
+↓
+afterRender Middlewareak
+↓
+Layout-a
+↓
+afterResponse Middlewareak
+↓
+HTTP erantzuna
+```
 
 Horrek esan nahi du:
 
-- Zure **ekintza osagaiak** **orrialdearen edukia** sortzean zentratzen da.
-- Zure **diseinuak** egitura partekatua eskaintzen du eta eduki hori biltzen du.
+- Ekintza-osagaiak orriaren edukia sortzen du.
+- `afterRender` Middlewareek edukia layout-a aplikatu aurretik ikuskatu edo ordezka dezakete.
+- Layout-ak emaitzazko edukia inguratzen du.
+- `afterResponse` Middlewareak azken gorputza sortu ondoren exekutatzen dira.
+
+`before` Middleware batek exekuzioa gelditzen badu, osagaia eta layout-a ez dira exekutatzen.
+
+`afterRender` Middleware batek exekuzioa gelditzen badu, layout-a ez da exekutatzen.
+
+Bi kasuetan, `afterResponse` exekutatzen jarraitzen da erantzuna bidali aurretik.
 
 ---
 
-## 2. Diseinu lehenetsia
+## 2. Layout lehenetsia
 
-Osumi Framework proiektu berri bat sortzen duzunean, diseinu lehenetsi bat sortzen da.
+Proiektu berriek layout lehenetsi bat dute.
 
-### 2.1 Diseinu lehenetsiaren osagaia
+`DefaultLayoutComponent`-ek normalean honako propietateak eskaintzen ditu:
 
-`DefaultLayoutComponent` osagai oso sinplea da, bere txantiloiak erabiltzen dituen propietate publikoak soilik definitzen dituena:
+- `title`
+- `body`
 
-- `title`: orrialdearen izenburua
-- `body`: ekintza osagaiaren HTML edukia
+Txantiloi lehenetsiak hauek erabiltzen ditu:
 
-### 2.2 Diseinu lehenetsiaren txantiloia
-
-Diseinu lehenetsiaren txantiloiak HTML eskeleto estandar bat dauka eta bi leku-marka erabiltzen ditu:
-
-- `{{title}}` → `<title>`-n txertatua
-- `{{body}}` → `<body>`-n txertatua
-
-Horrek diseinu lehenetsia zerbitzariak errendatutako orrialde gehienen bilgarri generiko bihurtzen du.
+- `{{title}}`
+- `{{body}}`
 
 ---
 
-## 3. Bideratzean diseinu bat definitzea (GARRANTZITSUA)
+## 3. Layout-ak bideratzean definitzea
 
-Bi modutan esleitu dezakezu diseinu bat bideratzean:
-
-### 3.1 Diseinu Taldea
-
-Erabili `ORoute::layout()` diseinu bat hainbat ibilbidetan aplikatzeko:
+### Layout taldea
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Layout\MainLayoutComponent;
-
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-  ORoute::get('/contact', ContactComponent::class);
-});
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/home', HomeComponent::class);
+		ORoute::get('/contact', ContactComponent::class);
+	}
+);
 ```
 
-### 3.2 Diseinua + Aurrizki Taldea
+`ORoute::layout()`-ek Middleware definizioak dituen hirugarren argumentu aukerakoa onartzen du.
 
-Erabili `ORoute::group()` URL aurrizki bat eta diseinu bat konbinatzeko:
+### Layout + aurrizki taldea
 
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Layout\AdminLayoutComponent;
-
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-  ORoute::get('/settings', SettingsComponent::class);
-});
+ORoute::group(
+	'/admin',
+	AdminLayoutComponent::class,
+	static function (): void {
+		ORoute::get('/dashboard', DashboardComponent::class);
+		ORoute::get('/settings', SettingsComponent::class);
+	}
+);
 ```
 
-> Hau da aplikazioaren eremu batean diseinu pertsonalizatu bat modu koherentean aplikatzeko gomendatutako modua.
+`ORoute::group()`-ek Middleware definizioak dituen laugarren argumentu aukerakoa onartzen du.
+
+Ikusi `/docs/eu/concepts/middlewares.md`.
 
 ---
 
-## 4. CSS / JS Injekzioa
+## 4. CSS / JS injekzioa
 
-Diseinuak dira Osumi Framework-ek CSS eta JS baliabideak injektatzen dituen lekua ere.
-
-Diseinuaren irteerak `</head>` etiketa bat duenean, framework-ak automatikoki txertatzen du:
-
-- Konfiguratutako fitxategietatik CSS lerrokatua (`<style>...</style>`)
-- Konfiguratutako fitxategietatik JS lerrokatua (`<script>...</script>`)
-- Kanpoko CSS (`<link ...>`) `ext_css_list` konfiguraziotik
-- Kanpoko JS (`<script src=...>`) `ext_js_list` konfiguraziotik
-
-Horrek diseinua frontend aktibo globalak muntatzen diren puntu natural bihurtzen du.
+Layout-ak Osumi Framework-ek konfiguratutako frontend baliabideak `</head>` duten dokumentuetan injektatzeko puntua dira.
 
 ---
 
 ## 5. Praktika onak
 
-- Mantendu diseinuak egitura hutsez (HTML eskeletoa + UI partekatua).
-- Ez jarri negozio logika diseinuetan.
-- Erabili atal bakoitzeko diseinu dedikatu bat behar izanez gero (adibidez, `MainLayout`, `AdminLayout`).
-- Hobetsi `ORoute::layout()` / `ORoute::group()` koherentzia lortzeko.
+- Mantendu layout-ak egituran zentratuta.
+- Ez sartu negozio-logikarik layout-etan.
+- Erabili layout desberdinak aplikazioaren eremu desberdinetarako beharrezkoa denean.
+- Hobetsi `ORoute::layout()` eta `ORoute::group()` konfigurazio koherentea mantentzeko.
+- Erabili `afterRender` Middlewareak irteera layout-a aplikatu aurretik aldatu behar denean.
 
 ---
 
 ## 6. Laburpena
 
-- Diseinuek ibilbide-osagaien errendatutako irteera biltzen dute.
-- Diseinuek `izenburua` eta `gorputza` jasotzen dituzte.
-- Diseinu lehenetsi bat sortzen da proiektu berrietan.
-- Bideratzean **diseinu pertsonalizatua** defini dezakezu `ORoute::layout()` edo `ORoute::group()` erabiliz.
-- Diseinuak dira CSS/JS injekzio globala gertatzen den lekua.
+- Layout-ek ibilbideko osagaiaren irteera inguratzen dute.
+- `afterRender` layout-a baino lehen exekutatzen da.
+- `afterResponse` azken gorputza sortu ondoren exekutatzen da.
+- `before` edo `afterRender` faseetako `stop` batek layout-aren errendatzea saihesten du.
+- Ibilbide-taldeek layout-ak eta Middlewareak konbina ditzakete.

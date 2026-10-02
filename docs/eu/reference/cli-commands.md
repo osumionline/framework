@@ -1,156 +1,134 @@
-# Osumi Framework CLI Komandoak
+# Osumi Framework CLI komandoak
 
-Osumi Framework-ek aplikazioen garapenarekin eta mantentzearekin lotutako hainbat eragiketa egiteko aukera ematen duten CLI ataza multzo bat dauka. Jarraian, eskuragarri dauden komandoen deskribapena dago:
+Osumi Framework-ek aplikazioaren CLI zereginak eta framework migrazioetarako binario dedikatu bat eskaintzen ditu.
 
-## Eskuragarri dauden komandoak
+## Aplikazioaren CLIa
+
+Aplikazioaren zereginak proiektuaren errotik exekutatzen dira:
+
+```bash
+php of <zeregina> [aukerak]
+```
 
 ### `add`
 
-**Deskribapena:** Ekintza, zerbitzu, ataza, modelo osagai, osagai edo iragazki berriak sortzeko aukera ematen du.
-
-**Erabilera:**
+Framework aplikazioko elementuak sortzen ditu.
 
 ```bash
-php of add [mota] [izena]
+php of add --option <mota> --name <izena>
 ```
 
-- **mota:** Sortuko den elementu mota (`action`, `service`, `task`, `modelComponent`, `component`, `filter`).
-- **izena:** Sortuko den elementuaren izena.
+Onartutako motak:
 
-**Adibidea:**
+- `action`
+- `service`
+- `task`
+- `modelComponent`
+- `component`
+- `middleware`
+
+Adibidea:
 
 ```bash
-php of add --option action --name MyAction
+php of add --option middleware --name Login
 ```
 
----
+`filter` aukera zaharra ez dago 9.9 bertsioan erabilgarri.
 
 ### `backupAll`
-
-**Deskribapena:** Aplikazioaren babeskopia fitxategi oso bat sortzen du, datu-basea eta kodea barne.
-
-**Erabilera:**
 
 ```bash
 php of backupAll
 ```
 
-**Oharrak:** Komando honek barne-deiak egiten ditu `backupDB` eta `extractor` atazei.
-
----
+Aplikazioaren kopia oso bat sortzen du framework-aren dagozkion backup/esportazio zereginak erabiliz.
 
 ### `backupDB`
 
-**Deskribapena:** Datu-basearen babeskopia bat sortzen du `mysqldump` tresna erabiliz.
-
-**Erabilera:**
-
 ```bash
-php of backupDB [aukerak]
+php of backupDB
 ```
 
-- **aukerak:**
-- `silent`: Sartuta badago, komandoak ez ditu mezuak bistaratuko kontsolan.
-
-**Adibidea:**
-
-```bash
-php of backupDB silent
-```
-
----
+Datu-basearen kopia bat sortzen du konfiguratutako datu-basea eta sistemako tresnak erabiliz.
 
 ### `extractor`
-
-**Deskribapena:** Aplikazio osoa PHP fitxategi auto-ateragarri bakar batera esportatzen du.
-
-**Erabilera:**
 
 ```bash
 php of extractor
 ```
 
-**Oharrak:** Aplikazio osoa PHP fitxategi auto-ateragarri bakar batera esportatzen du.
-
----
+Aplikazioa framework-aren extractor bidez esportatzen du.
 
 ### `generateModel`
-
-**Deskribapena:** Erabiltzaileak definitutako ereduetan oinarritutako datu-baseko taula guztiak sortzeko SQL fitxategi bat sortzen du.
-
-**Erabilera:**
 
 ```bash
 php of generateModel
 ```
 
-**Oharrak:** SQL fitxategia esportazio direktorioan sortzen da.
-
----
+SQL eskema sortzen du aplikazioaren modelo-klaseetatik.
 
 ### `generateModelFrom`
 
-**Deskribapena:** Emandako JSON fitxategi batetik sortzen ditu modelo guztiak.
-
-**Erabilera:**
-
 ```bash
-php of generateModelFrom [fitxategia]
+php of generateModelFrom <fitxategia>
 ```
 
-- **fitxategia:** Modeloen definizioak dituen JSON fitxategirako bidea.
-
-**Adibidea:**
-
-```bash
-php of generateModelFrom models.json
-```
-
----
+Modelo-definizio fitxategi batetik modeloak sortzen ditu.
 
 ### `generateModelFromDB`
-
-**Deskribapena:** Dagoeneko definitutako datu-baseko konexio batetik sortzen ditu modelo guztiak.
-
-**Erabilera:**
 
 ```bash
 php of generateModelFromDB
 ```
 
-**Oharrak:** Konfiguratutako datu-basera konektatzen da eta dagokien modeloak sortzen ditu.
-
----
+Konfiguratutako datu-basetik modelo-klaseak sortzen ditu.
 
 ### `reset`
-
-**Deskribapena:** Framework-ekoak ez diren datu guztiak garbitzen ditu, instalazio berrietarako erabilgarria.
-
-**Erabilera:**
 
 ```bash
 php of reset
 ```
 
-**Oharrak:** Erabiltzaileak sortutako karpetak eta fitxategiak ezabatzen ditu eta konfigurazio eta egitura lehenetsiak leheneratzen ditu.
-
----
+Aplikazio-egitura garbi bat birsortzeko babestutako reset fluxua hasten du. Sortutako egiturak `src/Middleware/` eta `src/Middleware/Middlewares.php` barne hartzen ditu.
 
 ### `version`
-
-**Deskribapena:** Framework-aren uneko bertsioari buruzko informazioa erakusten du.
-
-**Erabilera:**
 
 ```bash
 php of version
 ```
 
-**Oharrak:** Biltegi ofizialerako eta proiektuaren X (lehen Twitter) konturako estekak barne hartzen ditu.
+Framework-aren bertsioari buruzko informazioa erakusten du.
 
 ---
 
-## Ohar gehigarriak
+## Framework migrazioen CLIa
 
-- Komando guztiak proiektuaren errotik exekutatu behar dira.
-- Ziurtatu beharrezko konfigurazioak `Config.json` fitxategian definituta daudela datu-baseari edo esportazioei lotutako komandoak exekutatu aurretik.
+Composer paketeak honako binario hau eskaintzen du:
+
+```bash
+php vendor/bin/ofw-migrate --help
+```
+
+Onartutako migrazio-aukerak:
+
+```text
+--from
+--to
+--dry-run
+--force
+--verbose
+--no-interaction
+--help
+```
+
+Framework migrazioak bertsionatuak eta idempotenteak dira eta beren egoera `ofw/tmp/state.json` fitxategian gordetzen dute.
+
+9.8.5 → 9.9.0 migrazio-gidak migrazio-fluxua eta Composer-ekin integrazio automatikoa xehetasunez dokumentatzen ditu.
+
+---
+
+## Oharrak
+
+- Exekutatu aplikazioaren CLI komandoak proiektuaren errotik.
+- Exekutatu migrazio-komandoak proiektuaren errotik runner-ak aplikazio egokian jardun dezan.
+- Datu-basearekin lotutako zereginek konfigurazio balioduna behar dute.

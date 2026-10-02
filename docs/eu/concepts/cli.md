@@ -1,121 +1,127 @@
 # CLI (Komando-lerroko interfazea)
 
-Osumi Framework-ek komando-lerroko interfaze indartsua eskaintzen du garapen-atazak automatizatzeko, datu-basea kudeatzeko eta script pertsonalizatuak exekutatzeko. CLI komando guztien sarrera-puntua zure proiektuaren erroan dagoen `of` fitxategia da.
+Osumi Framework-ek komando-lerroko tresnak eskaintzen ditu aplikazioen garapenerako, mantentzerako eta framework-aren migrazioetarako.
+
+Aplikazioaren CLIaren sarrera-puntua proiektuaren erroko `of` fitxategia da.
 
 ---
 
-## Erabilera
-
-Komandoak PHP erabiliz exekutatzen dira terminaletik:
+## Aplikazioaren CLIa
 
 ```bash
-php of <aukera> [parametroak]
-
+php of <aukera> [argumentuak]
 ```
 
-Fitxategia parametrorik gabe exekutatzen bada, eskuragarri dauden aukeren zerrenda erakusten da (Framework-eko aukerak eta erabiltzaileak sortutakoak).
+Argumenturik gabe, CLIak framework-aren eta aplikazioaren zeregin eskuragarriak erakusten ditu.
 
 ### Oinarrizko komandoak
 
-Framework-ak hainbat atazak eskaintzen ditu:
+Framework-ak honako zereginak eskaintzen ditu, besteak beste:
 
-- **`add`**: Ekintza, zerbitzu, ataza, modelo, osagai edo iragazki berriak sortu.
-- **`generateModel`**: SQL datu-basearen eskema sortu zure modelo klaseetatik.
-- **`generateModelFrom` / `generateModelFromDB`**: Alderantzizko ingeniaritza modeloak sortzeko.
-- **`backupAll` / `backupDB`**: Fitxategien eta/edo datu-basearen segurtasun-kopiak sortu.
-- **`extractor`**: Aplikazio osoa auto-ateragarri den fitxategi bakar batean esportatu.
-- **`reset`**: Framework-ekoak ez diren datu guztiak garbitu instalazio berri bat egiteko.
-- **`version`**: Framework-aren uneko bertsioa erakutsi.
+- `add`: ekintzak, zerbitzuak, zereginak, modelo-osagaiak, osagaiak edo Middlewareak sortzen ditu.
+- `generateModel`
+- `generateModelFrom`
+- `generateModelFromDB`
+- `backupAll`
+- `backupDB`
+- `extractor`
+- `reset`
+- `version`
+
+Middleware bat sortzeko adibidea:
+
+```bash
+php of add --option middleware --name Login
+```
+
+Horrek hau sortzen du:
+
+```text
+src/Middleware/LoginMiddleware.php
+```
+
+`add`-en `filter` aukera zaharra ez dago 9.9 bertsioan erabilgarri.
 
 ---
 
-## Ataza pertsonalizatuak
+## Framework migrazioen CLIa
 
-CLIa zabaldu dezakezu zure atazak sortuz. `src/Task/`-n kokatutako eta `OTask` hedatzen duen edozein klase automatikoki agertuko da `of` komandoan aukera erabilgarri gisa.
+Framework-aren migrazioak Composer-ek instalatutako binarioaren bidez ere erabil daitezke:
 
-### Ataza bat sortzea
+```bash
+php vendor/bin/ofw-migrate --help
+```
 
-Ataza batek bi elementu nagusi behar ditu:
+Komando hori 9.8.5 → 9.9.0 migrazio-gidan dokumentatzen da xehetasunez.
 
-1. **`__toString()`**: Atazaren deskribapen laburra itzultzen du (laguntza-menuan bistaratzen da).
-2. **`run(array $options)`**: Exekutatuko den logika.
+---
 
-### Adibidea: `AddUserTask.php`
+## Zeregin pertsonalizatuak
+
+Aplikazioaren zereginak `src/Task/` direktorioan kokatzen dira eta `OTask` hedatzen dute.
+
+Adibidea:
 
 ```php
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\Task;
 
 use Osumi\OsumiFramework\Core\OTask;
-use Osumi\OsumiFramework\App\Model\User;
 
 class AddUserTask extends OTask {
-  public function __toString(): string {
-    return "addUser: Erabiltzaile berriak sortzeko ataza";
- }
+	public function __toString(): string {
+		return 'addUser: Erabiltzaile berriak sortzeko zeregina';
+	}
 
-  public function run(array $options=[]): void {
-    $name = $options['name'] ?? $options[0] ?? null;
+	/**
+	 * Exekutatu zeregina.
+	 *
+	 * @param array<string, string|false> $options Zereginaren aukerak.
+	 *
+	 * @return void
+	 */
+	public function run(array $options = []): void {
+		$name = $options['name'] ?? null;
 
-    if (is_null($name)) {
-      echo "Errorea: Izena beharrezkoa da.\n";
-      return;
-    }
+		if (!is_string($name)) {
+			echo "Errorea: Izena beharrezkoa da.\n";
+			return;
+		}
 
-    $u = new User();
-    $u->name = $name;
-    $u->save();
-
-    echo "Erabiltzailea " . $izena . " arrakastaz sortu da.\n";
-  }
+		echo "Erabiltzailea {$name} ondo sortu da.\n";
+	}
 }
-
 ```
 
 ---
 
-## Parametroak Kudeatzea
-
-`run` metodoak bi sarrera estilo onartzen dituen `$options` array bat jasotzen du:
-
-### 1. Parametro Posizionalak
-
-Komandoaren izenaren ondoren zuzenean pasatzen dira.
+## Parametro izendatuak
 
 ```bash
-php of addUser "John Doe"
-# $options = [0 => "John Doe"]
-
+php of addUser --name "John Doe"
 ```
 
-### 2. Parametro Izendatuak
-
-`--key value` sintaxia erabiliz. Horren ondorioz, array asoziatibo bat sortzen da.
-
-```bash
-php of addUser --izena "John Doe"
-# $options = ["izena" => "John Doe"]
-
-```
-
-> **Oharra `$options$`-ri buruz**: `$options` parametroa beti array bat da, DTOak ezin dira erabili Zereginetan.
+CLI zereginen aukerak beti array gisa ematen dira.
 
 ---
 
-## Zereginen Ezaugarriak
+## Zereginen ezaugarriak
 
-`OTask` hedatzen duten klaseek hainbat utilitate integraturako sarbidea dute:
+`OTask` hedatzen duten klaseek honako hauetarako sarbidea dute:
 
-- **`$this->getConfig()`**: Aplikazioaren konfiguraziora sartzeko.
-- **`$this->getColors()`**: Erabili `OColors` utilitatea testu koloreztatua kontsolara bidaltzeko.
-- **ORM Sarbidea**: Edozein Modelo klase erabil dezakezu datu-baseko eragiketak egiteko, Osagai batean egingo zenukeen bezala.
-- **Exekuzio Programatikoa**: Zereginak instantziatu eta kodearen beste atal batzuetatik exekutatu daitezke, ez bakarrik terminaletik.
+- `getConfig()`
+- `getColors()`
+- aplikazioaren modeloak eta zerbitzuak, dagokionean
 
 ---
 
-## Praktika Onak
+## Praktika onak
 
-- **Laguntza Mezuak**: Erabili `run` metodoa beharrezko argumentuak dauden egiaztatzeko eta erabilera-adibide bat bistaratzeko, falta badira.
-- **Kolore Kodeketa**: Erabili `$this->getColors()->getColoredString()` erroreak gorriz edo arrakasta mezuak berdez nabarmentzeko, UX hobea lortzeko.
-- **Izen-espazioa**: Ziurtatu zure zeregin pertsonalizatuak `Osumi\OsumiFramework\App\Task` izen-espazioaren barruan daudela.
+- Balidatu zereginen argumentuak.
+- Mantendu zereginen metodoak ahalik eta gehien tipatuta.
+- Dokumentatu zereginen metodoak PHPDoc bidez.
+- Erabili `getColors()` CLI irteera irakurgarriago egiteko.
+- Mantendu aplikazioaren zereginak `Osumi\OsumiFramework\App\Task` namespace-aren barruan.

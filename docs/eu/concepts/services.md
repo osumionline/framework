@@ -1,38 +1,33 @@
 # Zerbitzuak
 
-**Osumi Framework**-eko zerbitzuak berrerabilgarriak diren klaseak dira, negozio-logika, eragiketa partekatuak edo osagai, modulu eta zereginetan erabiltzen diren erabilgarritasun-funtzioak biltzen dituztenak.
+**Osumi Framework**-eko zerbitzuak negozio-logika, partekatutako eragiketak edo osagai, modulu eta zereginetan erabilitako erabilgarritasun-funtzioak kapsulatzen dituzten klase berrerabilgarriak dira.
 
-Angular zerbitzuen antzera jokatzen dute: arinak, konposagarriak eta osagaiak garbi eta fokatuta mantentzeko diseinatuta daude.
+Zerbitzuek honako hauetan laguntzen dute:
 
-Zerbitzuek honako hau egiten laguntzen dizute:
-
-- Osagaien arteko logika bikoiztea saihestea
-- Domeinu espezifikoen portaerak antolatzea
-- Modeloekin edo kanpoko APIekin elkarreraginak zentralizatzea
-- Zure aplikazioa arkitektura garbiaren printzipioen arabera egituratzea
+- Logika bikoiztua saihesten.
+- Domeinu-portaera antolatzen.
+- Modeloekin edo kanpoko APIekin elkarreraginak zentralizatzen.
+- Osagaiak orkestrazioan eta aurkezpenean zentratuta mantentzen.
 
 ---
 
-# 1. Zer da Zerbitzu bat?
+## 1. Zer da zerbitzu bat?
 
-Zerbitzu bat **`OService` hedatzen duen** PHP klase bat da.
-Oinarrizko klaseak honako hau eskaintzen du:
+Zerbitzu batek `OService` hedatzen du.
 
-- Erregistro bat (`OLog`)
-- Aplikazioaren konfiguraziorako sarbidea
-- Cache globaleko edukiontzirako sarbidea
-
-Zerbitzu klaseak zure aplikazioak behar dituen edozein metodo publiko defini ditzake.
+Framework-aren logging, konfigurazio eta cache baliabideak erabil ditzake.
 
 ---
 
-# 2. Zerbitzu bat sortzea
+## 2. Zerbitzu bat sortzea
 
-Zerbitzu bat honako honetan egon beharko litzateke:
+Aplikazioaren zerbitzuak hemen gordetzen dira:
 
-    src/App/Service/
+```text
+src/Service/
+```
 
-Ohiko egitura:
+Adibidea:
 
 ```php
 namespace Osumi\OsumiFramework\App\Service;
@@ -40,184 +35,114 @@ namespace Osumi\OsumiFramework\App\Service;
 use Osumi\OsumiFramework\Core\OService;
 
 class UserService extends OService {
-  public function getUserById(int $id): ?User {
-    return User::findOne(['id' => $id]);
-  }
+	public function getUserById(int $id): ?User {
+		return User::findOne([
+			'id' => $id
+		]);
+	}
 }
 ```
 
-Zerbitzuek normalean:
-
-- Logika berrerabilgarria inplementatzen dute
-- Ereduak kontsultatzen edo manipulatzen dituzte
-- Urrats anitzeko eragiketak koordinatzen dituzte
-- Aukeran beste zerbitzu batzuk erabiltzen dituzte
-
 ---
 
-# 3. Zerbitzu bat osagai batean txertatzea
+## 3. Zerbitzu bat osagai batean injektatzea
 
-Ezin duzu zerbitzu bat txertatu klase batean propietatea deklaratzen den unean.
-**Hau PHP hizkuntzaren muga bat da:** PHP-k **ez** du onartzen funtzioak (adibidez, `inject()`) deitzea propietateen deklarazioen barruan.
-
-Adibidez, hau **baliogabea** da PHPn:
-
-```php
-private UserService $us = inject(UserService::class); // Ez da onartzen PHPn
-```
-
-Horregatik, zerbitzuak eraikitzailearen barruan injektatu behar dira:
+Zerbitzuak exekutatzen den kode batetik injektatu behar dira, adibidez eraikitzailetik:
 
 ```php
 class MyComponent extends OComponent {
-  private ?UserService $us = null;
+	private ?UserService $us = null;
 
-  public function __construct() {
-    parent::__construct();
-    $this->us = inject(UserService::class); // Zuzena
-  }
+	public function __construct() {
+		parent::__construct();
+
+		$this->us = inject(
+			UserService::class
+		);
+	}
 }
 ```
 
-Horrek ziurtatzen du zerbitzua eskuragarri dagoela `run()` exekutatzen denerako.
-
 ---
 
-# 4. Zerbitzua osagai batean erabiltzea
+## 4. Zerbitzu bat osagai batean erabiltzea
 
-Injektatu ondoren, zerbitzuko metodoetara normal sar zaitezke:
+Ohiko fluxua hau da:
+
+1. Eskaeraren edo DTOaren datuak irakurri, beharrezkoa denean Middlewareek argitaratutako konfiantzazko testuingurua barne.
+2. Negozio-logika zerbitzu bati delegatu.
+3. Osagaiaren irteera prestatu.
 
 ```php
 public function run(ORequest $req): void {
-  $user = $this->us->getUserById(3);
-  $this->user = $user;
+	$id = $req->getMiddlewareValue(
+		'Login',
+		'id'
+	);
+
+	if (!is_int($id)) {
+		return;
+	}
+
+	$this->user = $this->us->getUserById(
+		$id
+	);
 }
 ```
 
-Eredu tipiko bat hau da:
+---
 
-1. Eskaeratik datuak atera (iragazkiak edo DTOak erabiliz, agian)
-2. Negozio-logika zerbitzuari delegatu
-3. Azken osagaiaren irteera prestatu
+## 5. Zerbitzu baten bizi-zikloa
 
-Osagaiak txikiak eta deklaratiboak izaten jarraitzen dute — zerbitzuek egiten dute lan astuna.
+`OService`-k framework-aren hainbat baliabidetarako sarbidea eskaintzen du:
+
+- logging-a
+- aplikazioaren konfigurazioa
+- cachea
 
 ---
 
-# 5. Zerbitzu baten bizi-zikloa
+## 6. Izenak eta kokapena
 
-`OService`-k hasieratze batzuk automatikoki kudeatzen ditu:
+Erabili:
 
-### Erregistratzailearen hasieraketa
-
-Zerbitzu bakoitzak bere erregistratzailea du arazketa-informazioa idazteko.
-
-### Konfiguraziorako sarbidea
-
-`$this->getConfig()`-k aplikazioaren konfigurazio orokorra ematen dizu.
-
-### Cache edukiontzirako sarbidea
-
-`$this->getCacheContainer()`-k cache azpisistema orokorra ematen dizu.
-
-Laguntzaile hauek zerbitzuak indartsuak eta egoera orokorretik deskonektatuak direla ziurtatzen dute.
-
----
-
-# 6. Zerbitzuak non jarri
-
-Jarraitu egitura hau:
-
-    src/
-      App/
-        Service/
-          CinemaService.php
-          UserService.php
-          NotificationService.php
-
-Izendatzeko konbentzioak:
-
-- Klasea: `XxxService`
-- Fitxategia: `XxxService.php`
-
----
-
-# 7. Adibidea: Domeinuan zentratutako zerbitzua
-
-```php
-class CinemaService extends OService {
-  public function getCinemas(int $id_user): array {
-    return Cinema::where(['id_user' => $id_user]);
-  }
-
-  public function deleteCinema(Cinema $cinema): void {
-    $movies = $cinema->getMovies();
-    foreach ($movies as $movie) {
-      $movie->deleteFull();
-    }
-    $cinema->delete();
-  }
-}
+```text
+src/Service/UserService.php
 ```
 
-Zerbitzu honek:
+eta klase-izenak:
 
-- Datuak berreskuratzen ditu
-- Ezabatze-eragiketa anitzak egiten ditu
-- Domeinu-arauak kapsulatzen ditu
-
-Logika hau zentralizatuz, zinema-eragiketak behar dituen osagai guztiek berrerabili dezakete.
-
----
-
-# 8. Praktika onak
-
-- **Mantendu zerbitzuak egoerarik gabe** ahal den guztietan
-  Laguntzaile hutsak bezala jokatu behar dute.
-
-- **Elkarrekin lotutako funtzionaltasunak taldekatu**
-  Saihestu zerbitzu-klase multiuso erraldoiak.
-
-- **Erabili beste zerbitzu batzuk behar denean**
-  Zerbitzu-hierarkiak sortzea baliozkoa da (adibidez, `OrderService` `PaymentService` erabiliz).
-
-- **Saihestu zerbitzuetan errendatzea edo irteera**
-  Zerbitzuek ez lukete HTML oihartzunik edo itzultzerik izan behar; hori osagaiei dagokie.
-
-- **Erabili erregistratzailea arazketarako**
-  `$this->getLog()->debug("...")` oso lagungarria da.
-
-- **Utzi osagaiei orkestratzen**
-  Osagaiak eskaera → zerbitzua → modeloak → txantiloia koordinatzen dituzte.
+```text
+UserService
+OrderService
+PaymentService
+```
 
 ---
 
-# 9. Noiz erabili behar duzu zerbitzu bat?
+## 7. Praktika onak
 
-Erabili zerbitzu bat honako kasu hauetan:
+- Mantendu zerbitzuak egoerarik gabe ahal denean.
+- Taldekatu lotutako funtzionaltasuna.
+- Saihestu errendatzea edo irteera zuzena.
+- Mantendu eskaera/erantzun ardura zeharkakoak Middlewareetan.
+- Mantendu sarrera-balidazioa DTOetan.
+- Utzi osagaiei eskaera → zerbitzua → modeloa → txantiloia fluxua orkestratzen.
 
-- Osagai anitzek logika bera partekatzen dutenean
-- Logikak ereduen arteko elkarrekintzak ez-tribialak dakartzanean
-- Erabilgarriak diren eragiketak behar dituzunean
-- Domeinu logika aurkezpen logikatik bereizi nahi duzunean
-- Osagaiak txikiak, garbiak eta fokatuak mantendu behar dituzunean
+---
+
+## 8. Noiz erabili zerbitzu bat
+
+Erabili zerbitzu bat negozio- edo domeinu-logika berrerabilgarria behar denean.
 
 Ez erabili zerbitzu bat honako kasu hauetan:
 
-- Logika eskaera-iragazkia da soilik (erabili Iragazkiak)
-- Logika errendatzeari buruzkoa da (erabili Osagaiak)
-- Logika sarrera datuak baliozkotzearekin lotuta dago (erabili DTOak)
+- Logika eskaera/erantzun ardura zeharkakoa bada eta Middleware baterako egokiagoa bada.
+- Logika aurkezpen edo errendatze-logika espezifikoa bada.
+- Logika DTO batekin hobeto adierazten den sarrera-balidazioa bada.
 
 ---
 
-# 10. Laburpena
+## 9. Laburpena
 
-Zerbitzuak Osumi Framework-aren oinarrizko eraikuntza-blokeetako bat dira:
-
-- Kezkak garbi bereiztea sustatzen dute
-- Bikoiztasunak murrizten dituzte
-- Negozio logika zentralizatzen dute
-- Osagaiak modu garbian integratzen dira mendekotasun injekzioaren bidez
-- Konposizioa onartzen dute (zerbitzuek zerbitzuak erabiltzen dituzte)
-
-Zerbitzuak modu eraginkorrean erabiltzeak aplikazio arkitektura mantentze-lanetarako errazago, eskalagarriagoa eta antolatuagoa lortzen du.
+Zerbitzuek negozio-logika berrerabilgarria eskaintzen dute eta osagaiak, Middlewareak eta DTOak beren arduratan zentratuta mantentzen laguntzen dute.
