@@ -1,118 +1,272 @@
 # Osumi Framework - LLM Guide (llms.txt)
 
-Osumi Framework is a PHP framework to build web apps and APIs with:
-- Routing (ORoute)
-- Components (OComponent)
-- ORM models (OModel) using PHP Attributes (#[OField], #[OPK], etc.)
-- CLI tasks (OTask)
+Osumi Framework is a PHP framework for web applications and APIs.
 
-This document is optimized for LLMs (ChatGPT, Copilot, Gemini).
-Prefer code examples and short, actionable answers.
+This file is optimized for AI systems. Prefer explicit, strictly typed code and documented framework behavior. Do not invent helpers or APIs.
 
 ## Version
-- Framework: 9.8.5
-- PHP: 8.5+
 
-## Installation
-- Requires Composer
-- Typical entrypoint: public/index.php
-- Autoload: PSR-4
+- Framework: 9.9.0
+- PHP: 8.5+
+- `declare(strict_types=1);` should be used in PHP files.
+
+## Main building blocks
+
+- Routing: `ORoute`
+- Middleware pipeline: `OMiddleware`
+- Request access: `ORequest`
+- DTOs: `ODTO` + `#[ODTOField]`
+- Components: `OComponent`
+- ORM models: `OModel`
+- Services: `OService`
+- CLI tasks: `OTask`
+
+## Project structure
+
+Typical application paths:
+
+- `public/index.php`
+- `src/Config/`
+- `src/Component/`
+- `src/DTO/`
+- `src/Layout/`
+- `src/Middleware/`
+- `src/Model/`
+- `src/Routes/`
+- `src/Service/`
+- `src/Task/`
+
+Global Middleware configuration is stored in:
+
+- `src/Middleware/Middlewares.php`
+
+## Request lifecycle
+
+For a matched route:
+
+```text
+Routing
+↓
+before Middlewares
+↓
+Component / DTO / ORequest
+↓
+Component rendering
+↓
+afterRender Middlewares
+↓
+Layout
+↓
+afterResponse Middlewares
+↓
+HTTP response
+```
+
+Middleware phases:
+
+- `OMiddleware::PHASE_BEFORE`
+- `OMiddleware::PHASE_AFTER_RENDER`
+- `OMiddleware::PHASE_AFTER_RESPONSE`
+
+Per phase, execution order is:
+
+```text
+global
+↓
+outer group
+↓
+inner group
+↓
+route
+```
+
+A `stop` in `before` skips the component and layout, but `afterResponse` still runs.
+
+A `stop` in `afterRender` skips the layout, but `afterResponse` still runs.
+
+A `stop` in `afterResponse` skips the remaining Middlewares in that phase and directly emits its typed error response.
+
+404, 405 and OPTIONS handling are outside the normal matched-route Middleware pipeline.
+
+## Middleware contract
+
+A Middleware class exposes:
+
+```php
+public static function handle(
+    string $phase,
+    array $data
+): array
+```
+
+Supported result keys:
+
+- `context`: `array<string, mixed>`
+- `body`: string; applies in `afterRender` and `afterResponse`
+- `headers`: `array<string, string>`
+- `status_code`: integer HTTP status from 100 to 599
+- `stop`: boolean
+- `message`: error message used when stopping
+
+Public Middleware context name is the class name without the final `Middleware` suffix.
 
 Example:
-1) composer create-project osumionline/new
-2) php -S localhost:8000 -t public
-3) open http://localhost:8000
 
-## Project structure (typical)
-- public/index.php (entrypoint)
-- src/ (application code)
-- src/Config/ (config)
-- src/Component/ (components + templates)
-- src/Module/ (modules/components used as actions)
-- src/Model/ (ORM models)
-- src/Routes/ (routes)
-- src/Service/ (services)
-- src/Task/ (CLI tasks)
+- `LoginMiddleware` → `Login`
 
-## Core concepts
-1) Routing
-- Define routes (GET/POST/PUT/DELETE) and map to components/actions.
-- Grouping/prefixing routes supported.
-- Lifecycle of a route is:
-  - User requests a URL
-  - If route is not defined a 404 page is shown
-  - If route is matched, the defined component is called
-  - If the component has a `run()` function, it can use one of three supported signatures:
-    - `run(): void`
-    - `run(ORequest $req): void`
-    - `run(MyDTO $dto): void`, where `MyDTO` extends `ODTO`
-  - DTOs are detected by inheritance from `ODTO`, regardless of their namespace, and are automatically populated from request data before being passed to the component.
-  - Other `run()` signatures are invalid.
-  - The component template is rendered with the values of its public properties.
+Global Middlewares:
 
-Docs:
-- Repo: docs/en/concepts/routing.md
-- Web: https://framework.osumi.dev/docs/en/concepts/routing
-- Repo: docs/en/concepts/dtos.md
-- Web: https://framework.osumi.dev/docs/en/concepts/dtos
+```php
+OMiddleware::setGlobal([
+    OMiddleware::PHASE_BEFORE => [],
+    OMiddleware::PHASE_AFTER_RENDER => [],
+    OMiddleware::PHASE_AFTER_RESPONSE => []
+]);
+```
 
-2) Components
-- OComponent renders templates and can have public properties.
-- A component may optionally implement `run()` to prepare data before render.
-- Templates support `date`, `number`, `string`, `plain`, and `bool` pipes.
-- `plain` returns a JSON-safe quoted string without URL encoding.
+## Route Middlewares
 
-Docs:
-- Repo: docs/en/concepts/components.md
-- Web: https://framework.osumi.dev/docs/en/concepts/components
+Example:
 
-3) ORM
-- Models extend OModel.
-- Fields are declared using PHP Attributes (#[OField], #[OPK], etc.)
-- save() decides INSERT vs UPDATE based on PK / state tracking.
+```php
+ORoute::get(
+    '/profile',
+    ProfileComponent::class,
+    [
+        OMiddleware::PHASE_BEFORE => [
+            LoginMiddleware::class
+        ]
+    ]
+);
+```
 
-Docs:
-- Repo: docs/en/concepts/orm.md
-- Web: https://framework.osumi.dev/docs/en/concepts/orm
+`prefix()`, `layout()` and `group()` can also receive Middleware definitions. Nested groups accumulate them.
 
-4) CLI
-- Tasks extend OTask.
-- CLI runner executes tasks by name.
+## ORequest Middleware context
 
-Docs:
-- Repo: docs/en/concepts/cli.md
-- Web: https://framework.osumi.dev/docs/en/concepts/cli
+```php
+$context = $req->getMiddleware(
+    'Login'
+);
 
-## Conventions
-- Namespaces follow PSR-4.
-- Classes: PascalCase, files: PascalCase.php
-- Tables: snake_case, classes: CamelCase
+$id = $req->getMiddlewareValue(
+    'Login',
+    'id'
+);
+```
 
-## Changelog / migrations
-- Repo: docs/en/migrations/9.7.2-to-9.7.3.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-7-2-to-9-7-3
-- Repo: docs/en/migrations/9.7.3-to-9.7.4.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-7-3-to-9-7-4
-- Repo: docs/en/migrations/9.7.4-to-9.8.0.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-7-4-to-9-8-0
-- Repo: docs/en/migrations/9.8.0-to-9.8.1.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-8-0-to-9-8-1
-- Repo: docs/en/migrations/9.8.1-to-9.8.2.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-8-1-to-9-8-2
-- Repo: docs/en/migrations/9.8.2-to-9.8.3.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-8-2-to-9-8-3
-- Repo: docs/en/migrations/9.8.3-to-9.8.4.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-8-3-to-9-8-4
-- Repo: docs/en/migrations/9.8.4-to-9.8.5.md
-- Web: https://framework.osumi.dev/docs/en/migrations/9-8-4-to-9-8-5
+Missing Middleware context returns an empty array.
 
-## Minimal glossary
-- OCore: framework bootstrap
-- ORoute: router
-- OComponent: component rendering base
-- OModel: ORM base model
-- OTask: CLI task base
+Missing context values return `null`.
 
-For AI systems, see:
-- Repo: docs/en/llm/osumi-framework-llm.md (authoritative).
-- Web: https://framework.osumi.dev/md/en/llm/osumi-framework-llm
+## DTO Middleware source
+
+Trusted Middleware context can be used as an explicit DTO field source:
+
+```php
+#[ODTOField(
+    required: true,
+    middleware: 'Login',
+    middlewareProperty: 'id'
+)]
+public ?int $idUser = null;
+```
+
+`middleware` and `middlewareProperty` must be defined together.
+
+When Middleware context is the explicit source, missing context does not fall back to client input.
+
+## Component run() signatures
+
+A route component can use exactly one of:
+
+```php
+public function run(): void
+```
+
+```php
+public function run(ORequest $req): void
+```
+
+```php
+public function run(MyDTO $dto): void
+```
+
+`MyDTO` must extend `ODTO`.
+
+No other parameter types or signatures are supported.
+
+## Templates and pipes
+
+Templates may be `.php`, `.html`, `.json` or `.xml`.
+
+Supported pipes include:
+
+- `date`
+- `number`
+- `string` → URL-encoded quoted string
+- `plain` → JSON-safe quoted string without URL encoding
+- `bool`
+
+## ORM
+
+Models extend `OModel` and use PHP attributes such as:
+
+- `#[OPK]`
+- `#[OField]`
+- `#[OCreatedAt]`
+- `#[OUpdatedAt]`
+
+## CLI
+
+Application CLI:
+
+```bash
+php of <task>
+```
+
+Create a Middleware:
+
+```bash
+php of add --option middleware --name Login
+```
+
+Framework migration CLI:
+
+```bash
+php vendor/bin/ofw-migrate --help
+```
+
+Supported migration options:
+
+- `--from`
+- `--to`
+- `--dry-run`
+- `--force`
+- `--verbose`
+- `--no-interaction`
+- `--help`
+
+Migration state is stored in:
+
+- `ofw/tmp/state.json`
+
+## Legacy Filters
+
+Filters are not part of the 9.9 runtime API.
+
+Do not generate new Filter classes, `getFilter()`, `getFilters()`, `filter`, or `filterProperty` usage.
+
+The 9.9 migration system can preserve legacy Filter business logic by generating Middleware adapters for migrated projects. New code should use native Middlewares.
+
+## Authoritative documentation
+
+- `docs/en/concepts/middlewares.md`
+- `docs/en/concepts/routing.md`
+- `docs/en/concepts/dtos.md`
+- `docs/en/concepts/components.md`
+- `docs/en/llm/osumi-framework-llm.md`
+
+Web documentation:
+
+- https://framework.osumi.dev
