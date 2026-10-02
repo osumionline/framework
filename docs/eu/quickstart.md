@@ -1,40 +1,34 @@
-# Hasiberrientzako Gida Azkarra
+# Hasiera azkarreko gida
 
-Gida honek **Osumi Framework** proiektu berri bat sortzen, token plugina instalatzen, CLIarekin ekintzak eta iragazkiak sortzen, eredu bat sortzen, ibilbideak definitzen eta osagaia eta txantiloia aldatzen lagunduko dizu, funtzionalki autentifikatutako API amaiera-puntua eraikitzeko.
+Gida honek **Osumi Framework 9.9** proiektu berri bat sortzen, token plugina instalatzen, CLI bidez ekintza bat eta Middleware bat sortzen, modelo bat definitzen, babestutako ibilbide bat konfiguratzen eta JSON erantzuna sortzen erakusten du.
 
-Gida honen amaieran hau izango duzu:
+Amaitzean honako hau izango duzu:
 
 - Osumi Framework aplikazio berri bat
 - OToken plugina instalatuta
-- Funtzionala den LoginFilter bat
-- `User` eredu bat
-- JSON itzultzen duen `/api/get-users` amaiera-puntua autentifikatuta
+- Funtzionatzen duen `LoginMiddleware`
+- `User` modelo bat
+- JSON itzultzen duen `/api/get-users` amaiera-puntu autentifikatu bat
+
+Adibide guztiek PHP 8.5+ eta `declare(strict_types=1);` erabiltzen dituzte.
 
 ---
 
-# 1. Sortu Proiektu Berri Bat
-
-Exekutatu komando hau Osumi Framework proiektu berri bat sortzeko:
+# 1. Proiektu berri bat sortu
 
 ```bash
 composer create-project osumionline/new myapp
 ```
 
-Honek karpeta-egitura oso bat sortuko du osagai, ibilbide, eredu eta abarren adibideekin.
-
 ---
 
-# 2. Instalatu OToken Plugina
-
-OToken pluginak JWT antzeko tokenak sortu eta balioztatzeko aukera ematen dizu.
-
-Instalatu Composer bidez:
+# 2. OToken plugina instalatu
 
 ```bash
 composer require osumionline/plugin-token
 ```
 
-Instalazio ondoren, zure aplikazioak hau erabil dezake:
+Ondoren aplikazioak hau erabil dezake:
 
 ```php
 use Osumi\OsumiFramework\Plugins\OToken;
@@ -42,313 +36,401 @@ use Osumi\OsumiFramework\Plugins\OToken;
 
 ---
 
-# 3. Kendu adibide datuak
-
-Proiektu berri guztiek adibide moduluak, osagaiak, ibilbideak eta modeloak dituzte.
-Guztiak garbitu ditzakezu honekin:
+# 3. Adibide-datuak ezabatu
 
 ```bash
 php of reset
 ```
 
-Honek framework egitura mantentzen du baina adibide funtzionalitate guztiak kentzen ditu.
+Honek aplikazioaren egitura estandarra mantentzen du eta adibide-funtzionalitatea ezabatzen du.
 
 ---
 
-# 4. Sortu ekintza berri bat (osagaia)
-
-Erabili CLI API amaierako puntu gisa balioko duen ekintza osagai berri bat sortzeko.
+# 4. Ekintza berri bat sortu
 
 ```bash
 php of add --option action --name api/getUsers --url /api/get-users --type json
 ```
 
-Honek sortzen du:
+Honek honako direktorio honen barruan fitxategiak sortzen ditu:
 
-- `/src/App/Module/Api/GetUsers/GetUsersComponent.php`
-- `/src/App/Module/Api/GetUsers/GetUsersTemplate.json`
-- Ibilbidearen definizio bat routes karpetan (ibilbide automatikoak sortzea desgaitzen ez baduzu behintzat)
+```text
+src/Api/GetUsers/
+```
+
+besteak beste:
+
+```text
+src/Api/GetUsers/GetUsersComponent.php
+src/Api/GetUsers/GetUsersTemplate.json
+```
+
+eta, desgaitzen ez bada, dagokion ibilbide-sarrera.
+
+Sortutako namespace-a hau da:
+
+```php
+namespace Osumi\OsumiFramework\App\Api\GetUsers;
+```
 
 ---
 
-# 5. Sortu Saioa Hasteko Iragazki bat
+# 5. Login Middleware bat sortu
 
-Orain sortu iragazki bat CLI erabiliz:
+Sortu Middlewarea:
 
 ```bash
-php of add --option filter --name login
+php of add --option middleware --name Login
 ```
 
-Honek sortzen du:
+Honek hau sortzen du:
 
-- `/src/App/Filter/LoginFilter.php`
-
-Sortutako fitxategia _zure benetako LoginFilter_ inplementazioarekin ordezkatu behar duzu orain:
-
-```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Filter;
-
-use Osumi\OsumiFramework\Plugins\OToken;
-
-class LoginFilter {
-  /**
-   * Segurtasun iragazkia erabiltzaileentzat
-   */
-  public static function handle(array $params, array $headers): array {
-    global $core;
-    $ret = ['status'=>'error', 'id'=>null];
-
-    $tk = new OToken($core->config->getExtra('secret'));
-    if ($tk->checkToken($headers['Authorization'])) {
-      $ret['status'] = 'ok';
-      $ret['id'] = intval($tk->getParam('id'));
-    }
-
-    return $ret;
-  }
-}
+```text
+src/Middleware/LoginMiddleware.php
 ```
 
-Iragazki honek:
-
-- `Authorization` goiburua irakurtzen du
-- Tokena baliozkotzen du konfiguratutako sekretua erabiliz
-- `"status" => "ok"` itzultzen du tokena baliozkoa denean bakarrik
-- `id` txertatzen du osagaiek zein erabiltzaile den autentifikatuta jakin dezaten
-
----
-
-# 6. Sortu `Erabiltzaile` Eredua
-
-Ereduak eskuz sortzen dira.
-
-`src/App/Model/User.php` barruan honelako zerbait sortu:
-
-```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Model;
-
-use Osumi\OsumiFramework\ORM\OModel;
-use Osumi\OsumiFramework\ORM\OPK;
-use Osumi\OsumiFramework\ORM\OField;
-use Osumi\OsumiFramework\ORM\OCreatedAt;
-use Osumi\OsumiFramework\ORM\OUpdatedAt;
-
-class User extends OModel {
-  #[OPK(
-    comment: "Erabiltzaile baten ID bakarra"
-  )]
-  public ?int $id = null;
-
-  #[OField(
-    comment: "Erabiltzailearen izena",
-    max: 100,
-    nullable: false
-  )]
-  public ?string $name = null;
-
-  #[OField(
-    comment: "Erabiltzailearen helbide elektronikoa",
-    max: 100,
-    nullable: false
-  )]
-  public ?string $email = null;
-
-  #[OCreatedAt(
-    comment: "Erregistroaren sorrera data"
-  )]
-  public ?string $created_at = null;
-
-  #[OUpdatedAt(
-    comment: "Erregistroaren azken eguneratze data"
-  )]
-  public ?string $updated_at = null;
-}
-```
-
-Eremuak zure beharren arabera doi ditzakezu.
-
----
-
-# 7. API Ibilbidea Sortu
-
-Sortu fitxategia (automatikoki sortu ez bada):
-
-    /src/Routes/Api.php
-
-Gehitu aurrizki bat etorkizuneko amaierako puntuak garbi taldekatzeko eta aplikatu LoginFilter API ibilbidea babesteko:
-
-```php
-<?php declare(strict_types=1);
-
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Filter\LoginFilter;
-use Osumi\OsumiFramework\App\Module\Api\GetUsers\GetUsersComponent;
-
-ORoute::prefix('/api', function() {
-  ORoute::get('/get-users', GetUsersComponent::class, [LoginFilter::class]);
-});
-```
-
-Orain `/api/get-users`-erako edozein deik `Authorization` token baliodun bat izan behar du.
-
-# 8. Sortu Eredu Osagai bat
-
-Eredu osagaiak erabiltzaile eredu bat JSON eran irudikatzen duten osagaiak dira. Sortu Eredu Osagai bat Erabiltzaile Eredu klasearentzat:
-
-```bash
-php of add --option modelComponent --name se
-```
-
-Eredu Osagai bat sortzen denean, 2 osagai sortzen dira:
-
-    /src/App/Component/Model/User/UserComponent.php
-    /src/App/Component/Model/User/UserTemplate.php
-    /src/App/Component/Model/UserList/UserListComponent.php
-    /src/App/Component/Model/UserList/UserListTemplate.php
-
-Osagai hauek erabiliz, datu-basea erabiltzaile bakar bat edo erabiltzaile multzo bat kontsultatu dezakezu eta haien datuak erraz bistara ditzakezu.
-
-Editatu `UserTemplate.php` fitxategia behar duzuna gehitzeko edo kentzeko, adibidez, sortzeko/eguneratzeko datak kendu:
-
-```php
-<?php if (is_null($user)): ?>
-null
-<?php else: ?>
-{
-	"id": {{ user.id }},
-	"name": {{ user.name | string }},
-  "email": {{ email.name | string }}
-}
-<?php endif ?>
-
-```
-
----
-
-# 9. Sortutako osagaia aldatu
-
-Ireki:
-
-    /src/App/Module/Api/GetUsers/GetUsersComponent.php
-
-Aldatu honela:
-
-1. LoginFilter irteera irakurtzen du
-2. Autentifikatutako erabiltzaile IDa erabiltzen du
-3. Erabiltzaileen taula kontsultatzen du
-4. JSON txantiloira pasatzen ditu
+Ordeztu edukia zure aplikazioaren autentifikazio-logikarekin.
 
 Adibidea:
 
 ```php
-<?php declare(strict_types=1);
+<?php
 
-namespace Osumi\OsumiFramework\App\Module\Api\GetUsers;
+declare(strict_types=1);
 
-use Osumi\OsumiFramework\Core\OComponent;
-use Osumi\OsumiFramework\Web\ORequest;
-use Osumi\OsumiFramework\App\Model\User;
-use Osumi\OsumiFramework\App\Component\Model\UserList\UserListComponent;
+namespace Osumi\OsumiFramework\App\Middleware;
 
-class GetUsersComponent extends OComponent {
-  public string $status = 'ok';
-  public ?UserListComponent $list = null;
+use Osumi\OsumiFramework\Core\OCore;
+use Osumi\OsumiFramework\Core\OMiddleware;
+use Osumi\OsumiFramework\Plugins\OToken;
 
-  public function run(ORequest $req): void {
-    $filter = $req->getFilter('Login');
-    $this->list = new UserListComponent();
+final class LoginMiddleware {
+	/**
+	 * Validate the Authorization token and publish the authenticated user ID.
+	 *
+	 * @param string $phase Current middleware phase.
+	 * @param array<string, mixed> $data Current middleware pipeline data.
+	 *
+	 * @return array<string, mixed> Middleware result.
+	 */
+	public static function handle(
+		string $phase,
+		array $data
+	): array {
+		if ($phase !== OMiddleware::PHASE_BEFORE) {
+			return [];
+		}
 
-    if (is_null($filter) || !array_key_exists('id', $filter)) {
-      $this->status = 'error';
-      $this->list->list = [];
-      return;
-    }
+		global $core;
 
-    // Adibidea: erabiltzaile guztiak lortu (edo behar izanez gero, autentifikatutako erabiltzaile IDaren arabera iragazi)
-    $this->list->list = User::where([]);
-  }
+		if (
+			!($core instanceof OCore) ||
+			$core->config === null
+		) {
+			return [
+				'stop' => true,
+				'status_code' => 500,
+				'message' => 'Framework configuration is not available.'
+			];
+		}
+
+		$headers = $data['headers'] ?? [];
+
+		if (!is_array($headers)) {
+			return [
+				'stop' => true,
+				'status_code' => 401,
+				'message' => 'Unauthorized'
+			];
+		}
+
+		$normalized_headers = array_change_key_case(
+			$headers,
+			CASE_LOWER
+		);
+
+		$authorization = $normalized_headers['authorization']
+			?? null;
+
+		if (
+			!is_string($authorization) ||
+			$authorization === ''
+		) {
+			return [
+				'stop' => true,
+				'status_code' => 401,
+				'message' => 'Unauthorized'
+			];
+		}
+
+		$secret = $core->config->getExtra(
+			'secret'
+		);
+
+		if (
+			!is_string($secret) ||
+			$secret === ''
+		) {
+			return [
+				'stop' => true,
+				'status_code' => 500,
+				'message' => 'Token secret is not configured.'
+			];
+		}
+
+		$token = new OToken(
+			$secret
+		);
+
+		if (!$token->checkToken($authorization)) {
+			return [
+				'stop' => true,
+				'status_code' => 401,
+				'message' => 'Unauthorized'
+			];
+		}
+
+		return [
+			'context' => [
+				'id' => (int) $token->getParam('id')
+			]
+		];
+	}
+}
+```
+
+Middleware honek:
+
+- `before` fasean exekutatzen da.
+- `Authorization` goiburua irakurtzen du.
+- Tokena baliozkotzen du.
+- Autentifikazioak huts egiten badu eskaera HTTP 401 egoerarekin gelditzen du.
+- Autentifikatutako erabiltzailearen IDa `Login.id` gisa argitaratzen du.
+
+---
+
+# 6. `User` modeloa sortu
+
+Sortu:
+
+```text
+src/Model/User.php
+```
+
+Adibidea:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Osumi\OsumiFramework\App\Model;
+
+use Osumi\OsumiFramework\ORM\OCreatedAt;
+use Osumi\OsumiFramework\ORM\OField;
+use Osumi\OsumiFramework\ORM\OModel;
+use Osumi\OsumiFramework\ORM\OPK;
+use Osumi\OsumiFramework\ORM\OUpdatedAt;
+
+class User extends OModel {
+	#[OPK(
+		comment: "Erabiltzaile baten ID bakarra"
+	)]
+	public ?int $id = null;
+
+	#[OField(
+		comment: "Erabiltzailearen izena",
+		max: 100,
+		nullable: false
+	)]
+	public ?string $name = null;
+
+	#[OField(
+		comment: "Erabiltzailearen emaila",
+		max: 100,
+		nullable: false
+	)]
+	public ?string $email = null;
+
+	#[OCreatedAt(
+		comment: "Erregistroaren sorrera-data"
+	)]
+	public ?string $created_at = null;
+
+	#[OUpdatedAt(
+		comment: "Erregistroaren eguneratze-data"
+	)]
+	public ?string $updated_at = null;
 }
 ```
 
 ---
 
-# 9. JSON txantiloia aldatu
+# 7. API ibilbidea babestu
+
+Sortu edo editatu:
+
+```text
+src/Routes/Api.php
+```
+
+Adibidea:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Osumi\OsumiFramework\App\Api\GetUsers\GetUsersComponent;
+use Osumi\OsumiFramework\App\Middleware\LoginMiddleware;
+use Osumi\OsumiFramework\Core\OMiddleware;
+use Osumi\OsumiFramework\Routing\ORoute;
+
+ORoute::get(
+	'/api/get-users',
+	GetUsersComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
+```
+
+Osagaia Middlewareak `stop` egin gabe amaitzen denean bakarrik exekutatzen da.
+
+---
+
+# 8. Modelo-osagai bat sortu
+
+```bash
+php of add --option modelComponent --name User
+```
+
+Honek honako hauek sortzen ditu:
+
+```text
+src/Component/Model/User/UserComponent.php
+src/Component/Model/User/UserTemplate.php
+src/Component/Model/UserList/UserListComponent.php
+src/Component/Model/UserList/UserListTemplate.php
+```
+
+---
+
+# 9. Sortutako ekintza aldatu
 
 Ireki:
 
-    /src/App/Module/Api/GetUsers/GetUsersTemplate.json
+```text
+src/Api/GetUsers/GetUsersComponent.php
+```
 
-Edukia honekin ordezkatu:
+Adibidea:
 
-```json
-{
-  "status": "{{ status }}",
-  "users": [
-    {{ list }}
-  ]
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Osumi\OsumiFramework\App\Api\GetUsers;
+
+use Osumi\OsumiFramework\App\Component\Model\UserList\UserListComponent;
+use Osumi\OsumiFramework\App\Model\User;
+use Osumi\OsumiFramework\Core\OComponent;
+use Osumi\OsumiFramework\Web\ORequest;
+
+class GetUsersComponent extends OComponent {
+	public string $status = 'ok';
+	public ?UserListComponent $list = null;
+
+	/**
+	 * Load users for an authenticated request.
+	 *
+	 * @param ORequest $req Current request.
+	 *
+	 * @return void
+	 */
+	public function run(ORequest $req): void {
+		$id_user = $req->getMiddlewareValue(
+			'Login',
+			'id'
+		);
+
+		$this->list = new UserListComponent();
+
+		if (!is_int($id_user)) {
+			$this->status = 'error';
+			$this->list->list = [];
+
+			return;
+		}
+
+		$this->list->list = User::where([]);
+	}
 }
 ```
 
-Txantiloia:
+`LoginMiddleware`-k argitaratutako balioa honela eskuratzen da:
 
-- `"egoera"` irteeratzen du
-- Erabiltzaileen datuetan zehar begiztatzen du
-- Azpi-osagaiak erabiliz haien datuak bistaratzen ditu
-- JSON array bat eraikitzen du
+```php
+$req->getMiddlewareValue(
+	'Login',
+	'id'
+);
+```
 
 ---
 
-# 10. Amaiera-puntua probatzen
+# 10. JSON txantiloia aldatu
 
-Zure APIa deitzeko:
+Ireki:
 
-1. Sortu token baliozko bat (zure saioa hasteko amaiera-puntua erabiliz edo eskuzko OToken sorrera erabiliz)
-2. Bidali eskaera bat:
-
-```bash
-curl -X GET http://localhost:8000/api/get-users \
--H "Authorization: ZURE_TOKENA_HEMEN"
+```text
+src/Api/GetUsers/GetUsersTemplate.json
 ```
 
-Tokena baliozkoa bada, hau jasoko duzu:
+Adibidea:
 
 ```json
 {
-	"status": "ok",
+	"status": {{ status | plain }},
 	"users": [
-		{ "id": 1, "name": "Alice", "email": "alice@mail.com" },
-		{ "id": 2, "name": "Bob", "email": "bob@mail.com" }
+		{{ list }}
 	]
 }
 ```
 
-Baldin eta Tokena baliogabea da edo falta da:
-
-```json
-{
-	"status": "error",
-	"users": []
-}
-```
+Erabili `plain` pipe-a jatorrizko katea URL bidez kodetu gabe mantendu nahi denean.
 
 ---
 
-# 11. Laburpena
+# 11. Amaiera-puntua probatu
 
-Hasierako gida honek honako hauek jorratu ditu:
+```bash
+curl -X GET http://localhost:8000/api/get-users \
+	-H "Authorization: ZURE_TOKENA_HEMEN"
+```
 
-- Osumi proiektu berri bat sortzea
-- OToken instalatzea
-- Demo datuak kentzea
-- API ekintza berri bat sortzea
-- LoginFilter bat sortzea
-- Erabiltzaile eredu bat idaztea
-- Autentifikatutako ibilbide bat gehitzea
-- Eredu osagai bat sortzea
-- Osagaia eta txantiloia aldatzea
+Tokena baliozkoa bada, babestutako osagaia exekutatzen da.
 
-Orain oinarri bat duzu Osumi Framework-en autentifikazio laguntza duten APIak eraikitzeko.
+Tokena falta bada edo baliogabea bada, `LoginMiddleware`-k eskaera gelditzen du eta framework-ak HTTP 401 egoerarekin JSON errore-erantzun tipatua itzultzen du.
+
+---
+
+# 12. Laburpena
+
+Gida honetan honako hauek landu dira:
+
+- Proiektu bat sortzea.
+- OToken instalatzea.
+- Adibide-datuak ezabatzea.
+- API ekintza bat sortzea.
+- Middleware natibo bat sortzea.
+- Autentifikazio-testuingurua argitaratzea.
+- Ibilbide bat `before` bidez babestea.
+- Middleware testuingurua `ORequest` bidez irakurtzea.
+- Modelo bat eta modelo-osagai bat sortzea.
+- JSON itzultzea.
+
+Hau da 9.9ko autentifikazio-fluxuaren oinarria, Middlewareak erabiliz Filter zaharren ordez.

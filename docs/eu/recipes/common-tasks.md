@@ -1,300 +1,221 @@
-# Zeregin Arruntak
+# Ohiko zereginak
 
-Dokumentu honek Osumi Framework-eko **ohiko zeregin errealak** eta horiek konpontzeko **gomendatutako (kanonikoa)** modua deskribatzen ditu.
+Dokumentu honek **Osumi Framework 9.9**-en ohiko zereginak konpontzeko modu kanonikoa erakusten du.
 
-Hainbat ikuspegi posible badira, Osumi Framework-eko irtenbide idiomatikoa bakarrik erakusten da.
+Adibide guztiek honako hau erabiltzen dute:
 
-Adibide guztiek honako hau suposatzen dute:
-
-- PHP 8.3+
+- PHP 8.5+
 - `declare(strict_types=1);`
-- Izen-espazio egokiak
+- Tipatze zorrotza ahal den guztietan
 
 ---
 
 # 1. JSON amaiera-puntu sinple bat sortu
 
-## Helburua
-
-JSON `/api/ping`-tik itzuli.
-
-### Ibilbidea
-
 ```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Module\Api\Ping\PingComponent;
-
-ORoute::get('/api/ping', PingComponent::class);
+ORoute::get(
+	'/api/ping',
+	PingComponent::class
+);
 ```
-
-### Osagaia
 
 ```php
 class PingComponent extends OComponent {
-  public string $status = 'ok';
+	public string $status = 'ok';
 }
 ```
-
-### Txantiloia (`PingTemplate.json`)
 
 ```json
 {
-	"status": "{{ status }}"
+	"status": {{ status | plain }}
 }
 ```
 
 ---
 
-# 2. Jaso Sarrera DTO bat Erabiliz
-
-## Helburua
-
-Sortu erabiltzaile bat balioztatutako sarrera erabiliz.
-
-### DTO
+# 2. Sarrera DTO baten bidez jaso
 
 ```php
 class CreateUserDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?string $name = null;
+	#[ODTOField(required: true)]
+	public ?string $name = null;
 
-  #[ODTOField(required: true)]
-  public ?string $email = null;
+	#[ODTOField(required: true)]
+	public ?string $email = null;
 }
 ```
-
-### Osagaia
 
 ```php
 class CreateUserComponent extends OComponent {
-  public string $status = 'ok';
+	public string $status = 'ok';
 
-  public function run(CreateUserDTO $dto): void {
-    if (!$dto->isValid()) {
-      $this->status = 'error';
-      return;
-    }
+	/**
+	 * Create a user from validated input.
+	 *
+	 * @param CreateUserDTO $dto Request DTO.
+	 *
+	 * @return void
+	 */
+	public function run(CreateUserDTO $dto): void {
+		if (!$dto->isValid()) {
+			$this->status = 'error';
+			return;
+		}
 
-    $u = new User();
-    $u->name = $dto->name;
-    $u->email = $dto->email;
-    $u->save();
-  }
+		$user = new User();
+		$user->name = $dto->name;
+		$user->email = $dto->email;
+		$user->save();
+	}
 }
 ```
 
 ---
 
-# 3. Babestu amaiera-puntua autentifikazioarekin
-
-## Helburua
-
-Autentifikatutako erabiltzaileek bakarrik sar daitezke `/api/profile`-ra.
-
-### Ibilbidea
+# 3. Amaiera-puntu bat autentifikazioarekin babestu
 
 ```php
-ORoute::get('/api/profile', ProfileComponent::class, [LoginFilter::class]);
+ORoute::get(
+	'/api/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-### Sarbide Iragazki Datuak
+Argitaratutako balio bat irakurtzeko:
 
 ```php
-public function run(ORequest $req): void {
-  $login = $req->getFilter('Login');
-  $user_id = $login['id'];
-}
+$id_user = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
 ```
 
----
-
-# 4. URL Parametro bat Irakurri
-
-## Helburua
-
-Sarbide `/user/:id`.
-
-### Ibilbidea
+Edo zuzenean DTO eremu bati esleitzeko:
 
 ```php
-ORoute::get('/user/:id', UserComponent::class);
-```
-
-### Osagaia
-
-```php
-public function run(ORequest $req): void {
-  $id = $req->getParamInt('id');
-  $this->user = User::findOne(['id' => $id]);
-}
+#[ODTOField(
+	required: true,
+	middleware: 'Login',
+	middlewareProperty: 'id'
+)]
+public ?int $idUser = null;
 ```
 
 ---
 
-# 5. Zerbitzu bat Erabili Osagai Baten Barruan
+# 4. URL parametro bat irakurri
 
-## Helburua
+```php
+ORoute::get(
+	'/user/:id',
+	UserComponent::class
+);
+```
 
-Negozio logika osagaitik kanpora eraman.
+```php
+$id = $req->getParamInt(
+	'id'
+);
+```
 
-### Zerbitzua
+---
+
+# 5. Zerbitzu bat osagai batean erabili
 
 ```php
 class UserService extends OService {
-  public function getAll(): array {
-    return User::where([]);
-  }
-}
-```
-
-### Osagaia
-
-```php
-class UsersComponent extends OComponent {
-  private ?UserService $us = null;
-  public array $users = [];
-
-  public function __construct() {
-    parent::__construct();
-    $this->us = inject(UserService::class);
-  }
-
-  public function run(): void {
-    $this->users = $this->us->getAll();
-  }
+	/**
+	 * Return all users.
+	 *
+	 * @return array<int, User> Users.
+	 */
+	public function getAll(): array {
+		return User::where([]);
+	}
 }
 ```
 
 ---
 
-# 6. Eredu bat gorde edo eguneratu
-
-## Helburua
-
-Txertatu edo eguneratu automatikoki `save()` erabiliz.
+# 6. Modelo bat gorde edo eguneratu
 
 ```php
 $user = new User();
 $user->name = 'Alice';
 $user->email = 'alice@mail.com';
-$user->save(); // TXERTATU
+$user->save();
 
-$user = User::findOne(['id' => 1]);
-$user->izena = 'Eguneratutako izena';
-$user->save(); // EGUNERATU
+$user = User::findOne([
+	'id' => 1
+]);
+
+if ($user !== null) {
+	$user->name = 'Eguneratutako izena';
+	$user->save();
+}
 ```
 
 ---
 
-# 7. Itzuli Modeloen Zerrenda bat (JSON)
-
-## Helburua
-
-Erabiltzaileak Modelo Osagai bat erabiliz itzuli.
-
-### Osagaiaren Barruan
+# 7. Modelo-zerrenda bat itzuli
 
 ```php
 public ?UserListComponent $list = null;
+```
 
+```php
+/**
+ * Load users.
+ *
+ * @return void
+ */
 public function run(): void {
-  $this->list = new UserListComponent();
-  $this->list->list = User::where([]);
-}
-```
-
-### Txantiloia
-
-```json
-{
-  "users": [
-    {{ list }}
-  ]
+	$this->list = new UserListComponent();
+	$this->list->list = User::where([]);
 }
 ```
 
 ---
 
-# 8. Fitxategien Igoera Kudeatu
+# 8. Fitxategien igoerak kudeatu
 
-## Helburua
+Erabili `ORequest::getFile()` igotako fitxategia lortzeko eta baliozkotu mugitu aurretik.
 
-Fitxategi bat modu seguruan igo.
-
-### DTO
-
-```php
-class UploadDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?array $file = null;
-
-  public function __construct(ORequest $req) {
-    parent::__construct($req);
-    $this->file = $req->getFile('file');
-  }
-}
-```
-
-### Osagaia
-
-```php
-public function run(UploadDTO $dto): void {
-  if (!$dto->isValid()) return;
-
-  $file = $dto->file;
-  $dest = $this->getConfig()->getDir('uploads') . basename($file['name']);
-  move_uploaded_file($file['tmp_name'], $dest);
-}
-```
+Ikusi `recipes/uploads.md` adibide osoetarako.
 
 ---
 
-# 9. Erabili diseinu pertsonalizatua
-
-## Helburua
-
-Ibilbide talde bati diseinu bat aplikatu.
+# 9. Layout pertsonalizatu bat erabili
 
 ```php
-ORoute::layout(MainLayoutComponent::class, function() {
-  ORoute::get('/home', HomeComponent::class);
-});
+ORoute::layout(
+	MainLayoutComponent::class,
+	static function (): void {
+		ORoute::get(
+			'/home',
+			HomeComponent::class
+		);
+	}
+);
 ```
 
-Edo konbinatu aurrizkia + diseinua:
-
-```php
-ORoute::group('/admin', AdminLayoutComponent::class, function() {
-  ORoute::get('/dashboard', DashboardComponent::class);
-});
-```
-
-Diseinuek errendatutako osagaiaren irteera biltzen dute eta hau jasotzen dute:
-
-- `title`
-- `body`
+Middlewareak `layout()`, `prefix()` eta `group()` bidez sortutako ibilbide-taldeei ere aplika dakizkieke.
 
 ---
 
-# 10. Balidazio erroreak behar bezala kudeatu
-
-## DTO balidazioa
+# 10. Balidazio-erroreak kudeatu
 
 ```php
 if (!$dto->isValid()) {
-  $this->status = 'error';
-  $this->errors = $dto->getValidationErrors();
-  return;
-}
-```
+	$this->status = 'error';
+	$this->errors = $dto->getValidationErrors();
 
-## Modeloa Ez Da Aurkitu
-
-```php
-$user = User::findOne(['id' => $id]);
-if (is_null($user)) {
-  $this->status = 'error';
-  return;
+	return;
 }
 ```
 
@@ -302,13 +223,12 @@ if (is_null($user)) {
 
 # Laburpena
 
-Errezeta hauek Osumi Framework-en ohiko zereginak egiteko **modu kanonikoa** erakusten dute:
+9.9ko eredu kanonikoak:
 
-- Erabili DTOak sarrera baliozkotzeko
-- Erabili Iragazkiak autentifikaziorako
-- Erabili Zerbitzuak negozio logikarako
-- Mantendu Osagaiak meheak
-- Erabili Modelo Osagaiak JSON irudikapenerako
-- Aplikatu Diseinuak bideratze bidez
-
-Jarraitu eredu hauek aplikazio koherente eta aurreikusgarriak lortzeko.
+- DTOak sarrera tipatu eta balioztaturako.
+- Middlewareak eskaera/erantzun logika zeharkakorako.
+- Middleware testuingurua zerbitzariaren konfiantzazko balioetarako.
+- Zerbitzuak negozio-logikarako.
+- Osagai arinak orkestraziorako.
+- Modelo-osagaiak irudikapenerako.
+- Routing bidez konfiguratutako layout-ak.
