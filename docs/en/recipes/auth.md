@@ -1,278 +1,339 @@
-# Authentication (Auth) — Recipes & Best Practices
+# Authentication — Recipes & Best Practices
 
-Authentication in **Osumi Framework** is typically implemented using:
+Authentication in **Osumi Framework 9.9** is typically built with:
 
-- **A login endpoint** that validates user credentials and issues a **token**
-- **A filter** (e.g., `LoginFilter`) that validates the token on every protected route
-- **DTOs** to safely process incoming authentication data
-- **Services** to keep authentication logic reusable and clean
-- **Routes** configured to apply authentication filters before running components
-
-This document provides practical recipes for implementing a complete authentication workflow.
+- A login endpoint that validates credentials and issues a token.
+- A `before` Middleware that validates the token on protected routes.
+- Middleware context for trusted authenticated values.
+- DTOs for validated input and trusted Middleware-sourced fields.
+- Services for reusable authentication and authorization logic.
 
 ---
 
-# 1. Protecting Routes Using Filters
+# 1. Protecting Routes with Middleware
 
-The most common method of securing endpoints is adding a filter to the route definition.
-
-According to your routing system, filters can be specified like this:
+Example:
 
 ```php
-ORoute::post('/profile', ProfileComponent::class, [LoginFilter::class]);
+ORoute::get(
+	'/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-When the route is accessed:
+When the route is matched:
 
-1.  The router identifies the endpoint
-2.  Before running the component, the filter chain is executed
-3.  If any filter returns `"status" !== "ok"`, the request **never reaches the component**, returning **403 Forbidden** or redirecting if `"return"` is set
+1. `before` Middlewares run.
+2. `LoginMiddleware` validates the request.
+3. If it returns `stop => true`, later `before` Middlewares and the component are skipped.
+4. `afterResponse` still runs.
+5. The framework emits the typed error response.
 
-This ensures only authenticated users reach protected logic.
+Authentication failures should normally use HTTP 401.
 
 ---
 
-# 2. Creating the Login Filter
+# 2. Login Middleware
 
-A filter looks like this:
+A login Middleware should publish trusted context when validation succeeds.
 
 ```php
-class LoginFilter {
-  public static function handle(array $params, array $headers): array {
-    global $core;
-    $ret = ['status' => 'error', 'id' => null];
+<?php
 
-    $tk = new OToken($core->config->getExtra('secret'));
+declare(strict_types=1);
 
-    if ($tk->checkToken($headers['Authorization'])) {
-        $ret['status'] = 'ok';
-        $ret['id'] = intval($tk->getParam('id'));
-    }
+namespace Osumi\OsumiFramework\App\Middleware;
 
-    return $ret;
-  }
+use Osumi\OsumiFramework\Core\OMiddleware;
+
+final class LoginMiddleware {
+	/**
+	 * Validate authentication and publish user context.
+	 *
+	 * @param string $phase Current middleware phase.
+	 * @param array<string, mixed> $data Current middleware pipeline data.
+	 *
+	 * @return array<string, mixed> Middleware result.
+	 */
+	public static function handle(
+		string $phase,
+		array $data
+	): array {
+		if ($phase !== OMiddleware::PHASE_BEFORE) {
+			return [];
+		}
+
+		// Validate Authorization token here.
+
+		$is_valid = true;
+		$id_user = 42;
+		$role = 'admin';
+
+		if (!$is_valid) {
+			return [
+				'stop' => true,
+				'status_code' => 401,
+				'message' => 'Unauthorized'
+			];
+		}
+
+		return [
+			'context' => [
+				'id' => $id_user,
+				'role' => $role
+			]
+		];
+	}
 }
 ```
 
-This filter:
-
-- Reads the `Authorization` header
-- Validates a token
-- If valid → returns `"status" => "ok"` and the authenticated user ID
-- If invalid → returns `"error"` and stops the request
-
-Token‑derived values (like `id`) can later be consumed by components or DTOs.
+`LoginMiddleware` is exposed publicly as `Login`.
 
 ---
 
-# 3. Creating the Login Endpoint (Issuing Tokens):
+# 3. Creating the Login Endpoint
 
-1.  Receives credentials via a DTO
-2.  Validates them using a service
-3.  Generates a token
-4.  Returns the token to the client
-5.  Client stores token and uses it in the `Authorization` header
+A login endpoint typically:
 
-### Example Structure
+1. Receives credentials through a DTO.
+2. Validates them through a service.
+3. Creates a token.
+4. Returns the token to the client.
+5. The client sends that token through `Authorization`.
 
-**DTO for login:**
+Example DTO:
 
 ```php
 class LoginDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?string $email = null;
+	#[ODTOField(required: true)]
+	public ?string $email = null;
 
-  #[ODTOField(required: true)]
-  public ?string $password = null;
+	#[ODTOField(required: true)]
+	public ?string $password = null;
 }
 ```
 
-**AuthService handling the logic:**
+Authentication service:
 
 ```php
 class AuthService extends OService {
-  public function login(string $email, string $password): ?array {
-    $user = User::findOne(['email' => $email]);
-    if (!$user || !password_verify($password, $user->password)) {
-      return null;
-    }
-    $token = new OToken($this->getConfig()->getExtra('secret'));
-    $token->addParam('id', $user->id);
-    return ['token' => $token->getToken()];
-  }
+	/**
+	 * Validate credentials and return a token.
+	 *
+	 * @param string $email User email.
+	 * @param string $password Plain-text password.
+	 *
+	 * @return array{token: string}|null Token data or null on failure.
+	 */
+	public function login(
+		string $email,
+		string $password
+	): ?array {
+		$user = User::findOne([
+			'email' => $email
+		]);
+
+		if (
+			$user === null ||
+			!password_verify(
+				$password,
+				$user->password
+			)
+		) {
+			return null;
+		}
+
+		$token = new OToken(
+			$this->getConfig()->getExtra('secret')
+		);
+
+		$token->addParam(
+			'id',
+			$user->id
+		);
+
+		return [
+			'token' => $token->getToken()
+		];
+	}
 }
 ```
 
-**LoginComponent:**
+---
+
+# 4. Reading Middleware Context in Components
+
+Get all context:
 
 ```php
-class LoginComponent extends OComponent {
-  private ?AuthService $auth = null;
-  public ?string $token = null;
-  public string $status = 'error';
-
-  public function __construct() {
-    parent::__construct();
-    $this->auth = inject(AuthService::class);
-  }
-
-  public function run(LoginDTO $dto): void {
-    if (!$dto->isValid()) {
-      return;
-    }
-
-    $data = $this->auth->login($dto->email, $dto->password);
-
-    if ($data) {
-      $this->status = 'ok';
-      $this->token = $data['token'];
-    }
-  }
-}
+$login = $req->getMiddleware(
+	'Login'
+);
 ```
 
-The client now includes the token in all subsequent requests:
+Get one value:
 
-    Authorization: <token>
+```php
+$id_user = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
+```
+
+Prefer `getMiddlewareValue()` when only one value is needed.
 
 ---
 
-# 4. Using Filter Output in Components
+# 5. Using Middleware Context in DTOs
 
-Once filters pass, the request object contains filter results:
-
-```php
-$filter = $req->getFilter('Login');
-```
-
-Typically you’d do:
+DTOs can use Middleware context as an explicit source:
 
 ```php
-$userId = $filter['id']; // authenticated user
-```
-
-You can then pass the ID to services, load models, and perform business logic securely.
-
----
-
-# 5. Using Filter Data Inside DTOs
-
-DTOs can automatically receive values from filters:
-
-```php
-#[ODTOField(filter: 'Login', filterProperty: 'id')]
+#[ODTOField(
+	required: true,
+	middleware: 'Login',
+	middlewareProperty: 'id'
+)]
 public ?int $idUser = null;
 ```
 
-This means:
+This prevents the client from spoofing the authenticated user ID.
 
-- Users cannot spoof their identity
-- DTOs receive the authenticated user ID securely
-- Components do not need to read filter data manually
-
-This greatly simplifies authentication‑dependent endpoints.
+If the Middleware context value is missing, the DTO value remains `null`; it does not fall back to client input.
 
 ---
 
-# 6. Recipe: Creating a Protected Endpoint
+# 6. Protected Endpoint Using a DTO
 
-Example: “Get My Cinemas”
-
-### Route
+Route:
 
 ```php
-ORoute::get('/my-cinemas', GetCinemasComponent::class, [LoginFilter::class]);
+ORoute::get(
+	'/my-cinemas',
+	GetCinemasComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-### Component
+DTO:
+
+```php
+class GetCinemasDTO extends ODTO {
+	#[ODTOField(
+		required: true,
+		middleware: 'Login',
+		middlewareProperty: 'id'
+	)]
+	public ?int $idUser = null;
+}
+```
+
+Component:
 
 ```php
 class GetCinemasComponent extends OComponent {
-  private ?CinemaService $cs = null;
-  public string $status = 'ok';
-  public ?CinemaListComponent $list = null;
+	private ?CinemaService $cinema_service = null;
 
-  public function __construct() {
-    parent::__construct();
-    $this->cs = inject(CinemaService::class);
-    $this->list = new CinemaListComponent();
-  }
+	/**
+	 * Prepare the component.
+	 */
+	public function __construct() {
+		parent::__construct();
 
-  public function run(ORequest $req): void {
-    $filter = $req->getFilter('Login');
+		$this->cinema_service = inject(
+			CinemaService::class
+		);
+	}
 
-    if (!$filter || !array_key_exists('id', $filter)) {
-      $this->status = 'error';
-      return;
-    }
+	/**
+	 * Load cinemas for the authenticated user.
+	 *
+	 * @param GetCinemasDTO $dto Authenticated request DTO.
+	 *
+	 * @return void
+	 */
+	public function run(GetCinemasDTO $dto): void {
+		if (
+			!$dto->isValid() ||
+			$dto->idUser === null
+		) {
+			return;
+		}
 
-    $this->list->list = $this->cs->getCinemas($filter['id']);
-  }
+		$this->list = $this->cinema_service->getCinemas(
+			$dto->idUser
+		);
+	}
 }
 ```
 
 ---
 
-# 7. Recipe: Enforcing Permissions
+# 7. Permissions
 
-You can extend your filter to include role/permission information from the token:
-
-```php
-$ret['role'] = $tk->getParam('role');
-```
-
-Then in components:
+A Middleware may publish role or permission context:
 
 ```php
-$filter = $req->getFilter('Login');
-if ($filter['role'] !== 'admin') {
-  $this->status = 'forbidden';
-  return;
-}
+return [
+	'context' => [
+		'id' => 42,
+		'role' => 'admin'
+	]
+];
 ```
+
+A component can inspect it:
+
+```php
+$role = $req->getMiddlewareValue(
+	'Login',
+	'role'
+);
+```
+
+For authorization rules shared by many routes, prefer a dedicated authorization Middleware instead of repeating checks in components.
 
 ---
 
-# 8. Recipe: Logging Out
+# 8. Logout
 
-Since your auth system is token‑based and stateless:
+For stateless token authentication, logout usually means removing the token client-side.
 
-- "Logout" is simply deleting the token client‑side
-- Optionally, you may implement a **token blacklist** using cache:
-    - Mark token as invalid in `getCacheContainer()`
-    - Filter checks for blacklisted tokens
+If server-side revocation is required, store revoked token identifiers in a service/cache and make the authentication Middleware reject them.
 
 ---
 
 # 9. Best Practices
 
-- **Use DTOs** for login requests
-- **Never trust client‑provided user IDs** — always derive IDs from filters
-- **Keep filters small** (validation only)
-- **Put business logic in services**
-- **Use strong secrets** for tokens (store in config)
-- **Divide logic cleanly**:
-    - Filters → authentication / verification
-    - DTOs → input validation
-    - Services → logic
-    - Components → orchestration and response
+- Use `before` Middlewares for authentication.
+- Return HTTP 401 for authentication failures.
+- Publish only the trusted context required downstream.
+- Never trust client-provided authenticated user IDs.
+- Use DTO Middleware sources for authenticated values.
+- Keep business logic in services.
+- Use separate authorization Middleware when permissions are shared across routes.
+- Keep token secrets in configuration.
 
 ---
 
 # 10. Summary
 
-A full authentication workflow in Osumi Framework usually includes:
+A typical authentication flow contains:
 
-1.  **Login endpoint** issuing tokens
-2.  **LoginFilter** validating tokens for protected routes
-3.  **DTOs** capturing and validating input
-4.  **Services** performing authentication logic
-5.  **Routing** applying filters before components
-6.  **Secure propagation** of authenticated user information via filters and DTOs
+1. Login endpoint.
+2. Token issuing service.
+3. `LoginMiddleware` on protected routes.
+4. Trusted Middleware context.
+5. DTOs and/or `ORequest` consuming that context.
+6. Services containing business logic.
 
-This architecture ensures:
-
-- Clean separation of responsibilities
-- Easy reuse across endpoints
-- Strong security guarantees
-- Simple and predictable request pipeline
+This is the canonical 9.9 replacement for the legacy Filter-based authentication flow.

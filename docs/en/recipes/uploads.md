@@ -1,252 +1,215 @@
 # File Uploads
 
-Handling file uploads in **Osumi Framework** follows the same design principles as the rest of the system:
+File uploads in **Osumi Framework 9.9** follow the same application structure as other request handling:
 
-- **DTOs** handle and validate incoming data
-- **Components** orchestrate the operation
-- The uploaded file is available through **`ORequest`**
-- You decide where and how files should be stored
-
-This recipe shows how to accept an uploaded file (e.g. from an HTML `<input type="file" name="photo">`), process it in a component, and store it properly.
-
----
-
-# 1. Overview of How Uploads Work
-
-When a user submits a form with a file, PHP places the uploaded file information inside `$_FILES`.
-
-Osumi Framework merges request data (params, headers, filters, files) into an **`ORequest`** instance.
-From inside your component’s `run()` method, you can access:
-
-```php
-$req->getFile("photo");
-```
-
-This returns the standard PHP upload array:
-
-```php
-[
-  'name'     => 'example.png',
-  'type'     => 'image/png',
-  'tmp_name' => '/tmp/phpXYZ123',
-  'error'    => 0,
-  'size'     => 123456
-]
-```
-
-To preserve consistency with the rest of the framework, you usually wrap this access inside a **DTO**, so validation and structure stay clean.
+- `ORequest` exposes uploaded files.
+- DTOs can validate upload-related input.
+- Components orchestrate the request.
+- Services are appropriate for reusable file-processing logic.
+- Middlewares can protect upload routes.
 
 ---
 
-# 2. Creating a DTO for File Uploads
+# 1. Accessing an Uploaded File
 
-DTOs can accept any request parameter, including files.
-Since uploaded files do not come from headers or filters, you read them directly from `ORequest` inside the DTO constructor.
+PHP stores uploaded file information in `$_FILES`.
 
-Example DTO:
+Osumi Framework exposes it through:
 
 ```php
-<?php declare(strict_types=1);
+$file = $req->getFile(
+	'photo'
+);
+```
+
+The returned value follows the standard PHP upload structure.
+
+Middleware context is available separately through `getMiddleware()` and `getMiddlewareValue()`.
+
+---
+
+# 2. Upload DTO
+
+Example:
+
+```php
+<?php
+
+declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\App\DTO;
 
 use Osumi\OsumiFramework\DTO\ODTO;
-use Osumi\OsumiFramework\DTO\ODTOField;
 use Osumi\OsumiFramework\Web\ORequest;
 
 class PhotoUploadDTO extends ODTO {
-  #[ODTOField(required: true)]
-  public ?array $photo = null;
+	public ?array $photo = null;
 
-  public function __construct(ORequest $req) {
-    parent::__construct($req);
+	/**
+	 * Build the upload DTO.
+	 *
+	 * @param ORequest $req Current request.
+	 */
+	public function __construct(ORequest $req) {
+		parent::__construct(
+			$req
+		);
 
-    // Load the uploaded file
-    $this->photo = $req->getFile('photo');
-
-    // Validate file presence
-    if ($this->photo === null || $this->photo['error'] !== 0) {
-      $this->validation_errors[] = "A valid file is required.";
-    }
-  }
+		$this->photo = $req->getFile(
+			'photo'
+		);
+	}
 }
 ```
 
-### Notes:
-
-- `required: true` ensures the DTO will be invalid if the file is missing
-- `getFile('photo')` retrieves the upload
-- You can extend validation (file size, mime type, etc.)
+Validate file presence, upload error, MIME type, extension and size before storing it.
 
 ---
 
-# 3. Creating the Upload Component
-
-The component receives the DTO and processes the uploaded file.
+# 3. Upload Component
 
 ```php
-<?php declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Module\Api\UploadPhoto;
-
-use Osumi\OsumiFramework\Core\OComponent;
-use Osumi\OsumiFramework\App\DTO\PhotoUploadDTO;
-
 class UploadPhotoComponent extends OComponent {
-  public string $status = 'ok';
-  public string $message = '';
-  public ?string $filename = null;
+	public string $status = 'ok';
+	public string $message = '';
+	public ?string $filename = null;
 
-  public function run(PhotoUploadDTO $dto): void {
-    if (!$dto->isValid()) {
-      $this->status = 'error';
-      $this->message = implode(", ", $dto->getValidationErrors());
-      return;
-    }
+	/**
+	 * Store the uploaded file.
+	 *
+	 * @param PhotoUploadDTO $dto Upload DTO.
+	 *
+	 * @return void
+	 */
+	public function run(PhotoUploadDTO $dto): void {
+		$file = $dto->photo;
 
-    // Access uploaded file data
-    $file = $dto->photo;
+		if (
+			!is_array($file) ||
+			!array_key_exists('error', $file) ||
+			$file['error'] !== UPLOAD_ERR_OK ||
+			!isset(
+				$file['tmp_name'],
+				$file['name']
+			)
+		) {
+			$this->status = 'error';
+			$this->message = 'A valid file is required.';
 
-    // Generate a destination file path
-    $new_name = uniqid("photo_") . "_" . basename($file['name']);
-    $upload_dir = $this->getConfig()->getDir('uploads');
-    $dest = $upload_dir . $new_name;
+			return;
+		}
 
-    // Move the uploaded file
-    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-      $this->status = 'error';
-      $this->message = 'Failed to store file.';
-      return;
-    }
+		$new_name = uniqid(
+			'photo_',
+			true
+		)
+			. '_'
+			. basename(
+				(string) $file['name']
+			);
 
-    $this->filename = $new_name;
-    $this->message = 'File uploaded successfully.';
-  }
-}
-```
+		$upload_dir = $this->getConfig()->getDir(
+			'uploads'
+		);
 
-### Key points:
+		$destination = $upload_dir
+			. $new_name;
 
-- `run()` receives a `PhotoUploadDTO`
-- The DTO ensures validity
-- `move_uploaded_file()` stores the file safely
-- You should store uploads in a configured directory (`uploads` or similar)
-- Components remain clean and readable
+		if (
+			!move_uploaded_file(
+				(string) $file['tmp_name'],
+				$destination
+			)
+		) {
+			$this->status = 'error';
+			$this->message = 'Failed to store file.';
 
----
+			return;
+		}
 
-# 4. HTML Form Example
-
-When consuming this endpoint from a web page:
-
-### Important:
-
-`enctype="multipart/form-data"` is required for PHP to populate `$_FILES`.
-
----
-
-# 5. Defining the Route
-
-Add a route that receives a POST request and maps to your upload component:
-
-```php
-use Osumi\OsumiFramework\Routing\ORoute;
-use Osumi\OsumiFramework\App\Module\Api\UploadPhoto\UploadPhotoComponent;
-
-ORoute::post('/api/upload-photo', UploadPhotoComponent::class);
-```
-
-If the upload requires authentication, simply add your filter:
-
-```php
-ORoute::post('/api/upload-photo', UploadPhotoComponent::class, [LoginFilter::class]);
-```
-
----
-
-# 6. Example JSON Response Template
-
-If your component uses a `.json` template, the output might be:
-
-```json
-{
-	"status": "{{ status }}",
-	"message": "{{ message }}",
-	"filename": "{{ filename }}"
+		$this->filename = $new_name;
+		$this->message = 'File uploaded successfully.';
+	}
 }
 ```
 
 ---
 
-# 7. Extending Validation
-
-Common validation patterns include:
-
-### Allowed extensions:
+# 4. Protecting the Upload Route
 
 ```php
-$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if (!in_array($ext, ['png','jpg','jpeg'])) {
-  $this->validation_errors[] = "Invalid file extension.";
-}
+ORoute::post(
+	'/api/upload-photo',
+	UploadPhotoComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
 ```
 
-### Max file size:
+The upload component will not execute when authentication Middleware stops the request.
+
+Authenticated context can be read with:
 
 ```php
-if ($file['size'] > 2 * 1024 * 1024) { // 2MB
-  $this->validation_errors[] = "File is too large.";
-}
+$id_user = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
 ```
 
-### Valid MIME types:
-
-```php
-$allowed = ['image/png','image/jpeg'];
-if (!in_array($file['type'], $allowed)) {
-  $this->validation_errors[] = "Invalid file type.";
-}
-```
-
-You can store these rules inside a dedicated service to keep DTOs clean.
+or mapped directly into a DTO using `middleware` and `middlewareProperty`.
 
 ---
 
-# 8. Storing File Metadata in Models
+# 5. Validation
 
-If you want to store upload info in a database:
+Common checks include:
+
+- `UPLOAD_ERR_OK`
+- Maximum size
+- MIME type
+- Extension
+- File name normalization
+- Destination permissions
+
+Do not trust client-provided MIME metadata as the only validation source.
+
+---
+
+# 6. Storing Metadata
 
 ```php
 $photo = new Photo();
 $photo->filename = $new_name;
-$photo->user_id = $userId; // if using LoginFilter
+$photo->user_id = $id_user;
 $photo->save();
 ```
 
-This is usually done inside a service rather than directly in a component.
+For reusable storage logic, use a service.
 
 ---
 
-# 9. Best Practices
+# 7. Best Practices
 
-- **Use DTOs** to validate uploaded files
-- **Use services** for file‑related logic if it grows (resizing images, generating thumbnails, etc.)
-- **Never trust client‑provided metadata** (always inspect MIME type, extension, size)
-- **Keep upload directories outside of public access** unless files need to be exposed
-- **Name files uniquely** to avoid overwriting user files
-- **Use filters** if only authenticated users may upload files
+- Keep upload directories outside public access unless files must be public.
+- Generate unique file names.
+- Validate size, MIME type and extension.
+- Use services when file-processing logic grows.
+- Use Middlewares when uploads require authentication or authorization.
+- Use Middleware context instead of client-provided user IDs.
 
 ---
 
-# 10. Summary
+# 8. Summary
 
-To implement uploads in Osumi Framework:
+A canonical upload flow is:
 
-1.  Create a **DTO** to receive and validate the file
-2.  Create a **component** to process and store it
-3.  Add a **route** pointing to the component
-4.  Use `ORequest->getFile(name)` to access uploaded files
-5.  Store them using `move_uploaded_file()`
-6.  Add authentication filters if necessary
-
-This approach keeps your upload logic consistent with the framework’s design: clean, modular, and predictable.
+1. Protect the route with Middleware if required.
+2. Read the file with `ORequest::getFile()`.
+3. Validate the upload.
+4. Store the file safely.
+5. Persist metadata if needed.
+6. Use trusted Middleware context for authenticated ownership.
