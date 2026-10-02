@@ -9,7 +9,7 @@ Cuando un comportamiento del framework no esté documentado aquí, no debe inven
 ## 0. Identidad del framework
 
 - **Nombre:** Osumi Framework
-- **Versión:** 9.9.0
+- **Versión:** 9.9.1
 - **Lenguaje:** PHP
 - **PHP mínimo:** 8.5+
 - **Tipado:** usar `declare(strict_types=1);`
@@ -203,22 +203,22 @@ return [
 Semántica:
 
 - `stop` en `before`:
-  - se omiten los Middlewares `before` restantes
-  - se omite el componente
-  - se omite el layout
-  - se genera un cuerpo de error tipado
-  - `afterResponse` sigue ejecutándose
+    - se omiten los Middlewares `before` restantes
+    - se omite el componente
+    - se omite el layout
+    - se genera un cuerpo de error tipado
+    - `afterResponse` sigue ejecutándose
 
 - `stop` en `afterRender`:
-  - se omiten los Middlewares `afterRender` restantes
-  - se omite el layout
-  - se genera un cuerpo de error tipado
-  - `afterResponse` sigue ejecutándose
+    - se omiten los Middlewares `afterRender` restantes
+    - se omite el layout
+    - se genera un cuerpo de error tipado
+    - `afterResponse` sigue ejecutándose
 
 - `stop` en `afterResponse`:
-  - se omiten los Middlewares `afterResponse` restantes
-  - su cuerpo de error tipado sustituye al cuerpo final
-  - `afterResponse` no se vuelve a ejecutar de forma recursiva
+    - se omiten los Middlewares `afterResponse` restantes
+    - su cuerpo de error tipado sustituye al cuerpo final
+    - `afterResponse` no se vuelve a ejecutar de forma recursiva
 
 Si se omiten al hacer `stop`:
 

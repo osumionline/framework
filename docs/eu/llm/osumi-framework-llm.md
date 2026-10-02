@@ -9,7 +9,7 @@ Framework-aren portaera bat hemen dokumentatuta ez badago, ez asmatu.
 ## 0. Framework-aren identitatea
 
 - **Izena:** Osumi Framework
-- **Bertsioa:** 9.9.0
+- **Bertsioa:** 9.9.1
 - **Hizkuntza:** PHP
 - **Gutxieneko PHP bertsioa:** 8.5+
 - **Tipatzea:** erabili `declare(strict_types=1);`
@@ -203,22 +203,22 @@ return [
 Semantika:
 
 - `stop` `before` fasean:
-  - gainerako `before` Middlewareak ez dira exekutatzen
-  - osagaia ez da exekutatzen
-  - layout-a ez da exekutatzen
-  - errore-gorputz tipatua sortzen da
-  - `afterResponse` exekutatzen jarraitzen da
+    - gainerako `before` Middlewareak ez dira exekutatzen
+    - osagaia ez da exekutatzen
+    - layout-a ez da exekutatzen
+    - errore-gorputz tipatua sortzen da
+    - `afterResponse` exekutatzen jarraitzen da
 
 - `stop` `afterRender` fasean:
-  - gainerako `afterRender` Middlewareak ez dira exekutatzen
-  - layout-a ez da exekutatzen
-  - errore-gorputz tipatua sortzen da
-  - `afterResponse` exekutatzen jarraitzen da
+    - gainerako `afterRender` Middlewareak ez dira exekutatzen
+    - layout-a ez da exekutatzen
+    - errore-gorputz tipatua sortzen da
+    - `afterResponse` exekutatzen jarraitzen da
 
 - `stop` `afterResponse` fasean:
-  - gainerako `afterResponse` Middlewareak ez dira exekutatzen
-  - bere errore-gorputz tipatuak azken gorputza ordezkatzen du
-  - `afterResponse` ez da berriro modu errekurtsiboan exekutatzen
+    - gainerako `afterResponse` Middlewareak ez dira exekutatzen
+    - bere errore-gorputz tipatuak azken gorputza ordezkatzen du
+    - `afterResponse` ez da berriro modu errekurtsiboan exekutatzen
 
 `stop` egitean honako hauek adierazten ez badira:
 
@@ -497,7 +497,7 @@ Filterrak 9.9 aurreko kontzeptu legacy bat dira.
 - ez erabili `filter` / `filterProperty`
 - erabili Middleware natiboak eta Middleware testuingurua
 
-9.9ko migrazio-pausoak Filter zaharren negozio-logika gorde dezake Middleware adapterrak sortuz.
+    9.9ko migrazio-pausoak Filter zaharren negozio-logika gorde dezake Middleware adapterrak sortuz.
 
 Beraz, migratutako proiektu batek aldi baterako Filter klase zaharrak izan ditzake sortutako Middleware adapterren atzean. Hau migrazio-bateragarritasuna da, ez 9.9ko aplikazio berrientzako gomendatutako arkitektura.
 

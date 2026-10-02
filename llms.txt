@@ -6,7 +6,7 @@ This file is optimized for AI systems. Prefer explicit, strictly typed code and 
 
 ## Version
 
-- Framework: 9.9.0
+- Framework: 9.9.1
 - PHP: 8.5+
 - `declare(strict_types=1);` should be used in PHP files.
 

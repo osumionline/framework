@@ -264,7 +264,8 @@ final class LegacyRouteTransformer {
 
         if ($this->isMiddlewareMapArgument(
             $tokens,
-            $argument
+            $argument,
+            $imports
         )) {
             return null;
         }
@@ -321,7 +322,8 @@ final class LegacyRouteTransformer {
 
         if ($this->isMiddlewareMapArgument(
             $tokens,
-            $range
+            $range,
+            $imports
         )) {
             [$start, $end] = $this->getTrimmedCharacterRange(
                 $tokens,
@@ -753,16 +755,20 @@ final class LegacyRouteTransformer {
     }
 
     /**
-     * Check whether an argument already contains middleware phase keys.
+     * Check whether an argument already contains a Middleware phase map.
+     *
+     * Both literal phase names and OMiddleware phase constants are supported.
      *
      * @param list<PhpToken> $tokens PHP tokens.
      * @param array{start: int, end: int} $range Argument token range.
+     * @param array<string, string> $imports Imported class aliases to FQCNs.
      *
-     * @return bool Whether the argument is already a middleware map.
+     * @return bool Whether the argument is already a Middleware map.
      */
     private function isMiddlewareMapArgument(
         array $tokens,
-        array $range
+        array $range,
+        array $imports
     ): bool {
         $bounds = $this->getArrayContentBounds(
             $tokens,
@@ -774,11 +780,24 @@ final class LegacyRouteTransformer {
         }
 
         [$start, $end] = $bounds;
+
         $entries = $this->splitArguments(
             $tokens,
             $start,
             $end
         );
+
+        $phase_names = [
+            'before',
+            'afterRender',
+            'afterResponse'
+        ];
+
+        $phase_constants = [
+            'PHASE_BEFORE',
+            'PHASE_AFTER_RENDER',
+            'PHASE_AFTER_RESPONSE'
+        ];
 
         foreach ($entries as $entry) {
             $significant = $this->getSignificantIndexes(
@@ -791,31 +810,76 @@ final class LegacyRouteTransformer {
             }
 
             $key_token = $tokens[$significant[0]];
-            $arrow_token = $tokens[$significant[1]];
 
-            if ($arrow_token->id !== T_DOUBLE_ARROW) {
+            // Literal syntax:
+            // 'before' => [...]
+            if (
+                $tokens[$significant[1]]->id === T_DOUBLE_ARROW &&
+                $key_token->id === T_CONSTANT_ENCAPSED_STRING
+            ) {
+                $key = trim(
+                    $key_token->text,
+                    "'\""
+                );
+
+                if (in_array(
+                    $key,
+                    $phase_names,
+                    true
+                )) {
+                    return true;
+                }
+
                 continue;
             }
 
-            if ($key_token->id !== T_CONSTANT_ENCAPSED_STRING) {
+            // Constant syntax:
+            // OMiddleware::PHASE_BEFORE => [...]
+            if (count($significant) < 4) {
                 continue;
             }
 
-            $key = trim(
-                $key_token->text,
-                "'\""
-            );
+            $separator_token = $tokens[$significant[1]];
+            $constant_token = $tokens[$significant[2]];
+            $arrow_token = $tokens[$significant[3]];
 
             if (
-                in_array(
-                    $key,
-                    [
-                        'before',
-                        'afterRender',
-                        'afterResponse'
-                    ],
+                $separator_token->id !== T_DOUBLE_COLON ||
+                $constant_token->id !== T_STRING ||
+                $arrow_token->id !== T_DOUBLE_ARROW ||
+                !in_array(
+                    $constant_token->text,
+                    $phase_constants,
                     true
                 )
+            ) {
+                continue;
+            }
+
+            if (!in_array(
+                $key_token->id,
+                [
+                    T_STRING,
+                    T_NAME_QUALIFIED,
+                    T_NAME_FULLY_QUALIFIED
+                ],
+                true
+            )) {
+                continue;
+            }
+
+            $class_name = ltrim(
+                $key_token->text,
+                '\\'
+            );
+
+            if (isset($imports[$class_name])) {
+                $class_name = $imports[$class_name];
+            }
+
+            if (
+                $class_name ===
+                'Osumi\\OsumiFramework\\Core\\OMiddleware'
             ) {
                 return true;
             }

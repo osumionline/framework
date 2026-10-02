@@ -134,6 +134,41 @@ PHP;
     }
 
     /**
+     * Test that a migrated route using OMiddleware phase constants remains unchanged.
+     *
+     * @return void
+     */
+    public function testMigratedRouteUsingMiddlewarePhaseConstantIsIdempotent(): void {
+        $source = <<<'PHP'
+<?php
+
+use Osumi\OsumiFramework\App\Middleware\LoginMiddleware;
+use Osumi\OsumiFramework\Core\OMiddleware;
+use Osumi\OsumiFramework\Routing\ORoute;
+
+ORoute::get(
+	'/profile',
+	ProfileComponent::class,
+	[
+		OMiddleware::PHASE_BEFORE => [
+			LoginMiddleware::class
+		]
+	]
+);
+PHP;
+
+        $transformer = $this->createTransformer();
+
+        self::assertSame(
+            $source,
+            $transformer->transform(
+                'src/Routes/Api.php',
+                $source
+            )
+        );
+    }
+
+    /**
      * Test that an empty legacy Filter list remains a valid empty middleware definition.
      *
      * @return void

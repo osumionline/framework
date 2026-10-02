@@ -9,7 +9,7 @@ When framework behavior is not documented here, do not invent it.
 ## 0. Framework Identity
 
 - **Name:** Osumi Framework
-- **Version:** 9.9.0
+- **Version:** 9.9.1
 - **Language:** PHP
 - **Minimum PHP:** 8.5+
 - **Typing:** use `declare(strict_types=1);`
@@ -203,22 +203,22 @@ return [
 Semantics:
 
 - `before` stop:
-  - remaining `before` Middlewares are skipped
-  - component is skipped
-  - layout is skipped
-  - typed error body is generated
-  - `afterResponse` still runs
+    - remaining `before` Middlewares are skipped
+    - component is skipped
+    - layout is skipped
+    - typed error body is generated
+    - `afterResponse` still runs
 
 - `afterRender` stop:
-  - remaining `afterRender` Middlewares are skipped
-  - layout is skipped
-  - typed error body is generated
-  - `afterResponse` still runs
+    - remaining `afterRender` Middlewares are skipped
+    - layout is skipped
+    - typed error body is generated
+    - `afterResponse` still runs
 
 - `afterResponse` stop:
-  - remaining `afterResponse` Middlewares are skipped
-  - its typed error body replaces the final body
-  - `afterResponse` is not run recursively
+    - remaining `afterResponse` Middlewares are skipped
+    - its typed error body replaces the final body
+    - `afterResponse` is not run recursively
 
 If omitted for a stop:
 
