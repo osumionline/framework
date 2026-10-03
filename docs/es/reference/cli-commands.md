@@ -33,7 +33,7 @@ Ejemplo:
 php of add --option middleware --name Login
 ```
 
-La antigua opción `filter` no está soportada en 9.9.
+La antigua opción `filter` no está soportada desde 9.9.
 
 ### `backupAll`
 

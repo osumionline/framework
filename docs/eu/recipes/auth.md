@@ -1,6 +1,6 @@
 # Autentifikazioa — Errezetak eta praktika onak
 
-**Osumi Framework 9.9**-en autentifikazioa normalean honako hauekin eraikitzen da:
+**Osumi Framework 9.10**-en autentifikazioa normalean honako hauekin eraikitzen da:
 
 - Kredentzialak baliozkotu eta token bat sortzen duen login amaiera-puntu bat.
 - Babestutako ibilbideetan tokena baliozkotzen duen `before` Middleware bat.
@@ -336,4 +336,4 @@ Ohiko autentifikazio-fluxu batek honako hauek ditu:
 5. Testuinguru hori erabiltzen duten DTOak eta/edo `ORequest`.
 6. Negozio-logika duten zerbitzuak.
 
-Hau da 9.9ko ordezko kanonikoa Filters zaharretan oinarritutako autentifikazio-fluxuarentzat.
+Hau da ordezko kanonikoa, 9.9 bertsioan sartutakoa, Filters zaharretan oinarritutako autentifikazio-fluxuarentzat.

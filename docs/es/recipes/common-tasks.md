@@ -1,6 +1,6 @@
 # Tareas comunes
 
-Este documento muestra la forma canónica de resolver tareas habituales en **Osumi Framework 9.9**.
+Este documento muestra la forma canónica de resolver tareas habituales en **Osumi Framework 9.10**.
 
 Todos los ejemplos asumen:
 
@@ -223,7 +223,7 @@ if (!$dto->isValid()) {
 
 # Resumen
 
-Patrones canónicos de 9.9:
+Patrones canónicos de 9.10:
 
 - DTOs para entrada tipada y validada.
 - Middlewares para lógica transversal de petición/respuesta.

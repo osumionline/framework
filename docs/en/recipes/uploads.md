@@ -1,6 +1,6 @@
 # File Uploads
 
-File uploads in **Osumi Framework 9.9** follow the same application structure as other request handling:
+File uploads in **Osumi Framework 9.10** follow the same application structure as other request handling:
 
 - `ORequest` exposes uploaded files.
 - DTOs can validate upload-related input.

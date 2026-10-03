@@ -5,14 +5,12 @@ Los Middlewares de **Osumi Framework** son clases reutilizables que participan e
 Pueden ejecutarse en tres fases:
 
 - `before`: antes de ejecutar el componente de la ruta.
-- `afterRender`: después de renderizar el componente y antes de aplicar el layout.
-- `afterResponse`: después de generar el cuerpo final de la respuesta y justo antes de enviarlo.
+- `afterRender`: después de renderizar el componente y antes de aplicar el layout en respuestas tradicionales.
+- `afterResponse`: después de preparar la respuesta final y antes de emitirla.
 
 Se usan habitualmente para autenticación, autorización, validación de tokens, carga de contexto, modificación de respuestas, cabeceras, códigos de estado, auditoría y logging.
 
 ## 1. Estructura de un Middleware
-
-Los Middlewares de aplicación se almacenan normalmente en `src/Middleware/`.
 
 ```php
 <?php
@@ -22,28 +20,26 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\App\Middleware;
 
 final class ExampleMiddleware {
-    /**
-     * Handle a middleware execution phase.
-     *
-     * @param string $phase Current middleware phase.
-     * @param array<string, mixed> $data Current middleware pipeline data.
-     *
-     * @return array<string, mixed> Middleware result.
-     */
-    public static function handle(
-        string $phase,
-        array $data
-    ): array {
-        return [];
-    }
+	/**
+	 * Handle a middleware execution phase.
+	 *
+	 * @param string $phase Current middleware phase.
+	 * @param array<string, mixed> $data Current middleware pipeline data.
+	 *
+	 * @return array<string, mixed> Middleware result.
+	 */
+	public static function handle(
+		string $phase,
+		array $data
+	): array {
+		return [];
+	}
 }
 ```
 
-Una misma clase puede registrarse en una o varias fases. `$phase` identifica la fase actual y `$data` contiene la información de la petición y el estado acumulado del pipeline.
+Los Middlewares de aplicación se almacenan normalmente en `src/Middleware/`.
 
 ## 2. Fases
-
-Osumi Framework define:
 
 ```php
 OMiddleware::PHASE_BEFORE
@@ -51,7 +47,7 @@ OMiddleware::PHASE_AFTER_RENDER
 OMiddleware::PHASE_AFTER_RESPONSE
 ```
 
-Orden de ejecución:
+Flujo tradicional:
 
 ```text
 Routing
@@ -69,215 +65,146 @@ afterResponse
 Respuesta HTTP
 ```
 
+En una respuesta streaming se omite el layout y `afterResponse` termina antes de comenzar a enviar bytes.
+
 ### `before`
 
 Se ejecuta antes de instanciar el componente. Es la fase adecuada para autenticación, autorización, validación, bloqueo de peticiones y carga de contexto.
 
-Puede detener el pipeline antes de ejecutar el componente.
-
 ### `afterRender`
 
-Se ejecuta después de renderizar el template del componente y antes de aplicar el layout. Puede inspeccionar o sustituir el cuerpo del componente, añadir cabeceras o cambiar el código de estado.
+En respuestas tradicionales se ejecuta después de renderizar el componente y antes del layout. Puede inspeccionar o sustituir el cuerpo, añadir cabeceras o cambiar el código de estado.
 
-Si detiene el pipeline, el layout no se renderiza.
+En respuestas streaming también se ejecuta, pero todavía no existe un cuerpo materializado que pueda sustituirse.
 
 ### `afterResponse`
 
-Se ejecuta después de generar el cuerpo final. Es adecuada para auditoría, logging, cambios finales de cabeceras y transformaciones finales de la respuesta.
-
-También se ejecuta cuando `before` o `afterRender` han detenido el pipeline, de modo que puede inspeccionar el estado de error.
-
-Si un Middleware de `afterResponse` detiene la ejecución, se omiten los Middlewares restantes de esa fase y su respuesta de error se envía directamente.
+Es la última fase antes de emitir la respuesta. También se ejecuta cuando `before` o `afterRender` han detenido el pipeline.
 
 ## 3. Resultado de un Middleware
 
-`handle()` siempre debe devolver un array. Un array vacío significa que no hay cambios:
-
-```php
-return [];
-```
+`handle()` siempre debe devolver un array. Un array vacío significa que no hay cambios.
 
 Claves admitidas:
 
-### `context`
+- `context`: publica datos para fases posteriores, `ORequest` y DTOs.
+- `body`: sustituye el cuerpo en `afterRender` o `afterResponse`, salvo en respuestas streaming.
+- `headers`: añade o sustituye cabeceras HTTP.
+- `status_code`: entero entre `100` y `599`.
+- `stop`: detiene la fase actual.
+- `message`: mensaje usado al detener la petición.
 
-Publica datos para Middlewares posteriores, `ORequest` y DTOs:
+### `context`
 
 ```php
 return [
-    'context' => [
-        'id' => 42,
-        'role' => 'admin'
-    ]
+	'context' => [
+		'id' => 42,
+		'role' => 'admin'
+	]
 ];
 ```
 
-El contexto se almacena con el nombre público del Middleware. `LoginMiddleware` se expone como `Login`.
+`LoginMiddleware` publica bajo el nombre `Login`.
 
 ### `body`
 
-Sustituye un cuerpo de respuesta:
-
 ```php
 return [
-    'body' => 'Modified response'
+	'body' => 'Modified response'
 ];
 ```
 
-En `afterRender` sustituye el cuerpo del componente. En `afterResponse` sustituye el cuerpo final.
+En una respuesta streaming devolver `body` produce `InvalidArgumentException`, porque el stream no se materializa como string.
 
 ### `headers`
 
-Añade o sustituye cabeceras HTTP:
-
 ```php
 return [
-    'headers' => [
-        'X-Request-Id' => 'abc123'
-    ]
+	'headers' => [
+		'X-Request-Id' => 'abc123'
+	]
 ];
 ```
 
 ### `status_code`
 
-Cambia el estado HTTP:
-
 ```php
 return [
-    'status_code' => 201
+	'status_code' => 201
 ];
 ```
-
-Los valores válidos están entre `100` y `599`.
 
 ### `stop`
 
-Detiene la fase actual:
-
 ```php
 return [
-    'stop' => true,
-    'status_code' => 403,
-    'message' => 'Forbidden'
+	'stop' => true,
+	'status_code' => 403,
+	'message' => 'Forbidden'
 ];
 ```
 
-Cuando `stop` es `true`, no se ejecutan los Middlewares posteriores de esa fase y la petición entra en estado de error de Middleware. Si se omiten, `status_code` usa `500` y `message` usa `Middleware stopped execution.`
+Si faltan los datos opcionales, `status_code` usa `500` y `message` usa `Middleware stopped execution.`.
 
-## 4. Ejemplo de autenticación
+## 4. Estado acumulado de la fase
+
+Además de los datos de la petición, `$data` incluye el estado acumulado del pipeline, entre otros:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Middleware;
-
-use Osumi\OsumiFramework\Core\OMiddleware;
-
-final class LoginMiddleware {
-    /**
-     * Validate the request and publish authenticated user context.
-     *
-     * @param string $phase Current middleware phase.
-     * @param array<string, mixed> $data Current middleware pipeline data.
-     *
-     * @return array<string, mixed> Middleware result.
-     */
-    public static function handle(
-        string $phase,
-        array $data
-    ): array {
-        if ($phase !== OMiddleware::PHASE_BEFORE) {
-            return [];
-        }
-
-        $headers = $data['headers'];
-
-        if (
-            !is_array($headers) ||
-            !array_key_exists('Authorization', $headers)
-        ) {
-            return [
-                'stop' => true,
-                'status_code' => 401,
-                'message' => 'Unauthorized'
-            ];
-        }
-
-        return [
-            'context' => [
-                'id' => 42,
-                'role' => 'admin'
-            ]
-        ];
-    }
-}
+$data['context']
+$data['component_body']
+$data['final_body']
+$data['response_headers']
+$data['status_code']
+$data['is_streaming_response']
+$data['is_error']
+$data['error_phase']
+$data['error_status_code']
+$data['error_message']
 ```
 
-## 5. Middlewares globales
+## 5. Respuestas streaming
+
+Cuando el componente devuelve `OStreamResponse`:
+
+```php
+$data['is_streaming_response'] === true
+```
+
+durante `afterRender` y `afterResponse`.
+
+Los Middlewares pueden seguir modificando:
+
+- `context`
+- `headers`
+- `status_code`
+- `stop`
+- `message`
+
+No pueden devolver `body`.
+
+El framework no envía ningún byte del stream hasta que ambas fases han terminado. Si un Middleware devuelve `stop => true`, el stream se descarta, se restauran las cabeceras normales y se genera una respuesta de error tradicional.
+
+Los layouts se omiten para respuestas streaming.
+
+## 6. Middlewares globales
 
 Se configuran en `src/Middleware/Middlewares.php`:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Middleware;
-
-use Osumi\OsumiFramework\Core\OMiddleware;
-
 OMiddleware::setGlobal([
-    OMiddleware::PHASE_BEFORE => [
-        RequestMiddleware::class
-    ],
-    OMiddleware::PHASE_AFTER_RENDER => [],
-    OMiddleware::PHASE_AFTER_RESPONSE => [
-        AuditMiddleware::class
-    ]
+	OMiddleware::PHASE_BEFORE => [],
+	OMiddleware::PHASE_AFTER_RENDER => [],
+	OMiddleware::PHASE_AFTER_RESPONSE => []
 ]);
 ```
 
-## 6. Middlewares de ruta
+## 7. Middlewares de ruta y grupo
 
-```php
-ORoute::get(
-    '/profile',
-    ProfileComponent::class,
-    [
-        OMiddleware::PHASE_BEFORE => [
-            LoginMiddleware::class
-        ],
-        OMiddleware::PHASE_AFTER_RESPONSE => [
-            AuditMiddleware::class
-        ]
-    ]
-);
-```
+Las rutas y `prefix()`, `layout()` y `group()` aceptan definiciones de Middlewares.
 
-## 7. Middlewares de grupo
-
-`prefix()`, `layout()` y `group()` aceptan definiciones de Middlewares.
-
-```php
-ORoute::prefix(
-    '/api',
-    static function (): void {
-        ORoute::get(
-            '/profile',
-            ProfileComponent::class
-        );
-    },
-    [
-        OMiddleware::PHASE_BEFORE => [
-            ApiMiddleware::class
-        ]
-    ]
-);
-```
-
-Los grupos anidados acumulan sus Middlewares. En cada fase el orden es:
+Dentro de cada fase el orden es:
 
 ```text
 global
@@ -289,37 +216,37 @@ grupo interior
 ruta
 ```
 
-## 8. Acceso al contexto desde ORequest
+## 8. Contexto desde ORequest
 
 ```php
 $login = $req->getMiddleware(
-    'Login'
+	'Login'
 );
 
 $id = $req->getMiddlewareValue(
-    'Login',
-    'id'
+	'Login',
+	'id'
 );
 ```
 
-Un contexto inexistente devuelve un array vacío. Una propiedad inexistente devuelve `null`.
+Un contexto inexistente devuelve `[]` y una propiedad inexistente devuelve `null`.
 
-## 9. Contexto de Middleware desde DTOs
+## 9. Contexto desde DTOs
 
 ```php
 #[ODTOField(
-    required: true,
-    middleware: 'Login',
-    middlewareProperty: 'id'
+	required: true,
+	middleware: 'Login',
+	middlewareProperty: 'id'
 )]
 public ?int $idUser = null;
 ```
 
-`middleware` y `middlewareProperty` deben definirse juntos. El contexto de Middleware es un origen explícito y no usa como alternativa los datos enviados por el cliente.
+`middleware` y `middlewareProperty` deben definirse juntos. El origen Middleware no usa como alternativa los datos del cliente.
 
-## 10. Estado de error en afterResponse
+## 10. Estado de error en `afterResponse`
 
-Cuando `before` o `afterRender` detienen el pipeline, `afterResponse` continúa ejecutándose. Su `$data` contiene:
+Después de un `stop` anterior, `afterResponse` puede consultar:
 
 ```php
 $data['is_error']
@@ -331,41 +258,8 @@ $data['error_message']
 ## 11. Buenas prácticas
 
 - Usa `before` para autenticación, autorización y contexto.
-- Usa `afterRender` cuando necesites el cuerpo del componente antes del layout.
-- Usa `afterResponse` para transformaciones finales, auditoría y logging.
-- Mantén los Middlewares pequeños y con una responsabilidad clara.
-- Mueve la lógica de negocio compleja a servicios.
-- Publica solo el contexto necesario.
-- Usa nombres `XxxMiddleware`.
-- Prefiere las constantes `OMiddleware::PHASE_*`.
-- Usa el contexto de Middleware en DTOs para valores internos de confianza, como el ID del usuario autenticado.
-
-## 12. Flujo completo
-
-```text
-Petición del cliente
-↓
-Routing
-↓
-Middlewares before globales
-↓
-Middlewares before de grupos
-↓
-Middlewares before de ruta
-↓
-Componente / DTO / ORequest
-↓
-Renderizado del componente
-↓
-Middlewares afterRender
-↓
-Renderizado del layout
-↓
-Middlewares afterResponse
-↓
-Respuesta HTTP
-```
-
-Un `stop` en `before` o `afterRender` omite el procesamiento normal restante pero continúa hasta `afterResponse`.
-
-Un `stop` dentro de `afterResponse` termina esa fase final y envía directamente su respuesta de error.
+- Usa `afterRender` para cambios previos al layout en respuestas tradicionales.
+- Usa `afterResponse` para cambios finales, auditoría y logging.
+- En streaming, modifica cabeceras o estado, no `body`.
+- Mantén los Middlewares pequeños y mueve la lógica de negocio compleja a servicios.
+- Prefiere `OMiddleware::PHASE_*`.

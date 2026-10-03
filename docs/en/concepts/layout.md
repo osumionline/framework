@@ -6,11 +6,13 @@ Layouts are typically used to share the same HTML structure across multiple rout
 
 A layout is applied after the route component and the `afterRender` Middleware phase. It receives the current component output as its `body`.
 
+`OStreamResponse` responses are an exception: they do not have a materialized body that can be wrapped and **do not use a layout**.
+
 ---
 
 ## 1. Render Flow
 
-For a normal matched route, the relevant flow is:
+For a traditional response:
 
 ```text
 Routing
@@ -28,49 +30,44 @@ afterResponse Middlewares
 HTTP response
 ```
 
+For a streamed response:
+
+```text
+Routing
+↓
+before Middlewares
+↓
+Component → OStreamResponse
+↓
+afterRender Middlewares
+↓
+afterResponse Middlewares
+↓
+Stream emission
+```
+
 This means:
 
-- The action component produces page content.
-- `afterRender` Middlewares may inspect or replace that content before the layout.
+- `afterRender` runs before layout processing for traditional responses.
 - The layout wraps the resulting content.
-- `afterResponse` Middlewares run after the final body has been produced.
+- `afterResponse` runs after the traditional final body is produced.
+- For streaming, the layout is skipped and `afterResponse` completes before the first byte is sent.
 
-If a `before` Middleware stops execution, the component and layout are skipped.
+If `before` stops execution, the component and layout are skipped.
 
-If an `afterRender` Middleware stops execution, the layout is skipped.
-
-In both cases, `afterResponse` still runs before the response is emitted.
+If `afterRender` stops execution, the layout is skipped.
 
 ---
 
 ## 2. Default Layout
 
-New projects include a default layout.
-
-### Default Layout Component
-
-`DefaultLayoutComponent` exposes:
-
-- `title`
-- `body`
-
-### Default Layout Template
-
-The default template uses:
-
-- `{{title}}`
-- `{{body}}`
+New projects include a default layout. `DefaultLayoutComponent` normally exposes `title` and `body`.
 
 ---
 
 ## 3. Defining Layouts in Routing
 
-### Layout Group
-
 ```php
-use Osumi\OsumiFramework\App\Layout\MainLayoutComponent;
-use Osumi\OsumiFramework\Routing\ORoute;
-
 ORoute::layout(
 	MainLayoutComponent::class,
 	static function (): void {
@@ -80,9 +77,7 @@ ORoute::layout(
 );
 ```
 
-`ORoute::layout()` accepts an optional third argument containing Middleware definitions.
-
-### Layout + Prefix Group
+`ORoute::layout()` accepts an optional third Middleware argument.
 
 ```php
 ORoute::group(
@@ -90,12 +85,13 @@ ORoute::group(
 	AdminLayoutComponent::class,
 	static function (): void {
 		ORoute::get('/dashboard', DashboardComponent::class);
-		ORoute::get('/settings', SettingsComponent::class);
 	}
 );
 ```
 
-`ORoute::group()` accepts an optional fourth argument containing Middleware definitions.
+`ORoute::group()` accepts an optional fourth Middleware argument.
+
+Even when a route belongs to a layout group, the layout is skipped if its component returns `OStreamResponse`.
 
 See `/docs/en/concepts/middlewares.md`.
 
@@ -103,24 +99,25 @@ See `/docs/en/concepts/middlewares.md`.
 
 ## 4. CSS / JS Injection
 
-Layouts are the point where Osumi Framework injects configured frontend resources into documents containing `</head>`.
+Layouts are where Osumi Framework injects configured frontend resources into documents containing `</head>`.
+
+This injection does not apply to streamed responses.
 
 ---
 
 ## 5. Best Practices
 
-- Keep layouts structural.
+- Keep layouts focused on structure and presentation.
 - Do not place business logic in layouts.
 - Use dedicated layouts for different application areas where useful.
-- Prefer `ORoute::layout()` and `ORoute::group()` for consistent routing configuration.
-- Use `afterRender` Middlewares when output must be changed before layout wrapping.
+- Do not rely on a layout for headers required by a streamed download; define them in `OStreamResponse` or Middlewares.
 
 ---
 
 ## 6. Summary
 
-- Layouts wrap route component output.
-- `afterRender` executes before the layout.
-- `afterResponse` executes after the final body is produced.
-- A stopped `before` or `afterRender` phase skips layout rendering.
-- Route groups can combine layouts and Middlewares.
+- Layouts wrap traditional component responses.
+- `afterRender` runs before the layout.
+- `afterResponse` runs after the traditional final body.
+- A `stop` in `before` or `afterRender` skips layout rendering.
+- `OStreamResponse` always skips the layout.

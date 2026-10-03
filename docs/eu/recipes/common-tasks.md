@@ -1,6 +1,6 @@
 # Ohiko zereginak
 
-Dokumentu honek **Osumi Framework 9.9**-en ohiko zereginak konpontzeko modu kanonikoa erakusten du.
+Dokumentu honek **Osumi Framework 9.10**-en ohiko zereginak konpontzeko modu kanonikoa erakusten du.
 
 Adibide guztiek honako hau erabiltzen dute:
 
@@ -223,7 +223,7 @@ if (!$dto->isValid()) {
 
 # Laburpena
 
-9.9ko eredu kanonikoak:
+9.10ko eredu kanonikoak:
 
 - DTOak sarrera tipatu eta balioztaturako.
 - Middlewareak eskaera/erantzun logika zeharkakorako.

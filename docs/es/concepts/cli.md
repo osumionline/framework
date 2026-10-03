@@ -40,7 +40,7 @@ Esto crea:
 src/Middleware/LoginMiddleware.php
 ```
 
-La antigua opción `filter` de `add` no está soportada en 9.9.
+La antigua opción `filter` de `add` no está soportada desde 9.9.
 
 ---
 

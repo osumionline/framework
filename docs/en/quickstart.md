@@ -1,6 +1,6 @@
 # Quickstart Guide
 
-This guide walks through creating a fresh **Osumi Framework 9.9** project, installing the token plugin, generating an action and a Middleware with the CLI, creating a model, defining a protected route and returning JSON.
+This guide walks through creating a fresh **Osumi Framework 9.10** project, installing the token plugin, generating an action and a Middleware with the CLI, creating a model, defining a protected route and returning JSON.
 
 By the end you will have:
 
@@ -433,4 +433,4 @@ This quickstart covered:
 - Creating a model and Model Component
 - Returning JSON
 
-You now have the basic 9.9 authentication flow using Middlewares instead of legacy Filters.
+You now have the current authentication flow, introduced in 9.9 using Middlewares instead of legacy Filters.

@@ -1,5 +1,16 @@
 Proximamente en Osumi Framework:
 
+**~~9.10.0~~**
+
+- Nuevo soporte nativo para respuestas HTTP por streaming mediante `OStreamResponse`.
+- Los componentes pueden devolver un `OStreamResponse` directamente desde `run()` y omitir la plantilla.
+- Las respuestas streaming atraviesan las fases `afterRender` y `afterResponse` antes de comenzar la emisión.
+- Los layouts se omiten en respuestas streaming.
+- Los Middlewares pueden modificar cabeceras y estado HTTP durante una respuesta streaming, pero no sustituir su `body`.
+- Los streams se emiten por bloques para evitar cargar el contenido completo en memoria.
+- Las conexiones de base de datos se liberan antes de comenzar una emisión potencialmente larga.
+- Los streams administrados por el framework se cierran automáticamente al finalizar o descartar la respuesta.
+
 **~~9.9.0~~**
 
 - Nuevo sistema de `middlewares`.
@@ -38,19 +49,19 @@ ORoute::prefix('/admin', static function(): void {
 **~~9.4.0~~**
 
 - ~~`ORoute::view` Método para asignar directamente un Template a una ruta, sin tener que pasar por un componente. Sirve para mostrar datos estáticos.~~
-    - ~~`ORoute::view("/url", "ruta_al_archivo.html");`~~
-    - ~~`ORoute::view("/url", "ruta_al_archivo.html", LayoutComponent::class);`~~
+  - ~~`ORoute::view("/url", "ruta_al_archivo.html");`~~
+  - ~~`ORoute::view("/url", "ruta_al_archivo.html", LayoutComponent::class);`~~
 - ~~Nueva task `generateModelFrom --file` Método inverso a `generateModel`, sirve para generar las clases de modelo directamente a partir de un archivo JSON con la definición de una base de datos.~~
 - ~~Permitir método `run` en componentes que no son de ruta, si lo tiene ejecutarlo antes de hacer `render`. Serviría tanto para componentes de ruta (quitaría la ejecución de `OCore->run`) como componentes reutilizables. `render` tendría que aceptar `ORequest` y `ODTO`.~~
 - ~~Pipes en templates:~~
-    - ~~`{{ variable | función }}`~~
-    - ~~También para objetos `{{ objeto.propiedad }}`~~
-    - ~~`{{ variable | date("d/m/Y") }}` fecha/string con marcara para date o null.~~
-    - ~~`{{ variable | date }}` como el anterior pero con máscara por defecto (d/m/Y h:i:s).~~
-    - ~~`{{ variable | number(2, ",", "") }}` int/float con marcara para `number_format` o null.~~
-    - ~~`{{ variable | number }}` como el anterior pero con máscara por defecto (".", "")~~
-    - ~~`{{ variable | string }}` string con urlencode o null.~~
-    - ~~`{{ variable | bool }}` bool o null.~~
+  - ~~`{{ variable | función }}`~~
+  - ~~También para objetos `{{ objeto.propiedad }}`~~
+  - ~~`{{ variable | date("d/m/Y") }}` fecha/string con marcara para date o null.~~
+  - ~~`{{ variable | date }}` como el anterior pero con máscara por defecto (d/m/Y h:i:s).~~
+  - ~~`{{ variable | number(2, ",", "") }}` int/float con marcara para `number_format` o null.~~
+  - ~~`{{ variable | number }}` como el anterior pero con máscara por defecto (".", "")~~
+  - ~~`{{ variable | string }}` string con urlencode o null.~~
+  - ~~`{{ variable | bool }}` bool o null.~~
 
 **~~9.3.0~~**
 

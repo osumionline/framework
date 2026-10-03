@@ -1,6 +1,6 @@
 # Subida de archivos
 
-Las subidas de archivos en **Osumi Framework 9.9** siguen la misma estructura que el resto del manejo de peticiones:
+Las subidas de archivos en **Osumi Framework 9.10** siguen la misma estructura que el resto del manejo de peticiones:
 
 - `ORequest` expone los archivos subidos.
 - Los DTOs pueden validar los datos relacionados con la subida.

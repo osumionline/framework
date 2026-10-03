@@ -1,17 +1,17 @@
 # Osagaiak
 
-Osumi Framework-eko osagaiak txantiloi bat errendatzen duten kode-zati berrerabilgarriak dira. Osagai batek honako hauek ditu:
+Osumi Framework-eko osagaiak kode-zati berrerabilgarri txikiak dira. Normalean txantiloi bat errendatzen dute, baina **Osumi Framework 9.10** bertsiotik aurrera HTTP erantzun bat streaming bidez ere sor dezakete zuzenean `OStreamResponse` erabiliz.
+
+Osagai tradizional batek honako hauek ditu:
 
 - `OComponent` hedatzen duen PHP klase bat.
 - Txantiloi-fitxategi bat (`php`, `html`, `json` edo `xml`, erabileraren arabera).
 
-Osagaiaren instantzia sortu, propietateak esleitu eta ondoren errendatzen da.
+Streaming hutseko osagai batek txantiloia ez eduki dezake, `run()` metodoak `OStreamResponse` itzulera-mota esplizituki deklaratzen badu.
 
 ---
 
 ## Osagai baten oinarrizko egitura
-
-### Osagai-klasea
 
 ```php
 <?php
@@ -27,8 +27,6 @@ class LostPasswordComponent extends OComponent {
 }
 ```
 
-### Txantiloi-fitxategia
-
 ```html
 <div>
 	Token: {{ token }}
@@ -41,48 +39,25 @@ class LostPasswordComponent extends OComponent {
 
 ### Content-Type goiburu automatikoak
 
-Osagai bat URL baten ekintza nagusi gisa erabiltzen denean, framework-ak automatikoki bidaltzen du dagokion `Content-Type`, txantiloiaren luzapenaren arabera:
+Txantiloia duen osagai bat URL baten ekintza nagusi gisa erabiltzen denean, framework-ak `Content-Type` prestatzen du luzapenaren arabera:
 
 - `.json`: `application/json`.
-- `.xml`: `application/xml`.
+- `.xml`: `text/xml`.
 - `.html` / `.php`: `text/html`.
+
+`OStreamResponse` erantzunek beren HTTP goiburuak definitzen dituzte.
 
 ### Osagaien habiaratzea
 
-Osagaiak habiaratu daitezke berrerabilpena sustatzeko.
+Osagai tradizionalak habiaratu daitezke berrerabilpena sustatzeko.
 
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Osumi\OsumiFramework\App\Component\Father;
-
-use Osumi\OsumiFramework\App\Component\Child\ChildComponent;
-use Osumi\OsumiFramework\Core\OComponent;
-
-class FatherComponent extends OComponent {
-	public ?ChildComponent $child = null;
-
-	public function run(): void {
-		$this->child = new ChildComponent();
-		$this->child->name = 'Semearen izena';
-	}
-}
-```
-
-### Txantiloi-sintaxia
-
-1. **PHP txantiloiek (`.php`)** PHP exekuta dezakete eta propietate publikoak aldagai gisa atzitu.
-2. **Txantiloi estatiko/egituratuek (`.html`, `.json`, `.xml`)** `{{ variable_name }}` erabiltzen dute.
+`OStreamResponse` bat ezin da osagai habiaratu gisa errendatu eta ezin da string bihurtu.
 
 ---
 
 ## `run()` metodoa
 
-Osagai batek aukerako `run()` metodoa defini dezake.
-
-Ibilbide-ekintza gisa erabiltzen denean, honako sinadura hauek bakarrik onartzen dira:
+Ibilbide-ekintza gisa erabiltzen denean, parametro-kontratu hauek onartzen dira:
 
 ```php
 public function run(): void
@@ -96,109 +71,158 @@ public function run(ORequest $req): void
 public function run(MyDTO $dto): void
 ```
 
-Portaera:
+Arauak:
 
 - `run()`-ek ez du eskaera-daturik jasotzen.
 - `run(ORequest $req)`-ek uneko eskaera jasotzen du.
-- `run(MyDTO $dto)`-k uneko eskaeratik betetako DTO bat jasotzen du. `MyDTO`-k `ODTO` hedatu behar du.
-- DTOak `ODTO`-ren herentziaren bidez identifikatzen dira, ez namespace-aren bidez.
-- Ez da beste sinadurarik onartzen.
-- Parametro bakarra, baldin badago, ezin da nullable izan.
+- `run(MyDTO $dto)`-k eskaeratik betetako DTO bat jasotzen du; `MyDTO`-k `ODTO` hedatu behar du.
+- Ezin da parametro bat baino gehiago erabili.
+- Parametroa, baldin badago, ezin da nullable izan.
 
-`ORequest`-ek parametro tipatuetarako metodoak eskaintzen ditu:
-
-- `getParamString('name')`
-- `getParamInt('name')`
-- `getParamFloat('name')`
-- `getParamBool('name')`
+Metodoak txantiloi baterako propietateak presta ditzake edo `OStreamResponse` bat itzul dezake.
 
 ### Middleware testuingurua
 
-`ORequest`-ek exekutatutako Middlewareek argitaratutako testuingurua ere eskaintzen du.
-
-Middleware batek argitaratutako testuinguru osoa lortzeko:
+`ORequest`-ek exekutatutako Middlewareek argitaratutako testuingurua eskaintzen du:
 
 ```php
-public function run(ORequest $req): void {
-	$login = $req->getMiddleware(
-		'Login'
-	);
-}
+$login = $req->getMiddleware(
+	'Login'
+);
+
+$id = $req->getMiddlewareValue(
+	'Login',
+	'id'
+);
 ```
 
-Balio bakar bat lortzeko:
-
-```php
-public function run(ORequest $req): void {
-	$id = $req->getMiddlewareValue(
-		'Login',
-		'id'
-	);
-}
-```
-
-`LoginMiddleware` `Login` izen publikoaren bidez azaltzen da.
-
-Ez dagoen Middleware testuinguru batek array hutsa itzultzen du; ez dagoen testuinguru-balio batek `null`.
+Ez dagoen testuinguru batek `[]` itzultzen du eta ez dagoen balio batek `null`.
 
 Ikusi `/docs/eu/concepts/middlewares.md`.
 
 ---
 
-## Aukera globaletara sartzea
+## Streaming erantzunak `OStreamResponse` bidez
 
-Osagaiek framework-eko zerbitzuetara sarbidea dute:
+Streaming erantzun batek fitxategi handiak edo progresiboki sortutako edukia bidaltzeko aukera ematen du gorputz osoa memorian materializatu gabe.
 
-- `getConfig()`
-- `getLog()`
-- `getSession()`
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Osumi\OsumiFramework\App\Module\Download;
+
+use Osumi\OsumiFramework\Core\OComponent;
+use Osumi\OsumiFramework\Web\OStreamResponse;
+
+class DownloadComponent extends OComponent {
+	/**
+	 * Stream a file to the client.
+	 *
+	 * @return OStreamResponse Streamed HTTP response.
+	 */
+	public function run(): OStreamResponse {
+		$file = '/path/to/file.zip';
+		$stream = fopen(
+			$file,
+			'rb'
+		);
+
+		if ($stream === false) {
+			throw new \RuntimeException(
+				'Could not open file.'
+			);
+		}
+
+		$size = filesize(
+			$file
+		);
+
+		if ($size === false) {
+			fclose(
+				$stream
+			);
+
+			throw new \RuntimeException(
+				'Could not determine file size.'
+			);
+		}
+
+		return new OStreamResponse(
+			$stream,
+			[
+				'Content-Type' => 'application/zip',
+				'Content-Length' => strval($size),
+				'Content-Disposition' => 'attachment; filename="file.zip"'
+			]
+		);
+	}
+}
+```
+
+`run()` metodoak `OStreamResponse` esplizituki deklaratzen duenez, txantiloia ez da beharrezkoa.
+
+Honako sinadura hauek ere onartzen dira:
+
+```php
+public function run(ORequest $req): OStreamResponse
+```
+
+```php
+public function run(MyDTO $dto): OStreamResponse
+```
+
+`OStreamResponse` eraikitzaileak honako hauek jasotzen ditu:
+
+1. stream irakurgarria;
+2. HTTP goiburuak;
+3. HTTP egoera-kodea, lehenespenez `200`;
+4. blokearen tamaina, lehenespenez 1 MiB;
+5. framework-ak stream-a itxi behar duen, lehenespenez `true`.
+
+### Streaming bizi-zikloa
+
+```text
+before Middlewareak
+↓
+Osagaia
+↓
+OStreamResponse
+↓
+afterRender Middlewareak
+↓
+afterResponse Middlewareak
+↓
+Datu-baseko konexioak itxi
+↓
+HTTP goiburuak
+↓
+Stream-a blokeka bidali
+```
+
+Arauak:
+
+- Ez da layout-ik aplikatzen.
+- Ez da stream-eko byterik bidaltzen `afterRender` eta `afterResponse` amaitu arte.
+- Middlewareek goiburuak eta HTTP egoera alda ditzakete.
+- Middlewareek ezin dute `body` ordezkatu erantzuna streaming den bitartean.
+- `$data['is_streaming_response']` `true` da fase horietan.
+- Middleware batek emisioa hasi aurretik `stop` egiten badu, stream-a baztertzen da eta ohiko errore-erantzuna sortzen da.
+- Framework-aren jabetzako stream-ak amaitzean, baztertzean edo erantzuna ustekabean suntsitzean ixten dira.
 
 ---
 
 ## Osagaiak errendatzea
+
+Txantiloietan oinarritutako osagaiak string bihur daitezke:
 
 ```php
 $cmp = new BooksComponent();
 echo strval($cmp);
 ```
 
----
-
-# Txantiloi-pipeak
-
-Osumi Framework-eko txantiloiek Angular estiloko pipeak onartzen dituzte.
-
-## `date`
-
-Datak formateatzen ditu.
-
-## `number`
-
-`number_format()` erabiltzen du.
-
-## `string`
-
-`urlencode()` aplikatzen du eta komatxo arteko kate bat itzultzen du.
-
-## `plain`
-
-Kate bat JSONerako modu seguruan kodetzen du, URL kodetzea aplikatu gabe.
-
-```text
-John Doe → "John Doe"
-```
-
-Unicode karaktereak mantentzen dira eta JSON karaktere bereziak behar bezala ihes egiten dira.
-
-## `bool`
-
-Honako balio hauek sortzen ditu:
-
-```text
-true
-false
-null
-```
+`OStreamResponse` itzultzen duen osagai bat framework-aren HTTP pipeline-ak kudeatu behar du eta ezin da string bihurtu.
 
 ---
 
@@ -207,4 +231,5 @@ null
 - Mantendu txantiloiak sinpleak.
 - Erabili `run()` datuak prestatzeko.
 - Erabili propietate publiko tipatuak.
-- Hobetsi `?type = null` bezalako balio nullable-ak egokia denean.
+- Erabili `OStreamResponse` memoria osoan kargatu behar ez diren gorputz handi edo progresiboetarako.
+- Deklaratu `OStreamResponse` esplizituki itzulera-mota gisa osagaiak txantiloirik ez badu.

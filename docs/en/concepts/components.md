@@ -1,11 +1,13 @@
 # Components
 
-Components in Osumi Framework are small, reusable pieces of code that render a template. A component is composed of:
+Components in Osumi Framework are small, reusable pieces of code. They normally render a template, although since **Osumi Framework 9.10** they can also produce a streamed HTTP response directly through `OStreamResponse`.
+
+A traditional component consists of:
 
 - A PHP class extending `OComponent`.
 - A template file (`php`, `html`, `json` or `xml`, depending on usage).
 
-A component instance is created, properties are assigned, and then the component is rendered.
+A stream-only component may omit its template when its `run()` method explicitly declares `OStreamResponse` as its return type.
 
 ---
 
@@ -41,15 +43,17 @@ class LostPasswordComponent extends OComponent {
 
 ### Automatic Content-Type Headers
 
-When a component is used as the main action for a URL, the framework automatically sends the appropriate `Content-Type` header based on the template extension:
+When a template-based component is used as the main action for a URL, the framework prepares the appropriate `Content-Type` from the template extension:
 
 - `.json`: `application/json`.
-- `.xml`: `application/xml`.
+- `.xml`: `text/xml`.
 - `.html` / `.php`: `text/html`.
+
+`OStreamResponse` instances define their own HTTP headers.
 
 ### Component Nesting
 
-Components can be nested to promote reusability.
+Traditional components can be nested to promote reusability.
 
 ```php
 <?php
@@ -64,6 +68,11 @@ use Osumi\OsumiFramework\Core\OComponent;
 class FatherComponent extends OComponent {
 	public ?ChildComponent $child = null;
 
+	/**
+	 * Prepare the nested component.
+	 *
+	 * @return void
+	 */
 	public function run(): void {
 		$this->child = new ChildComponent();
 		$this->child->name = 'Child Name';
@@ -71,9 +80,11 @@ class FatherComponent extends OComponent {
 }
 ```
 
+An `OStreamResponse` cannot be rendered as a nested component or converted to a string.
+
 ### Template Syntax and Access
 
-1. **PHP templates (`.php`)** can execute PHP and access public properties as variables.
+1. **PHP templates (`.php`)** can execute PHP and access public properties as local variables.
 2. **Static/structured templates (`.html`, `.json`, `.xml`)** use `{{ variable_name }}`.
 
 ---
@@ -82,7 +93,7 @@ class FatherComponent extends OComponent {
 
 A component can define an optional `run()` method.
 
-When the component is used as a route action, exactly these signatures are supported:
+When the component is used as a route action, these parameter signatures are supported:
 
 ```php
 public function run(): void
@@ -102,21 +113,14 @@ Behavior:
 - `run(ORequest $req)` receives the current request.
 - `run(MyDTO $dto)` receives a DTO populated from the current request. `MyDTO` must extend `ODTO`.
 - DTOs are recognized through inheritance from `ODTO`, not through their namespace.
-- No other signatures are supported.
-- The single parameter, when present, must be non-nullable.
+- More than one parameter is not supported.
+- The parameter, when present, must be non-nullable.
 
-`ORequest` provides typed request accessors such as:
-
-- `getParamString('name')`
-- `getParamInt('name')`
-- `getParamFloat('name')`
-- `getParamBool('name')`
+The method may prepare properties for a template or return an `OStreamResponse`.
 
 ### Middleware Context
 
-`ORequest` also exposes context published by executed Middlewares.
-
-Get all context published by one Middleware:
+`ORequest` exposes context published by executed Middlewares.
 
 ```php
 public function run(ORequest $req): void {
@@ -125,8 +129,6 @@ public function run(ORequest $req): void {
 	);
 }
 ```
-
-Get one value:
 
 ```php
 public function run(ORequest $req): void {
@@ -139,40 +141,121 @@ public function run(ORequest $req): void {
 
 `LoginMiddleware` is exposed through the public name `Login`.
 
-A missing Middleware context returns an empty array, while a missing context value returns `null`.
+A missing Middleware context returns an empty array and a missing context value returns `null`.
 
 See `/docs/en/concepts/middlewares.md`.
 
-### Examples
+---
+
+## Streamed Responses with `OStreamResponse`
+
+A streamed response allows large files or progressively generated content to be sent without materializing the complete body in memory.
 
 ```php
-class BooksComponent extends OComponent {
-	public array $books = [];
+<?php
 
-	public function run(): void {
-		$this->books = [
-			'Book A',
-			'Book B'
-		];
-	}
-}
-```
+declare(strict_types=1);
 
-```php
-class GetBookComponent extends OComponent {
-	public ?Book $book = null;
+namespace Osumi\OsumiFramework\App\Module\Download;
 
-	public function run(ORequest $req): void {
-		$id_book = $req->getParamInt(
-			'id'
+use Osumi\OsumiFramework\Core\OComponent;
+use Osumi\OsumiFramework\Web\OStreamResponse;
+
+class DownloadComponent extends OComponent {
+	/**
+	 * Stream a file to the client.
+	 *
+	 * @return OStreamResponse Streamed HTTP response.
+	 */
+	public function run(): OStreamResponse {
+		$file = '/path/to/file.zip';
+		$stream = fopen(
+			$file,
+			'rb'
 		);
 
-		$this->book = Book::findOne([
-			'id' => $id_book
-		]);
+		if ($stream === false) {
+			throw new \RuntimeException(
+				'Could not open file.'
+			);
+		}
+
+		$size = filesize(
+			$file
+		);
+
+		if ($size === false) {
+			fclose(
+				$stream
+			);
+
+			throw new \RuntimeException(
+				'Could not determine file size.'
+			);
+		}
+
+		return new OStreamResponse(
+			$stream,
+			[
+				'Content-Type' => 'application/zip',
+				'Content-Length' => strval($size),
+				'Content-Disposition' => 'attachment; filename="file.zip"'
+			]
+		);
 	}
 }
 ```
+
+The template can be omitted because `run()` explicitly declares `OStreamResponse`.
+
+The normal route parameters are also supported:
+
+```php
+public function run(ORequest $req): OStreamResponse
+```
+
+```php
+public function run(MyDTO $dto): OStreamResponse
+```
+
+The `OStreamResponse` constructor receives:
+
+1. a readable stream;
+2. HTTP headers;
+3. HTTP status code, default `200`;
+4. chunk size, default 1 MiB;
+5. whether the framework should close the stream, default `true`.
+
+### Streaming lifecycle
+
+```text
+before Middlewares
+↓
+Component
+↓
+OStreamResponse
+↓
+afterRender Middlewares
+↓
+afterResponse Middlewares
+↓
+Database connections closed
+↓
+HTTP headers
+↓
+Chunked stream emission
+```
+
+Rules:
+
+- No layout is applied.
+- No stream bytes are sent until both `afterRender` and `afterResponse` finish.
+- Middlewares can change headers and HTTP status.
+- Middlewares cannot replace `body` while the response is streaming.
+- `$data['is_streaming_response']` is `true` during those phases.
+- If a Middleware stops before emission, the stream is discarded and the normal typed error response is produced.
+- Framework-owned streams are closed after completion, when discarded, or if the response is unexpectedly destroyed.
+- If reading fails after emission has started, the HTTP response can no longer be safely replaced with another body.
 
 ---
 
@@ -188,10 +271,14 @@ Components can access framework services such as:
 
 ## Rendering Components
 
+Template-based components can be converted to strings:
+
 ```php
 $cmp = new BooksComponent();
 echo strval($cmp);
 ```
+
+A component returning `OStreamResponse` must be handled by the framework HTTP pipeline and cannot be converted to a string.
 
 ---
 
@@ -211,119 +298,31 @@ Pipes are processed by `OPipeFunctions`.
 
 ## `date`
 
-Formats a date string.
-
-```text
-{{ user.created_at | date }}
-{{ user.created_at | date:"d/m/Y" }}
-```
-
-Default format:
-
-```text
-d/m/Y H:i:s
-```
+Formats date values. Default format: `d/m/Y H:i:s`.
 
 ## `number`
 
-Uses PHP `number_format()`.
-
-```text
-{{ price | number }}
-{{ price | number:2 }}
-{{ price | number:2:".":"," }}
-```
+Uses `number_format()`.
 
 ## `string`
 
 Applies `urlencode()` and returns a quoted string.
 
-```text
-{{ user.name | string }}
-```
-
-Example:
-
-```text
-John Doe → "John+Doe"
-```
-
 ## `plain`
 
-Encodes a string as a JSON-safe quoted value without URL encoding.
-
-```text
-{{ user.name | plain }}
-```
-
-Behavior:
-
-- `null` → `null`
-- Unicode is preserved.
-- Slashes are not escaped.
-- JSON-sensitive characters are escaped correctly.
-
-Examples:
-
-```text
-John Doe → "John Doe"
-He said "hello" → "He said \"hello\""
-```
-
-This pipe is especially useful in JSON templates.
+Encodes a string as a JSON-safe quoted value without URL encoding. Unicode is preserved and JSON-sensitive characters are escaped correctly.
 
 ## `bool`
 
-Produces:
-
-```text
-true
-false
-null
-```
-
-### JSON Example
-
-```json
-{
-	"id": {{ user.id | number }},
-	"name": {{ user.name | plain }},
-	"slug": {{ user.slug | string }},
-	"created": {{ user.created_at | date:"d/m/Y" }},
-	"active": {{ user.active | bool }}
-}
-```
-
-### Summary
-
-| Pipe     | Purpose | Notes |
-| -------- | ------- | ----- |
-| `date`   | Format date values | Accepts custom masks |
-| `number` | Format numeric values | Supports decimals and separators |
-| `string` | URL-encode strings | Adds quotes |
-| `plain`  | JSON-safe plain strings | Adds quotes without URL encoding |
-| `bool`   | Normalize boolean output | `true` / `false` / `null` |
-
----
-
-### Model-bound Components
-
-```php
-namespace Osumi\OsumiFramework\App\Component\Model\User;
-
-use Osumi\OsumiFramework\App\Model\User;
-use Osumi\OsumiFramework\Core\OComponent;
-
-class UserComponent extends OComponent {
-	public ?User $user = null;
-}
-```
+Produces `true`, `false` or `null`.
 
 ---
 
 ## Best Practices
 
 - Keep templates simple.
-- Use `run()` for preparing data.
+- Use `run()` to prepare data.
 - Use typed public properties.
 - Prefer nullable defaults such as `?type = null` where appropriate.
+- Use `OStreamResponse` for large or progressive bodies that should not be fully loaded into memory.
+- Explicitly declare `OStreamResponse` as the return type when the component has no template.

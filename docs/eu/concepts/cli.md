@@ -40,7 +40,7 @@ Horrek hau sortzen du:
 src/Middleware/LoginMiddleware.php
 ```
 
-`add`-en `filter` aukera zaharra ez dago 9.9 bertsioan erabilgarri.
+`add`-en `filter` aukera zaharra ez dago 9.9 bertsiotik erabilgarri.
 
 ---
 

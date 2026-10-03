@@ -1,6 +1,6 @@
 # Hasiera azkarreko gida
 
-Gida honek **Osumi Framework 9.9** proiektu berri bat sortzen, token plugina instalatzen, CLI bidez ekintza bat eta Middleware bat sortzen, modelo bat definitzen, babestutako ibilbide bat konfiguratzen eta JSON erantzuna sortzen erakusten du.
+Gida honek **Osumi Framework 9.10** proiektu berri bat sortzen, token plugina instalatzen, CLI bidez ekintza bat eta Middleware bat sortzen, modelo bat definitzen, babestutako ibilbide bat konfiguratzen eta JSON erantzuna sortzen erakusten du.
 
 Amaitzean honako hau izango duzu:
 
@@ -433,4 +433,4 @@ Gida honetan honako hauek landu dira:
 - Modelo bat eta modelo-osagai bat sortzea.
 - JSON itzultzea.
 
-Hau da 9.9ko autentifikazio-fluxuaren oinarria, Middlewareak erabiliz Filter zaharren ordez.
+Hau da egungo autentifikazio-fluxuaren oinarria, 9.9 bertsioan sartutakoa, Middlewareak erabiliz Filter zaharren ordez.

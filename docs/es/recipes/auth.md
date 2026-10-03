@@ -1,6 +1,6 @@
 # Autenticación — Recetas y buenas prácticas
 
-La autenticación en **Osumi Framework 9.9** se construye normalmente mediante:
+La autenticación en **Osumi Framework 9.10** se construye normalmente mediante:
 
 - Un endpoint de login que valida credenciales y emite un token.
 - Un Middleware `before` que valida el token en las rutas protegidas.
@@ -336,4 +336,4 @@ Un flujo de autenticación habitual contiene:
 5. DTOs y/o `ORequest` que consumen ese contexto.
 6. Servicios que contienen la lógica de negocio.
 
-Este es el reemplazo canónico en 9.9 del antiguo flujo de autenticación basado en Filters.
+Este es el reemplazo canónico, introducido en 9.9, del antiguo flujo de autenticación basado en Filters.

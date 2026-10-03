@@ -1,6 +1,6 @@
 # Fitxategien igoerak
 
-**Osumi Framework 9.9**-en fitxategien igoerek eskaeren gainerako kudeaketaren egitura bera jarraitzen dute:
+**Osumi Framework 9.10**-en fitxategien igoerek eskaeren gainerako kudeaketaren egitura bera jarraitzen dute:
 
 - `ORequest`-ek igotako fitxategiak eskaintzen ditu.
 - DTOek igoerarekin lotutako datuak baliozkotu ditzakete.

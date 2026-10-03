@@ -6,7 +6,7 @@ This file is optimized for AI systems. Prefer explicit, strictly typed code and 
 
 ## Version
 
-- Framework: 9.9.1
+- Framework: 9.10.0
 - PHP: 8.5+
 - `declare(strict_types=1);` should be used in PHP files.
 
@@ -17,32 +17,14 @@ This file is optimized for AI systems. Prefer explicit, strictly typed code and 
 - Request access: `ORequest`
 - DTOs: `ODTO` + `#[ODTOField]`
 - Components: `OComponent`
+- Streamed responses: `OStreamResponse`
 - ORM models: `OModel`
 - Services: `OService`
 - CLI tasks: `OTask`
 
-## Project structure
-
-Typical application paths:
-
-- `public/index.php`
-- `src/Config/`
-- `src/Component/`
-- `src/DTO/`
-- `src/Layout/`
-- `src/Middleware/`
-- `src/Model/`
-- `src/Routes/`
-- `src/Service/`
-- `src/Task/`
-
-Global Middleware configuration is stored in:
-
-- `src/Middleware/Middlewares.php`
-
 ## Request lifecycle
 
-For a matched route:
+Traditional response:
 
 ```text
 Routing
@@ -62,35 +44,33 @@ afterResponse Middlewares
 HTTP response
 ```
 
-Middleware phases:
-
-- `OMiddleware::PHASE_BEFORE`
-- `OMiddleware::PHASE_AFTER_RENDER`
-- `OMiddleware::PHASE_AFTER_RESPONSE`
-
-Per phase, execution order is:
+Streamed response:
 
 ```text
-global
+Routing
 ↓
-outer group
+before Middlewares
 ↓
-inner group
+Component → OStreamResponse
 ↓
-route
+afterRender Middlewares
+↓
+afterResponse Middlewares
+↓
+Close DB connections
+↓
+HTTP headers
+↓
+Chunked stream emission
 ```
 
-A `stop` in `before` skips the component and layout, but `afterResponse` still runs.
-
-A `stop` in `afterRender` skips the layout, but `afterResponse` still runs.
-
-A `stop` in `afterResponse` skips the remaining Middlewares in that phase and directly emits its typed error response.
+No stream bytes are emitted before `afterRender` and `afterResponse` complete. Layouts are skipped for streamed responses.
 
 404, 405 and OPTIONS handling are outside the normal matched-route Middleware pipeline.
 
 ## Middleware contract
 
-A Middleware class exposes:
+A Middleware exposes:
 
 ```php
 public static function handle(
@@ -101,171 +81,88 @@ public static function handle(
 
 Supported result keys:
 
-- `context`: `array<string, mixed>`
-- `body`: string; applies in `afterRender` and `afterResponse`
-- `headers`: `array<string, string>`
-- `status_code`: integer HTTP status from 100 to 599
-- `stop`: boolean
-- `message`: error message used when stopping
+- `context`
+- `body`
+- `headers`
+- `status_code`
+- `stop`
+- `message`
 
-Public Middleware context name is the class name without the final `Middleware` suffix.
-
-Example:
-
-- `LoginMiddleware` → `Login`
-
-Global Middlewares:
-
-```php
-OMiddleware::setGlobal([
-    OMiddleware::PHASE_BEFORE => [],
-    OMiddleware::PHASE_AFTER_RENDER => [],
-    OMiddleware::PHASE_AFTER_RESPONSE => []
-]);
-```
-
-## Route Middlewares
-
-Example:
-
-```php
-ORoute::get(
-    '/profile',
-    ProfileComponent::class,
-    [
-        OMiddleware::PHASE_BEFORE => [
-            LoginMiddleware::class
-        ]
-    ]
-);
-```
-
-`prefix()`, `layout()` and `group()` can also receive Middleware definitions. Nested groups accumulate them.
+During streamed responses, `$data['is_streaming_response']` is `true` in `afterRender` and `afterResponse`. Middlewares may modify context, headers and status or stop before emission, but must not return `body`.
 
 ## ORequest Middleware context
 
-```php
-$context = $req->getMiddleware(
-    'Login'
-);
-
-$id = $req->getMiddlewareValue(
-    'Login',
-    'id'
-);
-```
-
-Missing Middleware context returns an empty array.
-
-Missing context values return `null`.
+Use `getMiddleware()` and `getMiddlewareValue()`. Missing context returns `[]`; missing values return `null`.
 
 ## DTO Middleware source
 
-Trusted Middleware context can be used as an explicit DTO field source:
-
-```php
-#[ODTOField(
-    required: true,
-    middleware: 'Login',
-    middlewareProperty: 'id'
-)]
-public ?int $idUser = null;
-```
-
-`middleware` and `middlewareProperty` must be defined together.
-
-When Middleware context is the explicit source, missing context does not fall back to client input.
+`middleware` and `middlewareProperty` must be defined together. Missing Middleware context never falls back to client input.
 
 ## Component run() signatures
 
-A route component can use exactly one of:
+Accepted parameter shapes:
 
 ```php
 public function run(): void
-```
-
-```php
 public function run(ORequest $req): void
-```
-
-```php
 public function run(MyDTO $dto): void
 ```
 
-`MyDTO` must extend `ODTO`.
+Streamed variants:
 
-No other parameter types or signatures are supported.
+```php
+public function run(): OStreamResponse
+public function run(ORequest $req): OStreamResponse
+public function run(MyDTO $dto): OStreamResponse
+```
 
-## Templates and pipes
+`MyDTO` must extend `ODTO`. More than one parameter is invalid and the parameter cannot be nullable.
+
+A component without a template must explicitly declare `OStreamResponse` as its `run()` return type.
+
+## OStreamResponse
+
+`Osumi\OsumiFramework\Web\OStreamResponse` wraps:
+
+- a readable PHP stream resource;
+- response headers;
+- HTTP status code, default 200;
+- chunk size, default 1 MiB;
+- automatic stream closing, default true.
+
+Framework-owned streams are closed after emission, when discarded or when the response is destroyed. A streamed response cannot be nested in another component or converted to a string.
+
+## Templates and layouts
 
 Templates may be `.php`, `.html`, `.json` or `.xml`.
 
-Supported pipes include:
+Supported pipes include `date`, `number`, `string`, `plain`, `bool`.
 
-- `date`
-- `number`
-- `string` → URL-encoded quoted string
-- `plain` → JSON-safe quoted string without URL encoding
-- `bool`
+Layouts wrap traditional component bodies only. They are never applied to `OStreamResponse`.
 
 ## ORM
 
-Models extend `OModel` and use PHP attributes such as:
+Models extend `OModel` and use attributes such as `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]`.
 
-- `#[OPK]`
-- `#[OField]`
-- `#[OCreatedAt]`
-- `#[OUpdatedAt]`
+## CLI and migrations
 
-## CLI
+Application CLI: `php of <task>`.
 
-Application CLI:
+Framework migration CLI: `php vendor/bin/ofw-migrate --help`.
 
-```bash
-php of <task>
-```
-
-Create a Middleware:
-
-```bash
-php of add --option middleware --name Login
-```
-
-Framework migration CLI:
-
-```bash
-php vendor/bin/ofw-migrate --help
-```
-
-Supported migration options:
-
-- `--from`
-- `--to`
-- `--dry-run`
-- `--force`
-- `--verbose`
-- `--no-interaction`
-- `--help`
-
-Migration state is stored in:
-
-- `ofw/tmp/state.json`
+Migration state is stored in `ofw/tmp/state.json`.
 
 ## Legacy Filters
 
-Filters are not part of the 9.9 runtime API.
-
-Do not generate new Filter classes, `getFilter()`, `getFilters()`, `filter`, or `filterProperty` usage.
-
-The 9.9 migration system can preserve legacy Filter business logic by generating Middleware adapters for migrated projects. New code should use native Middlewares.
+Filters predate 9.9 and are not part of the current runtime API. New code must use native Middlewares. The 9.9 migration system can preserve supported legacy logic through generated Middleware adapters.
 
 ## Authoritative documentation
 
-- `docs/en/concepts/middlewares.md`
-- `docs/en/concepts/routing.md`
-- `docs/en/concepts/dtos.md`
 - `docs/en/concepts/components.md`
+- `docs/en/concepts/middlewares.md`
+- `docs/en/concepts/layout.md`
 - `docs/en/llm/osumi-framework-llm.md`
+- `docs/en/migrations/9.9.1-to-9.10.0.md`
 
 Web documentation:
 

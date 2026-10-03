@@ -1,53 +1,53 @@
 {
-	"name": "osumionline/framework",
-	"description": "Framework PHP de Osumi para aplicaciones web.",
-	"version": "9.9.1",
-	"type": "library",
-	"bin": [
-		"bin/ofw-migrate"
-	],
-	"keywords": [
-		"framework",
-		"php",
-		"web",
-		"osumi"
-	],
-	"homepage": "https://github.com/osumionline/framework",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Iñigo Gorosabel",
-			"homepage": "https://osumi.es",
-			"role": "Developer"
-		}
-	],
-	"require": {
-		"php": ">=8.5",
-		"ext-json": "*",
-		"osumionline/plugin-updater": "^1.0"
-	},
-	"require-dev": {
-		"phpunit/phpunit": "^13.3"
-	},
-	"autoload": {
-		"psr-4": {
-			"Osumi\\OsumiFramework\\": "src/"
-		}
-	},
-	"autoload-dev": {
-		"psr-4": {
-			"Osumi\\OsumiFramework\\Tests\\": "tests/"
-		}
-	},
-	"scripts": {
-		"test": "phpunit"
-	},
-	"config": {
-		"allow-plugins": {
-			"osumionline/plugin-updater": true
-		}
-	},
-	"extra": {
-		"version-description": "Corrección en la detección de rutas con Middlewares durante las migraciones."
-	}
+  "name": "osumionline/framework",
+  "description": "Framework PHP de Osumi para aplicaciones web.",
+  "version": "9.10.0",
+  "type": "library",
+  "bin": [
+    "bin/ofw-migrate"
+  ],
+  "keywords": [
+    "framework",
+    "php",
+    "web",
+    "osumi"
+  ],
+  "homepage": "https://github.com/osumionline/framework",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Iñigo Gorosabel",
+      "homepage": "https://osumi.es",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.5",
+    "ext-json": "*",
+    "osumionline/plugin-updater": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^13.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "Osumi\\OsumiFramework\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Osumi\\OsumiFramework\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "config": {
+    "allow-plugins": {
+      "osumionline/plugin-updater": true
+    }
+  },
+  "extra": {
+    "version-description": "Soporte nativo para respuestas HTTP por streaming mediante OStreamResponse."
+  }
 }

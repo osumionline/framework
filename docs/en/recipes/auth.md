@@ -1,6 +1,6 @@
 # Authentication — Recipes & Best Practices
 
-Authentication in **Osumi Framework 9.9** is typically built with:
+Authentication in **Osumi Framework 9.10** is typically built with:
 
 - A login endpoint that validates credentials and issues a token.
 - A `before` Middleware that validates the token on protected routes.
@@ -336,4 +336,4 @@ A typical authentication flow contains:
 5. DTOs and/or `ORequest` consuming that context.
 6. Services containing business logic.
 
-This is the canonical 9.9 replacement for the legacy Filter-based authentication flow.
+This is the canonical replacement, introduced in 9.9, for the legacy Filter-based authentication flow.

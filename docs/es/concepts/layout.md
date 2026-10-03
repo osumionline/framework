@@ -6,11 +6,13 @@ Los layouts se utilizan normalmente para compartir la misma estructura HTML entr
 
 Un layout se aplica después del componente de la ruta y de la fase Middleware `afterRender`. Recibe la salida actual del componente como su `body`.
 
+Las respuestas `OStreamResponse` son una excepción: no tienen un cuerpo materializado que pueda envolverse y **no utilizan layout**.
+
 ---
 
 ## 1. Flujo de renderizado
 
-Para una ruta encontrada normalmente, el flujo relevante es:
+Para una respuesta tradicional:
 
 ```text
 Enrutamiento
@@ -28,49 +30,44 @@ Middlewares afterResponse
 Respuesta HTTP
 ```
 
+Para una respuesta streaming:
+
+```text
+Enrutamiento
+↓
+Middlewares before
+↓
+Componente → OStreamResponse
+↓
+Middlewares afterRender
+↓
+Middlewares afterResponse
+↓
+Emisión del stream
+```
+
 Esto significa:
 
-- El componente de acción produce el contenido de la página.
-- Los Middlewares `afterRender` pueden inspeccionar o sustituir ese contenido antes del layout.
+- `afterRender` se ejecuta antes del layout en respuestas tradicionales.
 - El layout envuelve el contenido resultante.
-- Los Middlewares `afterResponse` se ejecutan después de producir el cuerpo final.
+- `afterResponse` se ejecuta después de producir el cuerpo final tradicional.
+- En streaming, el layout se omite y `afterResponse` termina antes de enviar el primer byte.
 
-Si un Middleware `before` detiene la ejecución, se omiten el componente y el layout.
+Si `before` detiene la ejecución, se omiten el componente y el layout.
 
-Si un Middleware `afterRender` detiene la ejecución, se omite el layout.
-
-En ambos casos, `afterResponse` sigue ejecutándose antes de enviar la respuesta.
+Si `afterRender` detiene la ejecución, se omite el layout.
 
 ---
 
 ## 2. Layout predeterminado
 
-Los nuevos proyectos incluyen un layout predeterminado.
-
-### Componente del layout predeterminado
-
-`DefaultLayoutComponent` expone:
-
-- `title`
-- `body`
-
-### Plantilla del layout predeterminado
-
-La plantilla predeterminada utiliza:
-
-- `{{title}}`
-- `{{body}}`
+Los nuevos proyectos incluyen un layout predeterminado. `DefaultLayoutComponent` expone normalmente `title` y `body`.
 
 ---
 
 ## 3. Definición de layouts en el enrutamiento
 
-### Grupo de layout
-
 ```php
-use Osumi\OsumiFramework\App\Layout\MainLayoutComponent;
-use Osumi\OsumiFramework\Routing\ORoute;
-
 ORoute::layout(
 	MainLayoutComponent::class,
 	static function (): void {
@@ -80,9 +77,7 @@ ORoute::layout(
 );
 ```
 
-`ORoute::layout()` acepta un tercer argumento opcional con definiciones de Middlewares.
-
-### Grupo de layout + prefijo
+`ORoute::layout()` acepta un tercer argumento opcional con Middlewares.
 
 ```php
 ORoute::group(
@@ -90,12 +85,13 @@ ORoute::group(
 	AdminLayoutComponent::class,
 	static function (): void {
 		ORoute::get('/dashboard', DashboardComponent::class);
-		ORoute::get('/settings', SettingsComponent::class);
 	}
 );
 ```
 
-`ORoute::group()` acepta un cuarto argumento opcional con definiciones de Middlewares.
+`ORoute::group()` acepta un cuarto argumento opcional con Middlewares.
+
+Aunque una ruta esté dentro de un grupo con layout, si su componente devuelve `OStreamResponse` ese layout se omite.
 
 Consulta `/docs/es/concepts/middlewares.md`.
 
@@ -105,22 +101,23 @@ Consulta `/docs/es/concepts/middlewares.md`.
 
 Los layouts son el punto donde Osumi Framework inyecta los recursos frontend configurados en documentos que contienen `</head>`.
 
+Esta inyección no se aplica a respuestas streaming.
+
 ---
 
 ## 5. Mejores prácticas
 
-- Mantén los layouts centrados en la estructura.
+- Mantén los layouts centrados en estructura y presentación.
 - No incluyas lógica de negocio en los layouts.
-- Usa layouts dedicados para distintas áreas de la aplicación cuando sea útil.
-- Prefiere `ORoute::layout()` y `ORoute::group()` para mantener una configuración de rutas consistente.
-- Usa Middlewares `afterRender` cuando haya que modificar la salida antes de envolverla con el layout.
+- Usa layouts dedicados para distintas áreas cuando sea útil.
+- No dependas de un layout para cabeceras necesarias en una descarga streaming; defínelas en `OStreamResponse` o en Middlewares.
 
 ---
 
 ## 6. Resumen
 
-- Los layouts envuelven la salida del componente de ruta.
+- Los layouts envuelven respuestas tradicionales basadas en componentes.
 - `afterRender` se ejecuta antes del layout.
-- `afterResponse` se ejecuta después de producir el cuerpo final.
-- Un `stop` en `before` o `afterRender` evita el renderizado del layout.
-- Los grupos de rutas pueden combinar layouts y Middlewares.
+- `afterResponse` se ejecuta después del cuerpo final tradicional.
+- Un `stop` en `before` o `afterRender` evita el layout.
+- `OStreamResponse` omite siempre el layout.

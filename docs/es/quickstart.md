@@ -1,6 +1,6 @@
 # Guía de inicio rápido
 
-Esta guía muestra cómo crear un proyecto nuevo de **Osumi Framework 9.9**, instalar el plugin de token, generar una acción y un Middleware mediante la CLI, crear un modelo, definir una ruta protegida y devolver JSON.
+Esta guía muestra cómo crear un proyecto nuevo de **Osumi Framework 9.10**, instalar el plugin de token, generar una acción y un Middleware mediante la CLI, crear un modelo, definir una ruta protegida y devolver JSON.
 
 Al finalizar tendrás:
 
@@ -433,4 +433,4 @@ Esta guía ha cubierto:
 - Crear un modelo y un componente de modelo.
 - Devolver JSON.
 
-Esta es la base del flujo de autenticación de 9.9 mediante Middlewares en lugar de los antiguos Filters.
+Esta es la base del flujo de autenticación actual, introducido en 9.9 mediante Middlewares en lugar de los antiguos Filters.

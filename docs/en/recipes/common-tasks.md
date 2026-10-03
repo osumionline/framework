@@ -1,6 +1,6 @@
 # Common Tasks
 
-This document shows the canonical way to solve common tasks in **Osumi Framework 9.9**.
+This document shows the canonical way to solve common tasks in **Osumi Framework 9.10**.
 
 All examples assume:
 
@@ -223,7 +223,7 @@ if (!$dto->isValid()) {
 
 # Summary
 
-Canonical 9.9 patterns:
+Canonical 9.10 patterns:
 
 - DTOs for typed and validated input.
 - Middlewares for cross-cutting request/response logic.
