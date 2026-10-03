@@ -1306,14 +1306,27 @@ class OCore {
 	}
 
 	/**
-	 * Sets the HTTP status
+	 * Sets the HTTP status.
 	 *
-	 * @param int $http_status HTTP status number
+	 * The status is also propagated to the middleware response state so the
+	 * historical component API remains authoritative unless a later middleware
+	 * explicitly overrides it.
+	 *
+	 * @param int $http_status HTTP status number.
 	 *
 	 * @return void
 	 */
 	public function setHttpStatus(int $http_status): void {
 		$this->http_status = $http_status;
+
+		if (
+			$http_status >= 100 &&
+			$http_status <= 599
+		) {
+			OMiddleware::setStatusCode(
+				$http_status
+			);
+		}
 	}
 
 	/**

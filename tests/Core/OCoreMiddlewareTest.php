@@ -327,6 +327,42 @@ final class ThrowStreamAfterRenderMiddleware {
     }
 }
 
+final class SetCoreStatusMiddleware {
+    /**
+     * Change the HTTP status through the public OCore API.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     *
+     * @throws \RuntimeException If the test core is unavailable.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase !== OMiddleware::PHASE_AFTER_RENDER) {
+            return [];
+        }
+
+        $core = $GLOBALS['core']
+            ?? null;
+
+        if (!$core instanceof OCore) {
+            throw new \RuntimeException(
+                'Test core is not available.'
+            );
+        }
+
+        $core->setHttpStatus(
+            404
+        );
+
+        return [];
+    }
+}
+
 final class OCoreMiddlewareTest extends TestCase {
     private TemporaryProject $project;
     private bool $core_existed = false;
@@ -999,6 +1035,39 @@ final class OCoreMiddlewareTest extends TestCase {
 
         self::assertFalse(
             CoreStreamComponent::$last_response->isOpen()
+        );
+    }
+
+    /**
+     * Test that OCore::setHttpStatus remains effective in the middleware pipeline.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testCoreHttpStatusIsPropagatedToFinalResponse(): void {
+        ORoute::get(
+            '/core-status',
+            BasicComponent::class,
+            [
+                'afterRender' => [
+                    SetCoreStatusMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/core-status';
+
+        $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            404,
+            http_response_code()
+        );
+
+        self::assertSame(
+            404,
+            OMiddleware::getStatusCode()
         );
     }
 

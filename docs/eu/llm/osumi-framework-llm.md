@@ -9,7 +9,7 @@ Framework-aren portaera bat hemen dokumentatuta ez badago, ez asmatu.
 ## 0. Framework-aren identitatea
 
 - **Izena:** Osumi Framework
-- **Bertsioa:** 9.10.0
+- **Bertsioa:** 9.10.1
 - **Hizkuntza:** PHP
 - **Gutxieneko PHP bertsioa:** 8.5+
 - **Tipatzea:** erabili `declare(strict_types=1);`

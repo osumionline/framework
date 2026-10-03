@@ -9,7 +9,7 @@ When framework behavior is not documented here, do not invent it.
 ## 0. Framework Identity
 
 - **Name:** Osumi Framework
-- **Version:** 9.10.0
+- **Version:** 9.10.1
 - **Language:** PHP
 - **Minimum PHP:** 8.5+
 - **Typing:** use `declare(strict_types=1);`

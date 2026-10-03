@@ -9,7 +9,7 @@ Cuando un comportamiento del framework no esté documentado aquí, no debe inven
 ## 0. Identidad del framework
 
 - **Nombre:** Osumi Framework
-- **Versión:** 9.10.0
+- **Versión:** 9.10.1
 - **Lenguaje:** PHP
 - **PHP mínimo:** 8.5+
 - **Tipado:** usar `declare(strict_types=1);`
