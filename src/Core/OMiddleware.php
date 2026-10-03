@@ -274,6 +274,49 @@ final class OMiddleware {
     }
 
     /**
+     * Replace all accumulated response headers.
+     *
+     * Header validation is performed before the previous header collection is
+     * discarded so an invalid replacement cannot leave partial response state.
+     *
+     * @param array<string, string> $headers Complete response header collection.
+     *
+     * @return void
+     *
+     * @throws \InvalidArgumentException If a header name or value is invalid.
+     */
+    public static function replaceHeaders(
+        array $headers
+    ): void {
+        foreach ($headers as $name => $value) {
+            if (
+                !is_string($name) ||
+                !is_string($value)
+            ) {
+                throw new \InvalidArgumentException(
+                    'Response headers must contain string names and string values.'
+                );
+            }
+        }
+
+        $previous_headers = self::$headers;
+        self::$headers = [];
+
+        try {
+            foreach ($headers as $name => $value) {
+                self::setHeader(
+                    $name,
+                    $value
+                );
+            }
+        } catch (\Throwable $exception) {
+            self::$headers = $previous_headers;
+
+            throw $exception;
+        }
+    }
+
+    /**
      * Set the response HTTP status code.
      *
      * @param int $status_code HTTP status code.
@@ -303,31 +346,31 @@ final class OMiddleware {
     public static function getStatusCode(): int {
         return self::$status_code;
     }
-    
-    /**
- 	 * Set whether the current response is streamed.
- 	 *
- 	 * Streamed responses still pass through middleware phases, but their body
- 	 * cannot be replaced by middleware because it is emitted progressively.
- 	 *
- 	 * @param bool $is_streaming_response Whether the response is streamed.
- 	 *
- 	 * @return void
- 	 */
-	public static function setStreamingResponse(
-    	bool $is_streaming_response
-	): void {
-    	self::$is_streaming_response = $is_streaming_response;
-	}
 
-	/**
- 	 * Check whether the current response is streamed.
- 	 *
- 	 * @return bool True when the current response is streamed.
- 	 */
-	public static function isStreamingResponse(): bool {
-    	return self::$is_streaming_response;
-	}
+    /**
+     * Set whether the current response is streamed.
+     *
+     * Streamed responses still pass through middleware phases, but their body
+     * cannot be replaced by middleware because it is emitted progressively.
+     *
+     * @param bool $is_streaming_response Whether the response is streamed.
+     *
+     * @return void
+     */
+    public static function setStreamingResponse(
+        bool $is_streaming_response
+    ): void {
+        self::$is_streaming_response = $is_streaming_response;
+    }
+
+    /**
+     * Check whether the current response is streamed.
+     *
+     * @return bool True when the current response is streamed.
+     */
+    public static function isStreamingResponse(): bool {
+        return self::$is_streaming_response;
+    }
 
     /**
      * Check whether a middleware stopped the normal pipeline.
@@ -685,31 +728,31 @@ final class OMiddleware {
         }
 
         if (
-    		array_key_exists(
-        		'body',
-        		$result
-    		)
-		) {
-    		if (self::$is_streaming_response) {
-        		throw new \InvalidArgumentException(
-            		"Middleware '{$middleware_class}' cannot replace the body of a streamed response."
-        		);
-    		}
+            array_key_exists(
+                'body',
+                $result
+            )
+        ) {
+            if (self::$is_streaming_response) {
+                throw new \InvalidArgumentException(
+                    "Middleware '{$middleware_class}' cannot replace the body of a streamed response."
+                );
+            }
 
-    		if (!is_string($result['body'])) {
-        		throw new \InvalidArgumentException(
-            		"Middleware '{$middleware_class}' returned a non-string 'body' value."
-        		);
-    		}
+            if (!is_string($result['body'])) {
+                throw new \InvalidArgumentException(
+                    "Middleware '{$middleware_class}' returned a non-string 'body' value."
+                );
+            }
 
-    		if ($phase === self::PHASE_AFTER_RENDER) {
-        		self::$component_body = $result['body'];
-    		}
+            if ($phase === self::PHASE_AFTER_RENDER) {
+                self::$component_body = $result['body'];
+            }
 
-    		if ($phase === self::PHASE_AFTER_RESPONSE) {
-        		self::$final_body = $result['body'];
-    		}
-		}
+            if ($phase === self::PHASE_AFTER_RESPONSE) {
+                self::$final_body = $result['body'];
+            }
+        }
 
         if (
             array_key_exists(

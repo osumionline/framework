@@ -10,6 +10,7 @@ use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Core\OCore;
 use Osumi\OsumiFramework\Core\OMiddleware;
 use Osumi\OsumiFramework\Routing\ORoute;
+use Osumi\OsumiFramework\Web\OStreamResponse;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\BasicComponent;
 use Osumi\OsumiFramework\Tests\Support\TemporaryProject;
 use PHPUnit\Framework\TestCase;
@@ -185,6 +186,122 @@ final class NeverInstantiateComponent extends OComponent {
     }
 }
 
+final class CoreStreamComponent extends OComponent {
+    public static ?OStreamResponse $last_response = null;
+
+    /**
+     * Reset the last streamed response.
+     *
+     * @return void
+     */
+    public static function reset(): void {
+        self::$last_response = null;
+    }
+
+    /**
+     * Create a streamed test response.
+     *
+     * @return OStreamResponse Streamed response.
+     */
+    public function run(): OStreamResponse {
+        $stream = fopen(
+            'php://temp',
+            'w+b'
+        );
+
+        if ($stream === false) {
+            throw new \RuntimeException(
+                'Could not create test stream.'
+            );
+        }
+
+        fwrite(
+            $stream,
+            'streamed-content'
+        );
+
+        rewind(
+            $stream
+        );
+
+        $response = new OStreamResponse(
+            $stream,
+            [
+                'Content-Type' => 'application/octet-stream',
+                'Content-Length' => '16',
+                'Content-Disposition' => 'attachment; filename="test.bin"'
+            ],
+            206,
+            4
+        );
+
+        self::$last_response = $response;
+
+        return $response;
+    }
+}
+
+final class ObserveStreamingPipelineMiddleware {
+    /**
+     * @var list<array{phase: string, streaming: bool}>
+     */
+    public static array $observations = [];
+
+    /**
+     * Reset observed streaming phases.
+     *
+     * @return void
+     */
+    public static function reset(): void {
+        self::$observations = [];
+    }
+
+    /**
+     * Observe streamed response state.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        self::$observations[] = [
+            'phase' => $phase,
+            'streaming' => ($data['is_streaming_response'] ?? false) === true
+        ];
+
+        return [];
+    }
+}
+
+final class StopStreamAfterRenderMiddleware {
+    /**
+     * Stop a streamed response during afterRender.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase !== OMiddleware::PHASE_AFTER_RENDER) {
+            return [];
+        }
+
+        return [
+            'stop' => true,
+            'status_code' => 409,
+            'message' => 'Stream rejected'
+        ];
+    }
+}
+
 final class OCoreMiddlewareTest extends TestCase {
     private TemporaryProject $project;
     private bool $core_existed = false;
@@ -341,6 +458,8 @@ final class OCoreMiddlewareTest extends TestCase {
         OMiddleware::reset();
         ObserveErrorMiddleware::reset();
         NeverRunAfterResponseMiddleware::reset();
+        CoreStreamComponent::reset();
+        ObserveStreamingPipelineMiddleware::reset();
 
         http_response_code(
             200
@@ -358,6 +477,8 @@ final class OCoreMiddlewareTest extends TestCase {
         OMiddleware::reset();
         ObserveErrorMiddleware::reset();
         NeverRunAfterResponseMiddleware::reset();
+        CoreStreamComponent::reset();
+        ObserveStreamingPipelineMiddleware::reset();
 
         $_SERVER = $this->previous_server;
         $_GET = $this->previous_get;
@@ -615,6 +736,185 @@ final class OCoreMiddlewareTest extends TestCase {
         self::assertStringNotContainsString(
             '<h1>',
             $output
+        );
+    }
+
+    /**
+     * Test that streamed responses pass through middleware phases before emission.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testStreamResponseUsesMiddlewarePipelineAndIsClosed(): void {
+        ORoute::get(
+            '/stream',
+            CoreStreamComponent::class,
+            [
+                'afterRender' => [
+                    ObserveStreamingPipelineMiddleware::class
+                ],
+                'afterResponse' => [
+                    ObserveStreamingPipelineMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/stream';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            'streamed-content',
+            $output
+        );
+
+        self::assertSame(
+            [
+                [
+                    'phase' => OMiddleware::PHASE_AFTER_RENDER,
+                    'streaming' => true
+                ],
+                [
+                    'phase' => OMiddleware::PHASE_AFTER_RESPONSE,
+                    'streaming' => true
+                ]
+            ],
+            ObserveStreamingPipelineMiddleware::$observations
+        );
+
+        self::assertSame(
+            206,
+            http_response_code()
+        );
+
+        self::assertFalse(
+            OMiddleware::isStreamingResponse()
+        );
+
+        self::assertNotNull(
+            CoreStreamComponent::$last_response
+        );
+
+        self::assertFalse(
+            CoreStreamComponent::$last_response->isOpen()
+        );
+    }
+
+    /**
+     * Test that an afterRender stop discards the stream before emission.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testStreamResponseCanBeStoppedBeforeEmission(): void {
+        ORoute::get(
+            '/stream-stopped',
+            CoreStreamComponent::class,
+            [
+                'afterRender' => [
+                    StopStreamAfterRenderMiddleware::class
+                ],
+                'afterResponse' => [
+                    ObserveErrorMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/stream-stopped';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            'after-response-error',
+            $output
+        );
+
+        self::assertStringNotContainsString(
+            'streamed-content',
+            $output
+        );
+
+        self::assertTrue(
+            ObserveErrorMiddleware::$saw_error
+        );
+
+        self::assertSame(
+            OMiddleware::PHASE_AFTER_RENDER,
+            ObserveErrorMiddleware::$error_phase
+        );
+
+        self::assertSame(
+            409,
+            http_response_code()
+        );
+
+        self::assertFalse(
+            OMiddleware::isStreamingResponse()
+        );
+
+        self::assertArrayNotHasKey(
+            'Content-Disposition',
+            OMiddleware::getHeaders()
+        );
+
+        self::assertArrayNotHasKey(
+            'Content-Length',
+            OMiddleware::getHeaders()
+        );
+
+        self::assertFalse(
+            CoreStreamComponent::$last_response?->isOpen()
+                ?? true
+        );
+    }
+
+    /**
+     * Test that an afterResponse stop still occurs before stream bytes are emitted.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If output buffering cannot be used.
+     */
+    public function testStreamResponseCanBeStoppedDuringAfterResponse(): void {
+        ORoute::get(
+            '/stream-after-response-stop',
+            CoreStreamComponent::class,
+            [
+                'afterResponse' => [
+                    StopAfterResponseMiddleware::class,
+                    NeverRunAfterResponseMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/stream-after-response-stop';
+
+        $output = $this->runCoreAndCaptureOutput();
+
+        self::assertSame(
+            "<h1>Error 503</h1>\n<p>Unavailable</p>",
+            $output
+        );
+
+        self::assertStringNotContainsString(
+            'streamed-content',
+            $output
+        );
+
+        self::assertFalse(
+            NeverRunAfterResponseMiddleware::$executed
+        );
+
+        self::assertSame(
+            503,
+            http_response_code()
+        );
+
+        self::assertFalse(
+            CoreStreamComponent::$last_response?->isOpen()
+                ?? true
         );
     }
 

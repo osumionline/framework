@@ -13,6 +13,7 @@ use Osumi\OsumiFramework\Routing\OUrl;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Log\OLog;
 use Osumi\OsumiFramework\DTO\ODTO;
+use Osumi\OsumiFramework\Web\OStreamResponse;
 use ReflectionNamedType;
 use PDO;
 use ReflectionClass;
@@ -503,6 +504,16 @@ class OCore {
 			);
 		}
 
+		if ($body instanceof OStreamResponse) {
+			$this->processStreamResponse(
+				$body,
+				$middleware_data,
+				$return_type
+			);
+
+			return;
+		}
+
 		OMiddleware::setComponentBody(
 			$body
 		);
@@ -589,6 +600,162 @@ class OCore {
 
 		$this->emitMiddlewareResponse();
 		$this->closeDbConnections();
+	}
+
+	/**
+	 * Process a streamed component response through the middleware pipeline.
+	 *
+	 * Stream response metadata is made available before afterRender executes.
+	 * Layout rendering is intentionally skipped because a streamed response has
+	 * no materialized body. No stream bytes are emitted until both afterRender
+	 * and afterResponse have completed successfully.
+	 *
+	 * @param OStreamResponse      $stream_response Streamed component response.
+	 * @param array<string, mixed> $middleware_data Middleware request data.
+	 * @param string               $response_type   Response type used for errors.
+	 *
+	 * @return void
+	 *
+	 * @throws \JsonException If a middleware error response cannot be encoded.
+	 * @throws \InvalidArgumentException If middleware response data is invalid.
+	 * @throws \UnexpectedValueException If a middleware returns an invalid result.
+	 * @throws \RuntimeException If the stream cannot be read or an error response
+	 *                           cannot be rendered.
+	 */
+	private function processStreamResponse(
+		OStreamResponse $stream_response,
+		array $middleware_data,
+		string $response_type
+	): void {
+		$previous_headers = OMiddleware::getHeaders();
+
+		OMiddleware::setStreamingResponse(
+			true
+		);
+
+		OMiddleware::setStatusCode(
+			$stream_response->getStatusCode()
+		);
+
+		foreach ($stream_response->getHeaders() as $name => $value) {
+			OMiddleware::setHeader(
+				$name,
+				$value
+			);
+		}
+
+		$middleware_data['response_type'] = $response_type;
+
+		try {
+			$after_render_result = OMiddleware::runPhase(
+				OMiddleware::PHASE_AFTER_RENDER,
+				$middleware_data
+			);
+
+			if ($after_render_result['stop']) {
+				$this->discardStreamResponse(
+					$stream_response,
+					$previous_headers
+				);
+
+				OMiddleware::setFinalBody(
+					$this->buildMiddlewareErrorBody(
+						$response_type,
+						$after_render_result['status_code'],
+						$after_render_result['message']
+					)
+				);
+
+				$this->runAfterResponsePhase(
+					$middleware_data,
+					$response_type
+				);
+
+				$this->emitMiddlewareResponse();
+				$this->closeDbConnections();
+
+				return;
+			}
+
+			$after_response_result = OMiddleware::runPhase(
+				OMiddleware::PHASE_AFTER_RESPONSE,
+				$middleware_data
+			);
+
+			if ($after_response_result['stop']) {
+				$this->discardStreamResponse(
+					$stream_response,
+					$previous_headers
+				);
+
+				OMiddleware::setFinalBody(
+					$this->buildMiddlewareErrorBody(
+						$response_type,
+						$after_response_result['status_code'],
+						$after_response_result['message']
+					)
+				);
+
+				$this->emitMiddlewareResponse();
+				$this->closeDbConnections();
+
+				return;
+			}
+
+			/*
+         * Streaming can take a long time. Database connections are no longer
+         * needed once every middleware has completed, so release them before
+         * the first response byte is emitted.
+         */
+			$this->closeDbConnections();
+
+			$this->emitStreamResponse(
+				$stream_response
+			);
+		} finally {
+			OMiddleware::setStreamingResponse(
+				false
+			);
+
+			if (
+				$stream_response->shouldCloseOnFinish() &&
+				$stream_response->isOpen()
+			) {
+				$stream_response->close();
+			}
+		}
+	}
+
+	/**
+	 * Discard a streamed response before any body bytes have been emitted.
+	 *
+	 * The normal response headers that existed before the stream was selected are
+	 * restored so a middleware error cannot inherit stream-specific headers such
+	 * as Content-Length or Content-Disposition.
+	 *
+	 * @param OStreamResponse      $stream_response Stream response being discarded.
+	 * @param array<string, string> $previous_headers Previous response headers.
+	 *
+	 * @return void
+	 */
+	private function discardStreamResponse(
+		OStreamResponse $stream_response,
+		array $previous_headers
+	): void {
+		if (
+			$stream_response->shouldCloseOnFinish() &&
+			$stream_response->isOpen()
+		) {
+			$stream_response->close();
+		}
+
+		OMiddleware::setStreamingResponse(
+			false
+		);
+
+		OMiddleware::replaceHeaders(
+			$previous_headers
+		);
 	}
 
 	/**
@@ -850,14 +1017,11 @@ class OCore {
 	}
 
 	/**
-	 * Emit the final response accumulated by the middleware pipeline.
-	 *
-	 * The final middleware status code and response headers are applied before
-	 * writing the final response body.
+	 * Emit the HTTP status code and accumulated response headers.
 	 *
 	 * @return void
 	 */
-	private function emitMiddlewareResponse(): void {
+	private function emitResponseHeaders(): void {
 		$status_code = OMiddleware::isError()
 			? OMiddleware::getErrorStatusCode()
 			: OMiddleware::getStatusCode();
@@ -866,18 +1030,75 @@ class OCore {
 			$status_code
 		);
 
-		if (!headers_sent()) {
-			http_response_code(
-				$status_code
+		if (headers_sent()) {
+			return;
+		}
+
+		http_response_code(
+			$status_code
+		);
+
+		foreach (OMiddleware::getHeaders() as $name => $value) {
+			header(
+				$name . ': ' . $value,
+				true
+			);
+		}
+	}
+
+	/**
+	 * Emit a streamed HTTP response progressively.
+	 *
+	 * The stream is read using the configured chunk size so its complete contents
+	 * are never loaded into PHP memory.
+	 *
+	 * @param OStreamResponse $stream_response Streamed response to emit.
+	 *
+	 * @return void
+	 *
+	 * @throws \RuntimeException When the stream cannot be read completely.
+	 */
+	private function emitStreamResponse(
+		OStreamResponse $stream_response
+	): void {
+		$this->emitResponseHeaders();
+
+		$stream = $stream_response->getStream();
+		$chunk_size = $stream_response->getChunkSize();
+
+		while (!feof($stream)) {
+			$chunk = fread(
+				$stream,
+				$chunk_size
 			);
 
-			foreach (OMiddleware::getHeaders() as $name => $value) {
-				header(
-					$name . ': ' . $value,
-					true
+			if ($chunk === false) {
+				throw new \RuntimeException(
+					'Could not read streamed response.'
 				);
 			}
+
+			if ($chunk === '') {
+				if (feof($stream)) {
+					break;
+				}
+
+				throw new \RuntimeException(
+					'Streamed response returned no data before reaching EOF.'
+				);
+			}
+
+			echo $chunk;
 		}
+	}
+
+	/**
+	 * Emit the final response accumulated by the middleware pipeline.
+	 *
+	 * @return void
+	 */
+	private function emitMiddlewareResponse(): void {
+		$this->emitResponseHeaders();
 
 		echo OMiddleware::getFinalBody();
 	}
