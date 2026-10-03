@@ -9,6 +9,8 @@ use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Log\OLog;
 use Osumi\OsumiFramework\Cache\OCacheContainer;
 use Osumi\OsumiFramework\Web\OSession;
+use Osumi\OsumiFramework\Web\OStreamResponse;
+use ReflectionNamedType;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -18,6 +20,9 @@ use ReflectionProperty;
  * Components may optionally define a run() method. The method can receive
  * no parameters, an ORequest instance or an instance of a class extending
  * ODTO.
+ *
+ * A component whose run() method explicitly returns OStreamResponse can omit
+ * its template and produce a streamed HTTP response instead.
  */
 class OComponent {
   protected OLog | null $log = null;
@@ -108,7 +113,12 @@ class OComponent {
       }
     }
 
-    if ($this->component_info['template_name'] === '') {
+    if (
+      $this->component_info['template_name'] === '' &&
+      !$this->hasStreamOnlyRunReturnType(
+        $reflection
+      )
+    ) {
       throw new \RuntimeException(
         "No valid template file found for component '{$component_class}'."
       );
@@ -245,6 +255,32 @@ class OComponent {
   }
 
   /**
+   * Check whether the component run() method explicitly returns a stream response.
+   *
+   * This allows stream-only components to omit a template while preserving the
+   * existing template requirement for every other component.
+   *
+   * @param ReflectionClass<object> $reflection Component reflection.
+   *
+   * @return bool True when run() explicitly returns OStreamResponse.
+   */
+  private function hasStreamOnlyRunReturnType(
+    ReflectionClass $reflection
+  ): bool {
+    if (!$reflection->hasMethod('run')) {
+      return false;
+    }
+
+    $return_type = $reflection
+      ->getMethod('run')
+      ->getReturnType();
+
+    return $return_type instanceof ReflectionNamedType
+      && !$return_type->isBuiltin()
+      && $return_type->getName() === OStreamResponse::class;
+  }
+
+  /**
    * Apply template substitutions using the component public properties.
    *
    * @param string $content Template content.
@@ -296,6 +332,14 @@ class OComponent {
        * property marker.
        */
       if ($property_value instanceof OComponent) {
+        $rendered_component = $property_value->render();
+
+        if ($rendered_component instanceof OStreamResponse) {
+          throw new \RuntimeException(
+            'A streamed response cannot be rendered as a nested component.'
+          );
+        }
+
         $replaced_content = preg_replace(
           "/\{\{\s*"
             . preg_quote(
@@ -303,7 +347,7 @@ class OComponent {
               '/'
             )
             . "\s*\}\}/",
-          $property_value->render(),
+          $rendered_component,
           $content
         );
 
@@ -540,25 +584,35 @@ class OComponent {
   }
 
   /**
-   * Render a component mixing its properties into the template.
+   * Render a component or return its streamed response.
    *
    * If the component defines a run method, it is executed before rendering.
-   * The run method can receive an ORequest, an ODTO instance or no parameter.
+   * A run method that returns OStreamResponse bypasses template rendering and
+   * returns the stream response directly.
    *
    * @param mixed $data Data to be passed to the run method, if any.
    *
-   * @return string Resulting rendered content.
+   * @return string|OStreamResponse Rendered content or streamed response.
    *
    * @throws \RuntimeException If the component template cannot be read.
    */
-  public function render(mixed $data = null): string {
-    // Check if component has a "run" method
+  public function render(
+    mixed $data = null
+  ): string | OStreamResponse {
     if (method_exists($this, 'run')) {
-      if (is_null($data)) {
-        $this->run();
-      } else {
-        $this->run($data);
+      $run_result = is_null($data)
+        ? $this->run()
+        : $this->run($data);
+
+      if ($run_result instanceof OStreamResponse) {
+        return $run_result;
       }
+    }
+
+    if ($this->component_info['template_name'] === '') {
+      throw new \RuntimeException(
+        'Component did not return an OStreamResponse and has no template.'
+      );
     }
 
     if ($this->component_info['template_type'] === 'php') {
@@ -650,9 +704,14 @@ class OComponent {
   }
 
   /**
-   * Using toString magic method allows component to be treated as a simple string variable
+   * Render the component when it is used as a string.
    *
-   * @return string Return resulting string
+   * Stream responses cannot be converted to strings and must be handled by the
+   * HTTP response pipeline instead.
+   *
+   * @return string Rendered component content.
+   *
+   * @throws \RuntimeException When the component returns a streamed response.
    */
   public function __toString(): string {
     if (!$this->component_info['initialized']) {
@@ -661,6 +720,18 @@ class OComponent {
       );
     }
 
-    return $this->render();
+    $result = $this->render();
+
+    if ($result instanceof OStreamResponse) {
+      if ($result->shouldCloseOnFinish()) {
+        $result->close();
+      }
+
+      throw new \RuntimeException(
+        'An OStreamResponse cannot be converted to a string.'
+      );
+    }
+
+    return $result;
   }
 }

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\Tests\Core;
 
 use Osumi\OsumiFramework\Core\OConfig;
+use Osumi\OsumiFramework\Web\OStreamResponse;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\BasicComponent;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\MissingComponent;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\PhpComponent;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\RunComponent;
 use Osumi\OsumiFramework\Tests\Fixtures\Component\ThrowingPhpComponent;
 use Osumi\OsumiFramework\Tests\Support\TemporaryProject;
+use Osumi\OsumiFramework\Tests\Fixtures\Component\StreamComponent;
 use PHPUnit\Framework\TestCase;
 
 final class OComponentTest extends TestCase {
@@ -182,6 +184,59 @@ final class OComponentTest extends TestCase {
             trim(
                 $component->render()
             )
+        );
+    }
+
+    /**
+     * Test that a stream-only component can omit its template.
+     *
+     * @return void
+     */
+    public function testStreamResponseCanBeReturnedWithoutTemplate(): void {
+        $component = new StreamComponent();
+
+        $result = $component->render();
+
+        self::assertInstanceOf(
+            OStreamResponse::class,
+            $result
+        );
+
+        self::assertSame(
+            'application/octet-stream',
+            $result->getHeaders()['Content-Type']
+        );
+
+        $stream = $result->getStream();
+
+        self::assertSame(
+            'streamed-content',
+            stream_get_contents(
+                $stream
+            )
+        );
+
+        $result->close();
+    }
+
+    /**
+     * Test that streamed responses cannot be converted to strings.
+     *
+     * @return void
+     */
+    public function testStreamResponseCannotBeConvertedToString(): void {
+        $component = new StreamComponent();
+
+        $this->expectException(
+            \RuntimeException::class
+        );
+
+        $this->expectExceptionMessage(
+            'OStreamResponse cannot be converted to a string'
+        );
+
+        strval(
+            $component
         );
     }
 
