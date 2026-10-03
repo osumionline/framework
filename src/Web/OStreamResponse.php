@@ -39,6 +39,31 @@ final class OStreamResponse {
       );
     }
 
+    $metadata = stream_get_meta_data(
+      $stream
+    );
+
+    $mode = $metadata['mode']
+      ?? '';
+
+    if (
+      !is_string($mode) ||
+      (
+        !str_contains(
+          $mode,
+          'r'
+        ) &&
+        !str_contains(
+          $mode,
+          '+'
+        )
+      )
+    ) {
+      throw new \InvalidArgumentException(
+        'OStreamResponse requires a readable stream.'
+      );
+    }
+
     if (
       $this->status_code < 100 ||
       $this->status_code > 599
@@ -62,6 +87,17 @@ final class OStreamResponse {
       ) {
         throw new \InvalidArgumentException(
           'OStreamResponse headers must contain string names and values.'
+        );
+      }
+
+      if (
+        preg_match(
+          "/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/D",
+          $name
+        ) !== 1
+      ) {
+        throw new \InvalidArgumentException(
+          "Invalid HTTP header name '{$name}'."
         );
       }
 
@@ -165,5 +201,17 @@ final class OStreamResponse {
     fclose(
       $this->stream
     );
+  }
+
+  /**
+   * Close an owned stream when the response is discarded unexpectedly.
+   */
+  public function __destruct() {
+    if (
+      $this->close_on_finish &&
+      $this->isOpen()
+    ) {
+      $this->close();
+    }
   }
 }

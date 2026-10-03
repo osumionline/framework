@@ -302,6 +302,31 @@ final class StopStreamAfterRenderMiddleware {
     }
 }
 
+final class ThrowStreamAfterRenderMiddleware {
+    /**
+     * Throw during streamed afterRender processing.
+     *
+     * @param string $phase Middleware phase.
+     * @param array<string, mixed> $data Middleware data.
+     *
+     * @return array<string, mixed> Middleware result.
+     *
+     * @throws \RuntimeException During afterRender.
+     */
+    public static function handle(
+        string $phase,
+        array $data
+    ): array {
+        if ($phase === OMiddleware::PHASE_AFTER_RENDER) {
+            throw new \RuntimeException(
+                'Stream middleware exploded.'
+            );
+        }
+
+        return [];
+    }
+}
+
 final class OCoreMiddlewareTest extends TestCase {
     private TemporaryProject $project;
     private bool $core_existed = false;
@@ -915,6 +940,65 @@ final class OCoreMiddlewareTest extends TestCase {
         self::assertFalse(
             CoreStreamComponent::$last_response?->isOpen()
                 ?? true
+        );
+    }
+
+    /**
+     * Test that a pre-emission stream exception restores normal response state.
+     *
+     * @return void
+     */
+    public function testStreamExceptionBeforeEmissionRestoresResponseState(): void {
+        ORoute::get(
+            '/stream-exception',
+            CoreStreamComponent::class,
+            [
+                'afterRender' => [
+                    ThrowStreamAfterRenderMiddleware::class
+                ]
+            ]
+        );
+
+        $_SERVER['REQUEST_URI'] = '/stream-exception';
+
+        try {
+            $this->runCoreAndCaptureOutput();
+
+            self::fail(
+                'The streamed middleware was expected to throw.'
+            );
+        } catch (\RuntimeException $exception) {
+            self::assertSame(
+                'Stream middleware exploded.',
+                $exception->getMessage()
+            );
+        }
+
+        self::assertFalse(
+            OMiddleware::isStreamingResponse()
+        );
+
+        self::assertSame(
+            200,
+            OMiddleware::getStatusCode()
+        );
+
+        self::assertArrayNotHasKey(
+            'Content-Disposition',
+            OMiddleware::getHeaders()
+        );
+
+        self::assertArrayNotHasKey(
+            'Content-Length',
+            OMiddleware::getHeaders()
+        );
+
+        self::assertNotNull(
+            CoreStreamComponent::$last_response
+        );
+
+        self::assertFalse(
+            CoreStreamComponent::$last_response->isOpen()
         );
     }
 

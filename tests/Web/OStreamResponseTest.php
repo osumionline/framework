@@ -247,4 +247,84 @@ final class OStreamResponseTest extends TestCase {
 
         $response->getStream();
     }
+
+    /**
+     * Test rejection of unreadable streams.
+     *
+     * @return void
+     */
+    public function testUnreadableStreamIsRejected(): void {
+        $file_path = tempnam(
+            sys_get_temp_dir(),
+            'ofw-stream-'
+        );
+
+        self::assertIsString(
+            $file_path
+        );
+
+        $stream = fopen(
+            $file_path,
+            'wb'
+        );
+
+        self::assertIsResource(
+            $stream
+        );
+
+        try {
+            $this->expectException(
+                \InvalidArgumentException::class
+            );
+
+            $this->expectExceptionMessage(
+                'requires a readable stream'
+            );
+
+            new OStreamResponse(
+                $stream
+            );
+        } finally {
+            fclose(
+                $stream
+            );
+
+            unlink(
+                $file_path
+            );
+        }
+    }
+
+    /**
+     * Test rejection of invalid HTTP header names.
+     *
+     * @return void
+     */
+    public function testInvalidHeaderNameIsRejected(): void {
+        $stream = fopen(
+            'php://temp',
+            'w+b'
+        );
+
+        self::assertIsResource(
+            $stream
+        );
+
+        try {
+            $this->expectException(
+                \InvalidArgumentException::class
+            );
+
+            new OStreamResponse(
+                $stream,
+                [
+                    "Invalid Header" => 'value'
+                ]
+            );
+        } finally {
+            fclose(
+                $stream
+            );
+        }
+    }
 }

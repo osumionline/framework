@@ -628,25 +628,28 @@ class OCore {
 		string $response_type
 	): void {
 		$previous_headers = OMiddleware::getHeaders();
+		$previous_status_code = OMiddleware::getStatusCode();
 
-		OMiddleware::setStreamingResponse(
-			true
-		);
-
-		OMiddleware::setStatusCode(
-			$stream_response->getStatusCode()
-		);
-
-		foreach ($stream_response->getHeaders() as $name => $value) {
-			OMiddleware::setHeader(
-				$name,
-				$value
-			);
-		}
-
-		$middleware_data['response_type'] = $response_type;
+		$stream_emission_started = false;
 
 		try {
+			OMiddleware::setStreamingResponse(
+				true
+			);
+
+			OMiddleware::setStatusCode(
+				$stream_response->getStatusCode()
+			);
+
+			foreach ($stream_response->getHeaders() as $name => $value) {
+				OMiddleware::setHeader(
+					$name,
+					$value
+				);
+			}
+
+			$middleware_data['response_type'] = $response_type;
+
 			$after_render_result = OMiddleware::runPhase(
 				OMiddleware::PHASE_AFTER_RENDER,
 				$middleware_data
@@ -703,15 +706,36 @@ class OCore {
 			}
 
 			/*
-         * Streaming can take a long time. Database connections are no longer
-         * needed once every middleware has completed, so release them before
-         * the first response byte is emitted.
-         */
+     * Streaming can take a long time. Database connections are no longer
+     * needed once every middleware has completed, so release them before
+     * the first response byte is emitted.
+     */
 			$this->closeDbConnections();
+
+			$stream_emission_started = true;
 
 			$this->emitStreamResponse(
 				$stream_response
 			);
+		} catch (Throwable $exception) {
+			/*
+     * Before streaming starts the request can still safely return through the
+     * framework exception handler. Restore the response state so stream-specific
+     * metadata cannot leak into that error response.
+     *
+     * Once emission has started an HTTP response cannot be replaced safely.
+     */
+			if (!$stream_emission_started) {
+				OMiddleware::replaceHeaders(
+					$previous_headers
+				);
+
+				OMiddleware::setStatusCode(
+					$previous_status_code
+				);
+			}
+
+			throw $exception;
 		} finally {
 			OMiddleware::setStreamingResponse(
 				false
