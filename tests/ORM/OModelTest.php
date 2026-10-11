@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tests\ORM;
 
+use PDO;
+use PDOStatement;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\ExampleModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\InvalidAutoIncrementModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TextKeyModel;
@@ -381,6 +383,99 @@ final class OModelTest extends TestCase {
         self::assertStringNotContainsString(
             'AUTO_INCREMENT',
             $sql
+        );
+    }
+
+    /**
+     * Test that ORM statement parameters are bound using their PDO types.
+     *
+     * @return void
+     */
+    public function testStatementParametersAreBoundUsingPDOType(): void {
+        $statement = $this->createMock(
+            PDOStatement::class
+        );
+
+        $bound_values = [];
+
+        $statement
+            ->expects(
+                self::exactly(6)
+            )
+            ->method('bindValue')
+            ->willReturnCallback(
+                static function (
+                    string|int $param,
+                    mixed $value,
+                    int $type = PDO::PARAM_STR
+                ) use (&$bound_values): bool {
+                    $bound_values[] = [
+                        $param,
+                        $value,
+                        $type
+                    ];
+
+                    return true;
+                }
+            );
+
+        $statement
+            ->expects(
+                self::once()
+            )
+            ->method('execute')
+            ->willReturn(true);
+
+        $result = ExampleModel::executeStatementForTest(
+            $statement,
+            [
+                ':bool_false' => false,
+                ':bool_true' => true,
+                ':integer' => 25,
+                ':null' => null,
+                ':float' => 12.5,
+                ':string' => 'test'
+            ]
+        );
+
+        self::assertTrue(
+            $result
+        );
+
+        self::assertSame(
+            [
+                [
+                    ':bool_false',
+                    false,
+                    PDO::PARAM_BOOL
+                ],
+                [
+                    ':bool_true',
+                    true,
+                    PDO::PARAM_BOOL
+                ],
+                [
+                    ':integer',
+                    25,
+                    PDO::PARAM_INT
+                ],
+                [
+                    ':null',
+                    null,
+                    PDO::PARAM_NULL
+                ],
+                [
+                    ':float',
+                    12.5,
+                    PDO::PARAM_STR
+                ],
+                [
+                    ':string',
+                    'test',
+                    PDO::PARAM_STR
+                ]
+            ],
+            $bound_values
         );
     }
 }

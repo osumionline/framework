@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tests\Fixtures\ORM;
 
+use PDOStatement;
 use Osumi\OsumiFramework\ORM\OCreatedAt;
 use Osumi\OsumiFramework\ORM\ODeletedAt;
 use Osumi\OsumiFramework\ORM\OField;
@@ -97,5 +98,23 @@ final class ExampleModel extends OModel {
      */
     public function assertPersistedForTest(): void {
         $this->assertPersisted();
+    }
+
+    /**
+     * Execute a prepared statement using the ORM typed parameter binding.
+     *
+     * @param PDOStatement $stmt Prepared statement to execute.
+     * @param array<string, mixed> $params Parameters indexed by placeholder name.
+     *
+     * @return bool Whether the statement was executed successfully.
+     */
+    public static function executeStatementForTest(
+        PDOStatement $stmt,
+        array $params
+    ): bool {
+        return self::executeStatement(
+            $stmt,
+            $params
+        );
     }
 }

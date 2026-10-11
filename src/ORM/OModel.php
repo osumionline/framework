@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Osumi\OsumiFramework\ORM;
 
 use PDO;
+use PDOStatement;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionProperty;
@@ -944,6 +945,41 @@ abstract class OModel {
   }
 
   /**
+   * Execute a prepared statement binding parameters with their PDO types.
+   *
+   * Boolean, integer and null values are explicitly bound using their matching
+   * PDO parameter types. Other supported ORM scalar values are bound as strings.
+   *
+   * @param PDOStatement $stmt Prepared statement to execute.
+   * @param array<string, mixed> $params Parameters indexed by placeholder name.
+   *
+   * @return bool Whether the statement was executed successfully.
+   */
+  protected static function executeStatement(
+    PDOStatement $stmt,
+    array $params
+  ): bool {
+    foreach ($params as $name => $value) {
+      $type = match (true) {
+        is_bool($value) => PDO::PARAM_BOOL,
+        is_int($value) => PDO::PARAM_INT,
+        $value === null => PDO::PARAM_NULL,
+        default => PDO::PARAM_STR
+      };
+
+      if (!$stmt->bindValue(
+        $name,
+        $value,
+        $type
+      )) {
+        return false;
+      }
+    }
+
+    return $stmt->execute();
+  }
+
+  /**
    * Apply supported SQL query options.
    *
    * @param string $sql Base SQL query.
@@ -1263,7 +1299,8 @@ abstract class OModel {
       $sql
     );
 
-    $stmt->execute(
+    self::executeStatement(
+      $stmt,
       $where['params']
     );
 
@@ -1368,7 +1405,10 @@ abstract class OModel {
 
     // Prepare and execute the query
     $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    self::executeStatement(
+      $stmt,
+      $params
+    );
 
     // Gets the result and returns the value of "num"
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1448,7 +1488,8 @@ abstract class OModel {
         $sql
       );
 
-      $result = $stmt->execute(
+      $result = self::executeStatement(
+        $stmt,
         $params
       );
       if (!$result) {
@@ -1544,7 +1585,8 @@ abstract class OModel {
       $sql
     );
 
-    $result = $stmt->execute(
+    $result = self::executeStatement(
+      $stmt,
       $params
     );
     if (!$result) {
@@ -1609,7 +1651,8 @@ abstract class OModel {
         $sql
       );
 
-      $result = $stmt->execute(
+      $result = self::executeStatement(
+        $stmt,
         $params
       );
       if (!$result) {
@@ -1634,7 +1677,8 @@ abstract class OModel {
       $sql
     );
 
-    $result = $stmt->execute(
+    $result = self::executeStatement(
+      $stmt,
       $params
     );
     if (!$result) {
