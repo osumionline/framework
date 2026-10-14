@@ -144,6 +144,7 @@ final class RunnerTest extends TestCase {
         );
 
         $state_store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -186,6 +187,7 @@ final class RunnerTest extends TestCase {
         );
 
         $state_store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -246,6 +248,7 @@ final class RunnerTest extends TestCase {
         );
 
         $state_store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -393,7 +396,7 @@ final class RunnerTest extends TestCase {
         );
 
         self::assertContains(
-            'ofw/tmp/state.json',
+            '.ofw-migrations.json',
             $changed_files
         );
     }

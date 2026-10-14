@@ -40,6 +40,7 @@ final class StateStoreTest extends TestCase {
      */
     public function testMissingStateReturnsNull(): void {
         $store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -57,6 +58,7 @@ final class StateStoreTest extends TestCase {
      */
     public function testStateCanBeWrittenAndRead(): void {
         $store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -83,6 +85,7 @@ final class StateStoreTest extends TestCase {
      */
     public function testInvalidVersionIsRejected(): void {
         $store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -150,6 +153,7 @@ final class StateStoreTest extends TestCase {
      */
     public function testStateContentCanBeBuiltWithoutWriting(): void {
         $store = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -168,6 +172,107 @@ final class StateStoreTest extends TestCase {
 
         self::assertFileDoesNotExist(
             $store->getStateFile()
+        );
+    }
+
+    /**
+     * Test that legacy pre-9.12 state can still be read.
+     *
+     * @return void
+     */
+    public function testLegacyStateIsUsedWhenProjectStateDoesNotExist(): void {
+        $legacy_directory = $this->project->getPath(
+            'ofw/tmp'
+        );
+
+        if (
+            !is_dir($legacy_directory) &&
+            !mkdir(
+                $legacy_directory,
+                0755,
+                true
+            ) &&
+            !is_dir($legacy_directory)
+        ) {
+            self::fail(
+                'Could not create legacy migration state directory.'
+            );
+        }
+
+        if (
+            file_put_contents(
+                $legacy_directory . '/state.json',
+                "{\n    \"last_migrated\": \"9.9.0\"\n}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create legacy migration state.'
+            );
+        }
+
+        $store = new StateStore(
+            $this->project->getBasePath(),
+            $legacy_directory
+        );
+
+        self::assertSame(
+            '9.9.0',
+            $store->readLastMigrated()
+        );
+
+        self::assertFileDoesNotExist(
+            $store->getStateFile()
+        );
+    }
+
+    /**
+     * Test that project state takes precedence over legacy state.
+     *
+     * @return void
+     */
+    public function testProjectStateTakesPrecedenceOverLegacyState(): void {
+        $legacy_directory = $this->project->getPath(
+            'ofw/tmp'
+        );
+
+        if (
+            !mkdir(
+                $legacy_directory,
+                0755,
+                true
+            ) &&
+            !is_dir($legacy_directory)
+        ) {
+            self::fail(
+                'Could not create legacy migration state directory.'
+            );
+        }
+
+        if (
+            file_put_contents(
+                $legacy_directory . '/state.json',
+                "{\n    \"last_migrated\": \"9.9.0\"\n}\n",
+                LOCK_EX
+            ) === false
+        ) {
+            self::fail(
+                'Could not create legacy migration state.'
+            );
+        }
+
+        $store = new StateStore(
+            $this->project->getBasePath(),
+            $legacy_directory
+        );
+
+        $store->writeLastMigrated(
+            '9.12.0'
+        );
+
+        self::assertSame(
+            '9.12.0',
+            $store->readLastMigrated()
         );
     }
 }

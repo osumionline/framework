@@ -369,23 +369,26 @@ final class Runner {
      *
      * @return StateStore Project migration state store.
      */
-    private static function createStateStore(string $project_root): StateStore {
+    private static function createStateStore(
+        string $project_root
+    ): StateStore {
         $config = new OConfig(
             $project_root . '/'
         );
 
-        $tmp_directory = $config->getDir(
+        $legacy_state_directory = $config->getDir(
             'ofw_tmp'
         );
 
-        if (!is_string($tmp_directory)) {
+        if (!is_string($legacy_state_directory)) {
             throw new \LogicException(
                 'Configured OFW temporary directory is invalid.'
             );
         }
 
         return new StateStore(
-            $tmp_directory
+            $project_root,
+            $legacy_state_directory
         );
     }
 

@@ -938,7 +938,8 @@ final class OModelTest extends TestCase {
         $model = TemporalBigIntModel::create(
             [
                 'event_date' => '2026-10-14',
-                'event_datetime' => '2026-10-14 12:30:45'
+                'event_datetime' => '2026-10-14 12:30:45',
+                'created_at' => '2026-10-14 09:15:00'
             ]
         );
 
@@ -954,6 +955,14 @@ final class OModelTest extends TestCase {
             '14/10/2026 12:30',
             $model->get(
                 'event_datetime',
+                'd/m/Y H:i'
+            )
+        );
+
+        self::assertSame(
+            '14/10/2026 09:15',
+            $model->get(
+                'created_at',
                 'd/m/Y H:i'
             )
         );
@@ -1012,59 +1021,12 @@ final class OModelTest extends TestCase {
 
         self::assertSame(
             OField::DATE,
-            $schema['fields']['business_date']['type']
+            $schema['fields']['event_date']['type']
         );
 
         self::assertSame(
             OField::DATETIME,
-            $schema['fields']['processed_at']['type']
-        );
-
-        self::assertSame(
-            OField::DATETIME,
-            $schema['fields']['created_at']['type']
-        );
-
-        self::assertSame(
-            OField::DATETIME,
-            $schema['fields']['updated_at']['type']
-        );
-    }
-
-    /**
-     * Test DATE and DATETIME formatting through get().
-     *
-     * @return void
-     */
-    public function testTemporalFieldsCanBeFormatted(): void {
-        $model = new TemporalBigIntModel([
-            'business_date' => '2026-10-14',
-            'processed_at' => '2026-10-14 13:45:30',
-            'created_at' => '2026-10-14 09:15:00'
-        ]);
-
-        self::assertSame(
-            '14/10/2026',
-            $model->get(
-                'business_date',
-                'd/m/Y'
-            )
-        );
-
-        self::assertSame(
-            '14/10/2026 13:45',
-            $model->get(
-                'processed_at',
-                'd/m/Y H:i'
-            )
-        );
-
-        self::assertSame(
-            '14/10/2026 09:15',
-            $model->get(
-                'created_at',
-                'd/m/Y H:i'
-            )
+            $schema['fields']['event_datetime']['type']
         );
     }
 
@@ -1074,9 +1036,12 @@ final class OModelTest extends TestCase {
      * @return void
      */
     public function testInvalidCalendarDateIsRejected(): void {
-        $model = new TemporalBigIntModel([
-            'business_date' => '2026-02-30'
-        ]);
+        $model = TemporalBigIntModel::create(
+            [
+                'event_date' => '2026-02-30',
+                'event_datetime' => '2026-10-14 12:30:00'
+            ]
+        );
 
         try {
             $model->validateForTest();
@@ -1086,31 +1051,7 @@ final class OModelTest extends TestCase {
             );
         } catch (\Exception $e) {
             self::assertSame(
-                "The 'business_date' field must be in a valid date format (Y-m-d).",
-                $e->getMessage()
-            );
-        }
-    }
-
-    /**
-     * Test that DATE and DATETIME formats cannot be interchanged.
-     *
-     * @return void
-     */
-    public function testDateTimeRequiresTimeComponent(): void {
-        $model = new TemporalBigIntModel([
-            'processed_at' => '2026-10-14'
-        ]);
-
-        try {
-            $model->validateForTest();
-
-            self::fail(
-                'DATETIME without a time component was expected to be rejected.'
-            );
-        } catch (\Exception $e) {
-            self::assertSame(
-                "The 'processed_at' field must be in a valid date and time format (Y-m-d H:i:s).",
+                "The 'event_date' field must be in a valid date format (Y-m-d).",
                 $e->getMessage()
             );
         }

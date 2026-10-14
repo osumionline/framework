@@ -93,6 +93,7 @@ PHP
         );
 
         $state = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -247,6 +248,84 @@ PHP
             $this->readProjectFile(
                 'src/Model/Event.php'
             )
+        );
+    }
+
+    /**
+     * Test that genuine DATE fields created after migration remain DATE fields.
+     *
+     * @return void
+     */
+    public function testNewDateFieldsAreNotRemigrated(): void {
+        $this->writeProjectFile(
+            'src/Model/LegacyEvent.php',
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace Osumi\OsumiFramework\App\Model;
+
+use Osumi\OsumiFramework\ORM\OField;
+
+class LegacyEvent {
+    #[OField(
+        type: OField::DATE
+    )]
+    public ?string $processed_at = null;
+}
+
+PHP
+        );
+
+        Runner::run(
+            $this->project->getBasePath(),
+            '9.11.0',
+            '9.12.0'
+        );
+
+        /*
+     * This model represents code written after the project has already
+     * migrated to 9.12. Its DATE field now has real SQL DATE semantics.
+     */
+        $this->writeProjectFile(
+            'src/Model/NewEvent.php',
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace Osumi\OsumiFramework\App\Model;
+
+use Osumi\OsumiFramework\ORM\OField;
+
+class NewEvent {
+    #[OField(
+        type: OField::DATE
+    )]
+    public ?string $event_date = null;
+}
+
+PHP
+        );
+
+        Runner::runPending(
+            $this->project->getBasePath(),
+            '9.12.0'
+        );
+
+        $content = $this->readProjectFile(
+            'src/Model/NewEvent.php'
+        );
+
+        self::assertStringContainsString(
+            'type: OField::DATE',
+            $content
+        );
+
+        self::assertStringNotContainsString(
+            'type: OField::DATETIME',
+            $content
         );
     }
 

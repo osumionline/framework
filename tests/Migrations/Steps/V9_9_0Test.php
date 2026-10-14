@@ -138,6 +138,7 @@ final class V9_9_0Test extends TestCase {
         );
 
         $state = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -172,6 +173,7 @@ final class V9_9_0Test extends TestCase {
         );
 
         $state = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -270,6 +272,7 @@ final class V9_9_0Test extends TestCase {
         );
 
         $state = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )
@@ -378,6 +381,7 @@ PHP
         );
 
         $state = new StateStore(
+            $this->project->getBasePath(),
             $this->project->getPath(
                 'ofw/tmp'
             )

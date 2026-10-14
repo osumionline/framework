@@ -7,22 +7,45 @@ namespace Osumi\OsumiFramework\Migrations\State;
 use Osumi\OsumiFramework\Migrations\Util\MigrationVersion;
 
 final class StateStore {
-    private const string STATE_FILE = 'state.json';
+    private const string STATE_FILE = '.ofw-migrations.json';
+    private const string LEGACY_STATE_FILE = 'state.json';
 
-    private string $state_directory;
+    private string $project_root;
+    private ?string $legacy_state_directory;
 
     /**
      * Create a migration state store.
      *
-     * The supplied directory is expected to be OConfig::getDir('ofw_tmp').
+     * The primary migration state is stored in the project root so it can be
+     * versioned together with the application. An optional legacy state
+     * directory may be supplied to read pre-9.12 state.
      *
-     * @param string $state_directory Directory containing the migration state.
+     * @param string $project_root Project root directory.
+     * @param string|null $legacy_state_directory Legacy state directory.
      */
-    public function __construct(string $state_directory) {
-        $this->state_directory = rtrim(
-            str_replace('\\', '/', $state_directory),
+    public function __construct(
+        string $project_root,
+        ?string $legacy_state_directory = null
+    ) {
+        $this->project_root = rtrim(
+            str_replace(
+                '\\',
+                '/',
+                $project_root
+            ),
             '/'
         );
+
+        $this->legacy_state_directory = $legacy_state_directory === null
+            ? null
+            : rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $legacy_state_directory
+                ),
+                '/'
+            );
     }
 
     /**
@@ -31,13 +54,31 @@ final class StateStore {
      * @return string Migration state file path.
      */
     public function getStateFile(): string {
-        return $this->state_directory
+        return $this->project_root
             . '/'
             . self::STATE_FILE;
     }
 
     /**
+     * Get the legacy migration state file path.
+     *
+     * @return string|null Legacy state path, or null when unavailable.
+     */
+    public function getLegacyStateFile(): ?string {
+        if ($this->legacy_state_directory === null) {
+            return null;
+        }
+
+        return $this->legacy_state_directory
+            . '/'
+            . self::LEGACY_STATE_FILE;
+    }
+
+    /**
      * Read the last successfully migrated framework version.
+     *
+     * The versioned project state takes precedence over the legacy temporary
+     * state used before OFW 9.12.
      *
      * @return string|null Last migrated version or null when no state exists.
      *
@@ -48,10 +89,39 @@ final class StateStore {
         $state_file = $this->getStateFile();
 
         if (!is_file($state_file)) {
-            return null;
+            $legacy_state_file = $this->getLegacyStateFile();
+
+            if (
+                $legacy_state_file === null ||
+                !is_file($legacy_state_file)
+            ) {
+                return null;
+            }
+
+            $state_file = $legacy_state_file;
         }
 
-        $content = file_get_contents($state_file);
+        return $this->readStateFile(
+            $state_file
+        );
+    }
+
+    /**
+     * Read and validate a migration state file.
+     *
+     * @param string $state_file State file path.
+     *
+     * @return string Last migrated framework version.
+     *
+     * @throws \JsonException If the file contains invalid JSON.
+     * @throws \RuntimeException If the file cannot be read or has an invalid structure.
+     */
+    private function readStateFile(
+        string $state_file
+    ): string {
+        $content = file_get_contents(
+            $state_file
+        );
 
         if ($content === false) {
             throw new \RuntimeException(
@@ -138,20 +208,6 @@ final class StateStore {
         $content = $this->buildLastMigratedContent(
             $version
         );
-
-        if (
-            !is_dir($this->state_directory) &&
-            !mkdir(
-                $this->state_directory,
-                0755,
-                true
-            ) &&
-            !is_dir($this->state_directory)
-        ) {
-            throw new \RuntimeException(
-                "Unable to create migration state directory '{$this->state_directory}'."
-            );
-        }
 
         $state_file = $this->getStateFile();
 
