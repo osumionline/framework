@@ -145,6 +145,103 @@ es inválido porque un `float` no puede utilizarse para un campo `DECIMAL`.
 
 Los campos `DECIMAL` no pueden utilizarse como claves primarias.
 
+### Campos DATE y DATETIME
+
+Desde Osumi Framework 9.12, los tipos SQL `DATE` y `DATETIME` están representados de forma independiente.
+
+Un campo SQL `DATE` utiliza `OField::DATE` y una propiedad PHP `?string`:
+
+```php
+#[OField(
+	type: OField::DATE,
+	nullable: false
+)]
+public ?string $event_date = null;
+```
+
+Su formato canónico es:
+
+```text
+Y-m-d
+```
+
+por ejemplo:
+
+```text
+2026-10-14
+```
+
+Un campo SQL `DATETIME` utiliza `OField::DATETIME`:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false
+)]
+public ?string $processed_at = null;
+```
+
+Su formato canónico es:
+
+```text
+Y-m-d H:i:s
+```
+
+por ejemplo:
+
+```text
+2026-10-14 15:30:45
+```
+
+El ORM valida estrictamente los valores temporales. Fechas inexistentes como `2026-02-30` o horas inválidas no son aceptadas.
+
+Los atributos automáticos `#[OCreatedAt]`, `#[OUpdatedAt]` y `#[ODeletedAt]` utilizan internamente `DATETIME`.
+
+El método `get()` puede aplicar una máscara de formato a ambos tipos:
+
+```php
+$model->get(
+	'event_date',
+	'd/m/Y'
+);
+
+$model->get(
+	'processed_at',
+	'd/m/Y H:i'
+);
+```
+
+El pipe `date` de las plantillas también admite ambos formatos. Sin máscara explícita:
+
+- un `DATE` utiliza `d/m/Y`;
+- un `DATETIME` utiliza `d/m/Y H:i:s`.
+
+---
+
+### Campos BIGINT
+
+Las columnas SQL `BIGINT` con signo utilizan `OField::BIGINT` y propiedades PHP `?int`:
+
+```php
+#[OField(
+	type: OField::BIGINT
+)]
+public ?int $external_id = null;
+```
+
+También pueden utilizarse como clave primaria:
+
+```php
+#[OPK(
+	type: OField::BIGINT
+)]
+public ?int $id = null;
+```
+
+`BIGINT` requiere un entorno PHP de 64 bits.
+
+El ORM no soporta columnas `BIGINT UNSIGNED` ni modificadores `ZEROFILL`.
+
 ---
 
 ## Integración CLI

@@ -6,7 +6,7 @@ This file is optimized for AI systems. Prefer explicit, strictly typed code and 
 
 ## Version
 
-- Framework: 9.11.0
+- Framework: 9.12.0
 - PHP: 8.5+
 - `declare(strict_types=1);` should be used in PHP files.
 
@@ -146,13 +146,17 @@ Models extend `OModel` and use attributes such as `#[OPK]`, `#[OField]`, `#[OCre
 
 Exact SQL `DECIMAL(p,s)` fields use `OField::DECIMAL` and PHP `?string`, never `float`. DECIMAL values are normalized to fixed scale using "." internally; "." and "," are accepted as input decimal separators. Precision defaults to 10, scale defaults to 2, maximum precision is 65 and maximum scale is 30. DECIMAL is not supported for primary keys.
 
+SQL `DATE` fields use `OField::DATE` with PHP `?string` values in canonical `Y-m-d` format. SQL `DATETIME` fields use `OField::DATETIME` with PHP `?string` values in canonical `Y-m-d H:i:s` format. Temporal values are validated strictly. Automatic created/updated/deleted timestamp fields use `DATETIME`.
+
+Signed SQL `BIGINT` fields use `OField::BIGINT` with PHP `?int` and require a 64-bit PHP environment. BIGINT may be used as a primary key and auto-increment field. `UNSIGNED` and `ZEROFILL` are not supported.
+
 ## CLI and migrations
 
 Application CLI: `php of <task>`.
 
 Framework migration CLI: `php vendor/bin/ofw-migrate --help`.
 
-Migration state is stored in `ofw/tmp/state.json`.
+Authoritative migration state is stored in `.ofw-migrations.json` at the project root and must be versioned with the application. Legacy `ofw/tmp/state.json` is read only as a compatibility fallback when the project state does not yet exist.
 
 ## Legacy Filters
 
@@ -168,6 +172,7 @@ Filters predate 9.9 and are not part of the current runtime API. New code must u
 - `docs/en/migrations/9.10.0-to-9.10.1.md`
 - `docs/en/migrations/9.10.1-to-9.10.2.md`
 - `docs/en/migrations/9.10.2-to-9.11.0.md`
+- `docs/en/migrations/9.11.0-to-9.12.0.md`
 
 Web documentation:
 

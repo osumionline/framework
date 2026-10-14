@@ -153,6 +153,103 @@ ez da baliozkoa, `float` balio bat ezin baita `DECIMAL` eremu baterako erabili.
 - **`generateModelFrom`**: JSON definizio batetik modeloak sortzen ditu eta `OField::DECIMAL` eremuak onartzen ditu.
 - **`generateModelFromDB`**: SQL `DECIMAL(p,s)` zutabeak PHP `?string` propietate gisa interpretatzen ditu, precision, scale eta balio lehenetsi zehatzak mantenduz.
 
+### DATE eta DATETIME eremuak
+
+Osumi Framework 9.12 bertsiotik aurrera, SQL `DATE` eta `DATETIME` motak bereizita irudikatzen dira.
+
+SQL `DATE` eremu batek `OField::DATE` eta PHP `?string` propietate bat erabiltzen ditu:
+
+```php
+#[OField(
+	type: OField::DATE,
+	nullable: false
+)]
+public ?string $event_date = null;
+```
+
+Bere formatu kanonikoa hau da:
+
+```text
+Y-m-d
+```
+
+adibidez:
+
+```text
+2026-10-14
+```
+
+SQL `DATETIME` eremu batek `OField::DATETIME` erabiltzen du:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false
+)]
+public ?string $processed_at = null;
+```
+
+Bere formatu kanonikoa hau da:
+
+```text
+Y-m-d H:i:s
+```
+
+adibidez:
+
+```text
+2026-10-14 15:30:45
+```
+
+ORM-ak denbora-balioak modu zorrotzean balidatzen ditu. `2026-02-30` bezalako existitzen ez diren datak edo baliogabeko orduak baztertzen dira.
+
+`#[OCreatedAt]`, `#[OUpdatedAt]` eta `#[ODeletedAt]` atributu automatikoek `DATETIME` erabiltzen dute barnean.
+
+`get()` metodoak bi denbora-motei formatu-maskara bat aplika diezaieke:
+
+```php
+$model->get(
+	'event_date',
+	'd/m/Y'
+);
+
+$model->get(
+	'processed_at',
+	'd/m/Y H:i'
+);
+```
+
+Txantiloietako `date` pipe-ak bi formatuak onartzen ditu. Maskara espliziturik gabe:
+
+- `DATE` eremuak `d/m/Y` erabiltzen du;
+- `DATETIME` eremuak `d/m/Y H:i:s` erabiltzen du.
+
+---
+
+### BIGINT eremuak
+
+SQL `BIGINT` sinatutako zutabeek `OField::BIGINT` eta PHP `?int` propietateak erabiltzen dituzte:
+
+```php
+#[OField(
+	type: OField::BIGINT
+)]
+public ?int $external_id = null;
+```
+
+Lehen mailako gako gisa ere erabil daitezke:
+
+```php
+#[OPK(
+	type: OField::BIGINT
+)]
+public ?int $id = null;
+```
+
+`BIGINT` erabiltzeko 64 biteko PHP ingurunea behar da.
+
+ORM-ak ez ditu `BIGINT UNSIGNED` zutabeak edo `ZEROFILL` modifikatzaileak onartzen.
+
 ---
 
 ## Praktika onak

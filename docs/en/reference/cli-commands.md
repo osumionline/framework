@@ -121,7 +121,9 @@ Supported migration options include:
 --help
 ```
 
-Framework migrations are versioned, idempotent and keep their state under `ofw/tmp/state.json`.
+Since 9.12, authoritative migration state is stored in `.ofw-migrations.json` at the project root. This file must be versioned together with the application code.
+
+For backward compatibility, the runner can still read the old `ofw/tmp/state.json` when `.ofw-migrations.json` does not yet exist.
 
 The 9.8.5 → 9.9.0 migration guide documents the migration workflow and the automatic Composer integration in detail.
 

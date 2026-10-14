@@ -2,14 +2,14 @@
 
 **Purpose**
 
-This document provides compact but authoritative context for AI systems that explain or generate code for **Osumi Framework 9.11**.
+This document provides compact but authoritative context for AI systems that explain or generate code for **Osumi Framework 9.12**.
 
 When framework behavior is not documented here, do not invent it.
 
 ## 0. Framework Identity
 
 - **Name:** Osumi Framework
-- **Version:** 9.11.0
+- **Version:** 9.12.0
 - **Language:** PHP
 - **Minimum PHP:** 8.5+
 - **Typing:** use `declare(strict_types=1);`

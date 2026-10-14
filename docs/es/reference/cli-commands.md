@@ -121,7 +121,9 @@ Las opciones de migración soportadas incluyen:
 --help
 ```
 
-Las migraciones del framework están versionadas, son idempotentes y mantienen su estado en `ofw/tmp/state.json`.
+Desde 9.12, el estado autoritativo de las migraciones se mantiene en `.ofw-migrations.json` en la raíz del proyecto. Este archivo debe versionarse junto con el código de la aplicación.
+
+Por compatibilidad, el runner todavía puede leer el antiguo `ofw/tmp/state.json` cuando `.ofw-migrations.json` aún no existe.
 
 La guía de migración 9.8.5 → 9.9.0 documenta en detalle el flujo de migración y la integración automática con Composer.
 

@@ -153,6 +153,103 @@ is invalid because a `float` cannot be used for a `DECIMAL` field.
 - **`generateModelFrom`**: Generates models from a JSON definition and supports `OField::DECIMAL` fields.
 - **`generateModelFromDB`**: Interprets SQL `DECIMAL(p,s)` columns as PHP `?string` properties, preserving precision, scale and exact default values.
 
+### DATE and DATETIME Fields
+
+Since Osumi Framework 9.12, SQL `DATE` and `DATETIME` types are represented independently.
+
+An SQL `DATE` field uses `OField::DATE` and a PHP `?string` property:
+
+```php
+#[OField(
+	type: OField::DATE,
+	nullable: false
+)]
+public ?string $event_date = null;
+```
+
+Its canonical format is:
+
+```text
+Y-m-d
+```
+
+for example:
+
+```text
+2026-10-14
+```
+
+An SQL `DATETIME` field uses `OField::DATETIME`:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false
+)]
+public ?string $processed_at = null;
+```
+
+Its canonical format is:
+
+```text
+Y-m-d H:i:s
+```
+
+for example:
+
+```text
+2026-10-14 15:30:45
+```
+
+The ORM validates temporal values strictly. Invalid calendar dates such as `2026-02-30` and invalid times are rejected.
+
+Automatic `#[OCreatedAt]`, `#[OUpdatedAt]` and `#[ODeletedAt]` fields internally use `DATETIME`.
+
+The `get()` method can format both temporal types with an explicit mask:
+
+```php
+$model->get(
+	'event_date',
+	'd/m/Y'
+);
+
+$model->get(
+	'processed_at',
+	'd/m/Y H:i'
+);
+```
+
+The template `date` pipe also supports both formats. Without an explicit mask:
+
+- `DATE` uses `d/m/Y`;
+- `DATETIME` uses `d/m/Y H:i:s`.
+
+---
+
+### BIGINT Fields
+
+Signed SQL `BIGINT` columns use `OField::BIGINT` and PHP `?int` properties:
+
+```php
+#[OField(
+	type: OField::BIGINT
+)]
+public ?int $external_id = null;
+```
+
+They may also be used as primary keys:
+
+```php
+#[OPK(
+	type: OField::BIGINT
+)]
+public ?int $id = null;
+```
+
+`BIGINT` requires a 64-bit PHP environment.
+
+The ORM does not support `BIGINT UNSIGNED` columns or `ZEROFILL` modifiers.
+
 ---
 
 ## Best Practices

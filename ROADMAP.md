@@ -1,5 +1,14 @@
 Proximamente en Osumi Framework:
 
+**~~9.12.0~~**
+
+- Soporte nativo para columnas SQL `DATE` mediante `OField::DATE`.
+- Nuevo tipo `OField::DATETIME` para columnas SQL `DATETIME`.
+- Soporte nativo para columnas SQL `BIGINT` mediante propiedades PHP `?int` en entornos de 64 bits.
+- `generateModelFromDB` reconoce `DATE`, `DATETIME` y `BIGINT`.
+- Migración automática de los antiguos usos de `OField::DATE` a `OField::DATETIME`.
+- El estado de migraciones pasa a `.ofw-migrations.json`, versionable con el proyecto.
+
 **~~9.10.0~~**
 
 - Nuevo soporte nativo para respuestas HTTP por streaming mediante `OStreamResponse`.
@@ -49,19 +58,19 @@ ORoute::prefix('/admin', static function(): void {
 **~~9.4.0~~**
 
 - ~~`ORoute::view` Método para asignar directamente un Template a una ruta, sin tener que pasar por un componente. Sirve para mostrar datos estáticos.~~
-  - ~~`ORoute::view("/url", "ruta_al_archivo.html");`~~
-  - ~~`ORoute::view("/url", "ruta_al_archivo.html", LayoutComponent::class);`~~
+    - ~~`ORoute::view("/url", "ruta_al_archivo.html");`~~
+    - ~~`ORoute::view("/url", "ruta_al_archivo.html", LayoutComponent::class);`~~
 - ~~Nueva task `generateModelFrom --file` Método inverso a `generateModel`, sirve para generar las clases de modelo directamente a partir de un archivo JSON con la definición de una base de datos.~~
 - ~~Permitir método `run` en componentes que no son de ruta, si lo tiene ejecutarlo antes de hacer `render`. Serviría tanto para componentes de ruta (quitaría la ejecución de `OCore->run`) como componentes reutilizables. `render` tendría que aceptar `ORequest` y `ODTO`.~~
 - ~~Pipes en templates:~~
-  - ~~`{{ variable | función }}`~~
-  - ~~También para objetos `{{ objeto.propiedad }}`~~
-  - ~~`{{ variable | date("d/m/Y") }}` fecha/string con marcara para date o null.~~
-  - ~~`{{ variable | date }}` como el anterior pero con máscara por defecto (d/m/Y h:i:s).~~
-  - ~~`{{ variable | number(2, ",", "") }}` int/float con marcara para `number_format` o null.~~
-  - ~~`{{ variable | number }}` como el anterior pero con máscara por defecto (".", "")~~
-  - ~~`{{ variable | string }}` string con urlencode o null.~~
-  - ~~`{{ variable | bool }}` bool o null.~~
+    - ~~`{{ variable | función }}`~~
+    - ~~También para objetos `{{ objeto.propiedad }}`~~
+    - ~~`{{ variable | date("d/m/Y") }}` fecha/string con marcara para date o null.~~
+    - ~~`{{ variable | date }}` como el anterior pero con máscara por defecto (d/m/Y h:i:s).~~
+    - ~~`{{ variable | number(2, ",", "") }}` int/float con marcara para `number_format` o null.~~
+    - ~~`{{ variable | number }}` como el anterior pero con máscara por defecto (".", "")~~
+    - ~~`{{ variable | string }}` string con urlencode o null.~~
+    - ~~`{{ variable | bool }}` bool o null.~~
 
 **~~9.3.0~~**
 

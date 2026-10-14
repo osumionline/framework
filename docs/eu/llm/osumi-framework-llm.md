@@ -2,14 +2,14 @@
 
 **Helburua**
 
-Dokumentu honek **Osumi Framework 9.11** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
+Dokumentu honek **Osumi Framework 9.12** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
 
 Framework-aren portaera bat hemen dokumentatuta ez badago, ez asmatu.
 
 ## 0. Framework-aren identitatea
 
 - **Izena:** Osumi Framework
-- **Bertsioa:** 9.11.0
+- **Bertsioa:** 9.12.0
 - **Hizkuntza:** PHP
 - **Gutxieneko PHP bertsioa:** 8.5+
 - **Tipatzea:** erabili `declare(strict_types=1);`

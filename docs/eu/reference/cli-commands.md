@@ -121,7 +121,9 @@ Onartutako migrazio-aukerak:
 --help
 ```
 
-Framework migrazioak bertsionatuak eta idempotenteak dira eta beren egoera `ofw/tmp/state.json` fitxategian gordetzen dute.
+9.12 bertsiotik aurrera, migrazioen egoera autoritatiboa proiektuaren erroko `.ofw-migrations.json` fitxategian gordetzen da. Fitxategi hori aplikazioaren kodearekin batera bertsionatu behar da.
+
+Atzeranzko bateragarritasunerako, runner-ak oraindik `ofw/tmp/state.json` zaharra irakur dezake `.ofw-migrations.json` oraindik existitzen ez denean.
 
 9.8.5 → 9.9.0 migrazio-gidak migrazio-fluxua eta Composer-ekin integrazio automatikoa xehetasunez dokumentatzen ditu.
 
