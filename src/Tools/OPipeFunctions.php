@@ -4,25 +4,64 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tools;
 
-use DateTime;
+use DateTimeImmutable;
 
 class OPipeFunctions {
   /**
-   * Formats a date value based on the given mask.
+   * Formats a DATE or DATETIME value.
    *
-   * @param string|null $value Date string in 'Y-m-d H:i:s' format, or null.
+   * DATE values use "d/m/Y" by default.
+   * DATETIME values use "d/m/Y H:i:s" by default.
    *
-   * @param string $mask Format mask, default is "d/m/Y H:i:s".
+   * @param string|null $value DATE or DATETIME value, or null.
+   * @param string|null $mask Optional output format mask.
    *
-   * @return string Formatted date in quotes or "null" if value is null.
+   * @return string Formatted date in quotes or "null" if the value is null
+   *                or invalid.
    */
-  public static function getDateValue(?string $value, string $mask = "d/m/Y H:i:s"): string {
-    if (is_null($value)) {
+  public static function getDateValue(
+    ?string $value,
+    ?string $mask = null
+  ): string {
+    if ($value === null) {
       return 'null';
     }
 
-    $date = DateTime::createFromFormat('Y-m-d H:i:s', $value);
-    return $date ? '"' . $date->format($mask) . '"' : 'null';
+    $formats = [
+      'Y-m-d H:i:s' => 'd/m/Y H:i:s',
+      'Y-m-d' => 'd/m/Y'
+    ];
+
+    foreach ($formats as $input_format => $default_mask) {
+      $date = DateTimeImmutable::createFromFormat(
+        '!' . $input_format,
+        $value
+      );
+
+      $errors = DateTimeImmutable::getLastErrors();
+
+      if (
+        $date === false ||
+        (
+          $errors !== false &&
+          (
+            $errors['warning_count'] > 0 ||
+            $errors['error_count'] > 0
+          )
+        ) ||
+        $date->format($input_format) !== $value
+      ) {
+        continue;
+      }
+
+      return '"'
+        . $date->format(
+          $mask ?? $default_mask
+        )
+        . '"';
+    }
+
+    return 'null';
   }
 
   /**

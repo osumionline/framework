@@ -305,10 +305,20 @@ class OBuild {
 			return 'component-folder-cant-create';
 		}
 
-		$text_fields   = [OField::TEXT, OField::LONGTEXT];
-		$number_fields = [OField::NUMBER, OField::FLOAT];
-		$date_fields   = [OField::DATE];
-		$cont          = 0;
+		$text_fields = [
+			OField::TEXT,
+			OField::LONGTEXT
+		];
+		$number_fields = [
+			OField::NUMBER,
+			OField::BIGINT,
+			OField::FLOAT
+		];
+		$date_fields = [
+			OField::DATE,
+			OField::DATETIME
+		];
+		$cont = 0;
 
 		$component_name = $values['model_name'] . 'Component';
 
@@ -568,12 +578,17 @@ class OBuild {
 					?? 'OField::NUMBER';
 
 				$field['attribute_type'] = match ($field_type) {
-					'OField::NUMBER' => 'int',
+					'OField::NUMBER',
+					'OField::BIGINT' => 'int',
+
 					'OField::FLOAT' => 'float',
 					'OField::BOOL' => 'bool',
+
 					'OField::TEXT',
 					'OField::LONGTEXT',
-					'OField::DATE' => 'string',
+					'OField::DATE',
+					'OField::DATETIME' => 'string',
+
 					default => throw new \InvalidArgumentException(
 						"Unsupported primary key field type '{$field_type}'."
 					)

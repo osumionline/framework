@@ -264,8 +264,8 @@ final class OMiddlewareTest extends TestCase {
             202
         );
         OMiddleware::setStreamingResponse(
-    		true
-		);
+            true
+        );
 
         OMiddleware::reset();
 
@@ -296,8 +296,8 @@ final class OMiddlewareTest extends TestCase {
             OMiddleware::getStatusCode()
         );
         self::assertFalse(
-    		OMiddleware::isStreamingResponse()
-		);
+            OMiddleware::isStreamingResponse()
+        );
         self::assertFalse(
             OMiddleware::isError()
         );
@@ -367,68 +367,68 @@ final class OMiddlewareTest extends TestCase {
             "value\r\nInjected: true"
         );
     }
-    
+
     /**
- 	 * Test that streaming response state is exposed to middlewares.
- 	 *
- 	 * @return void
- 	 */
-	public function testStreamingResponseStateIsAvailableToMiddlewares(): void {
-    	OMiddleware::setStreamingResponse(
-        	true
-    	);
+     * Test that streaming response state is exposed to middlewares.
+     *
+     * @return void
+     */
+    public function testStreamingResponseStateIsAvailableToMiddlewares(): void {
+        OMiddleware::setStreamingResponse(
+            true
+        );
 
-    	OMiddleware::setRoute([
-        	OMiddleware::PHASE_AFTER_RENDER => [
-            	StreamingResponseObserverMiddleware::class
-        	]
-    	]);
+        OMiddleware::setRoute([
+            OMiddleware::PHASE_AFTER_RENDER => [
+                StreamingResponseObserverMiddleware::class
+            ]
+        ]);
 
-    	StreamingResponseObserverMiddleware::reset();
+        StreamingResponseObserverMiddleware::reset();
 
-    	OMiddleware::runPhase(
-        	OMiddleware::PHASE_AFTER_RENDER,
-        	[]
-    	);
+        OMiddleware::runPhase(
+            OMiddleware::PHASE_AFTER_RENDER,
+            []
+        );
 
-    	self::assertTrue(
-        	StreamingResponseObserverMiddleware::$is_streaming_response
-    	);
+        self::assertTrue(
+            StreamingResponseObserverMiddleware::$is_streaming_response
+        );
 
-    	self::assertTrue(
-        	OMiddleware::isStreamingResponse()
-    	);
-	}
+        self::assertTrue(
+            OMiddleware::isStreamingResponse()
+        );
+    }
 
-	/**
- 	 * Test that middleware cannot replace a streamed response body.
- 	 *
- 	 * @return void
- 	 */
-	public function testStreamingResponseBodyCannotBeReplaced(): void {
-    	OMiddleware::setStreamingResponse(
-        	true
-    	);
+    /**
+     * Test that middleware cannot replace a streamed response body.
+     *
+     * @return void
+     */
+    public function testStreamingResponseBodyCannotBeReplaced(): void {
+        OMiddleware::setStreamingResponse(
+            true
+        );
 
-    	OMiddleware::setRoute([
-        	OMiddleware::PHASE_AFTER_RENDER => [
-            AfterRenderBodyMiddleware::class
-        	]
-    	]);
+        OMiddleware::setRoute([
+            OMiddleware::PHASE_AFTER_RENDER => [
+                AfterRenderBodyMiddleware::class
+            ]
+        ]);
 
-    	$this->expectException(
-        	\InvalidArgumentException::class
-    	);
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
 
-    	$this->expectExceptionMessage(
-        	'cannot replace the body of a streamed response'
-    	);
+        $this->expectExceptionMessageIsOrContains(
+            'cannot replace the body of a streamed response'
+        );
 
-    	OMiddleware::runPhase(
-        	OMiddleware::PHASE_AFTER_RENDER,
-        	[]
-    	);
-	}
+        OMiddleware::runPhase(
+            OMiddleware::PHASE_AFTER_RENDER,
+            []
+        );
+    }
 }
 
 final class OrderRecorder {

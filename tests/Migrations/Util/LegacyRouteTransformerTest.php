@@ -212,7 +212,7 @@ PHP;
         $this->expectException(
             \RuntimeException::class
         );
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             'Only literal Filter class arrays can be migrated automatically.'
         );
 
@@ -242,7 +242,7 @@ PHP;
         $this->expectException(
             \RuntimeException::class
         );
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             'no migratable Filter definition was found'
         );
 

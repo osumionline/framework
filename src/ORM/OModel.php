@@ -9,6 +9,7 @@ use PDOStatement;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionProperty;
+use DateTimeImmutable;
 use Exception;
 
 abstract class OModel {
@@ -307,6 +308,7 @@ abstract class OModel {
 
     switch ($field_type) {
       case OField::NUMBER:
+      case OField::BIGINT:
         if (is_int($value)) {
           return $value;
         }
@@ -404,6 +406,7 @@ abstract class OModel {
       case OField::TEXT:
       case OField::LONGTEXT:
       case OField::DATE:
+      case OField::DATETIME:
         if (is_string($value)) {
           return $value;
         }
@@ -475,13 +478,29 @@ abstract class OModel {
 
     $type = $field->type;
 
+    if (
+      $type === OField::BIGINT &&
+      PHP_INT_SIZE < 8
+    ) {
+      throw new Exception(
+        "BIGINT field '{$field_name}' requires a 64-bit PHP integer environment."
+      );
+    }
+
     if ($field instanceof OPK) {
       if (
         $field->incr &&
-        $type !== OField::NUMBER
+        !in_array(
+          $type,
+          [
+            OField::NUMBER,
+            OField::BIGINT
+          ],
+          true
+        )
       ) {
         throw new Exception(
-          "Auto-increment primary key '{$field_name}' must use OField::NUMBER."
+          "Auto-increment primary key '{$field_name}' must use OField::NUMBER or OField::BIGINT."
         );
       }
 
@@ -564,6 +583,7 @@ abstract class OModel {
 
     switch ($type) {
       case OField::NUMBER:
+      case OField::BIGINT:
         if ($property_type_name !== 'int') {
           throw new Exception(
             "The type of the property '{$field_name}' does not match the expected type '{$type}'."
@@ -605,6 +625,7 @@ abstract class OModel {
         break;
 
       case OField::DATE:
+      case OField::DATETIME:
         if ($property_type_name !== 'string') {
           throw new Exception(
             "The type of the property '{$field_name}' does not match the expected type 'string' for dates."
@@ -761,15 +782,15 @@ abstract class OModel {
                 ?? OField::DECIMAL_DEFAULT_SCALE;
             }
           } elseif ($attr_instance instanceof OCreatedAt) {
-            $field_schema['type'] = OField::DATE;
+            $field_schema['type'] = OField::DATETIME;
             $field_schema['comment'] = $attr_instance->comment;
             $schema['created_at'] = $field_name;
           } elseif ($attr_instance instanceof OUpdatedAt) {
-            $field_schema['type'] = OField::DATE;
+            $field_schema['type'] = OField::DATETIME;
             $field_schema['comment'] = $attr_instance->comment;
             $schema['updated_at'] = $field_name;
           } elseif ($attr_instance instanceof ODeletedAt) {
-            $field_schema['type'] = OField::DATE;
+            $field_schema['type'] = OField::DATETIME;
             $field_schema['comment'] = $attr_instance->comment;
             $schema['deleted_at'] = $field_name;
           }
@@ -981,8 +1002,11 @@ abstract class OModel {
       // Validate the data type
       switch ($field['type']) {
         case OField::NUMBER:
+        case OField::BIGINT:
           if (!is_int($value)) {
-            throw new Exception("The '{$field_name}' field must be an integer.");
+            throw new Exception(
+              "The '{$field_name}' field must be an integer."
+            );
           }
           break;
 
@@ -1029,8 +1053,30 @@ abstract class OModel {
           break;
 
         case OField::DATE:
-          if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
-            throw new Exception("The '{$field_name}' field must be in a valid date and time format (Y-m-d H:i:s).");
+          if (
+            !is_string($value) ||
+            self::parseTemporalValue(
+              $value,
+              'Y-m-d'
+            ) === null
+          ) {
+            throw new Exception(
+              "The '{$field_name}' field must be in a valid date format (Y-m-d)."
+            );
+          }
+          break;
+
+        case OField::DATETIME:
+          if (
+            !is_string($value) ||
+            self::parseTemporalValue(
+              $value,
+              'Y-m-d H:i:s'
+            ) === null
+          ) {
+            throw new Exception(
+              "The '{$field_name}' field must be in a valid date and time format (Y-m-d H:i:s)."
+            );
           }
           break;
 
@@ -2034,7 +2080,7 @@ abstract class OModel {
   /**
    * Get a field value, optionally applying type-specific formatting.
    *
-   * Date fields require a date format as the first additional parameter.
+   * Date and datetime fields require a date format as the first additional parameter.
    * Float fields require the number of decimals, decimal separator and
    * thousands separator as the first three additional parameters.
    *
@@ -2070,27 +2116,53 @@ abstract class OModel {
       return null;
     }
 
-    if ($field_schema['type'] === OField::DATE) {
+    if (
+      in_array(
+        $field_schema['type'],
+        [
+          OField::DATE,
+          OField::DATETIME
+        ],
+        true
+      )
+    ) {
       if (
-        !array_key_exists(0, $params) ||
-        !is_string($params[0])
+        !array_key_exists(
+          0,
+          $params
+        ) ||
+        !is_string(
+          $params[0]
+        )
       ) {
         throw new \InvalidArgumentException(
-          "A string format must be provided for date field '{$field}'."
+          "A string format must be provided for temporal field '{$field}'."
         );
       }
 
-      $timestamp = strtotime($value);
-
-      if ($timestamp === false) {
+      if (!is_string($value)) {
         throw new \UnexpectedValueException(
-          "Field '{$field}' contains an invalid date value."
+          "Field '{$field}' contains an invalid temporal value."
         );
       }
 
-      return date(
-        $params[0],
-        $timestamp
+      $input_format = $field_schema['type'] === OField::DATE
+        ? 'Y-m-d'
+        : 'Y-m-d H:i:s';
+
+      $date = self::parseTemporalValue(
+        $value,
+        $input_format
+      );
+
+      if ($date === null) {
+        throw new \UnexpectedValueException(
+          "Field '{$field}' contains an invalid temporal value."
+        );
+      }
+
+      return $date->format(
+        $params[0]
       );
     }
 
@@ -2253,6 +2325,10 @@ abstract class OModel {
           $sql_field .= " INT(11)";
           break;
 
+        case OField::BIGINT:
+          $sql_field .= " BIGINT";
+          break;
+
         case OField::FLOAT:
           $sql_field .= " FLOAT";
           break;
@@ -2275,6 +2351,10 @@ abstract class OModel {
           break;
 
         case OField::DATE:
+          $sql_field .= " DATE";
+          break;
+
+        case OField::DATETIME:
           $sql_field .= " DATETIME";
           break;
       }
@@ -2347,5 +2427,45 @@ abstract class OModel {
     }
 
     return $sql;
+  }
+
+  /**
+   * Parse a temporal ORM value using an exact format.
+   *
+   * @param string $value Temporal value.
+   * @param string $format Expected PHP date format.
+   *
+   * @return DateTimeImmutable|null Parsed value, or null when invalid.
+   */
+  private static function parseTemporalValue(
+    string $value,
+    string $format
+  ): ?DateTimeImmutable {
+    $date = DateTimeImmutable::createFromFormat(
+      '!' . $format,
+      $value
+    );
+
+    if ($date === false) {
+      return null;
+    }
+
+    $errors = DateTimeImmutable::getLastErrors();
+
+    if (
+      $errors !== false &&
+      (
+        $errors['warning_count'] > 0 ||
+        $errors['error_count'] > 0
+      )
+    ) {
+      return null;
+    }
+
+    if ($date->format($format) !== $value) {
+      return null;
+    }
+
+    return $date;
   }
 }

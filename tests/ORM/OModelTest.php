@@ -6,10 +6,12 @@ namespace Osumi\OsumiFramework\Tests\ORM;
 
 use PDO;
 use PDOStatement;
+use Osumi\OsumiFramework\ORM\OField;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\ExampleModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\InvalidAutoIncrementModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TextKeyModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\DecimalModel;
+use Osumi\OsumiFramework\Tests\Fixtures\ORM\TemporalBigIntModel;
 use PHPUnit\Framework\TestCase;
 
 final class OModelTest extends TestCase {
@@ -214,7 +216,7 @@ final class OModelTest extends TestCase {
             \Exception::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIs(
             "Primary key field 'code' cannot be null."
         );
 
@@ -231,8 +233,8 @@ final class OModelTest extends TestCase {
             \Exception::class
         );
 
-        $this->expectExceptionMessage(
-            "Auto-increment primary key 'code' must use OField::NUMBER."
+        $this->expectExceptionMessageIs(
+            "Auto-increment primary key 'code' must use OField::NUMBER or OField::BIGINT."
         );
 
         new InvalidAutoIncrementModel();
@@ -801,7 +803,7 @@ final class OModelTest extends TestCase {
             \InvalidArgumentException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIs(
             "Unknown model field 'unknown_field'."
         );
 
@@ -810,5 +812,307 @@ final class OModelTest extends TestCase {
                 'unknown_field' => '12.50'
             ]
         );
+    }
+
+    /**
+     * Test BIGINT values are normalized to PHP integers.
+     *
+     * @return void
+     */
+    public function testBigIntValuesAreNormalizedToInteger(): void {
+        $model = TemporalBigIntModel::from(
+            [
+                'id' => '9000000000',
+                'event_date' => '2026-10-14',
+                'event_datetime' => '2026-10-14 12:30:00'
+            ]
+        );
+
+        self::assertSame(
+            9000000000,
+            $model->id
+        );
+    }
+
+    /**
+     * Test DATE and DATETIME values use their respective formats.
+     *
+     * @return void
+     */
+    public function testDateAndDateTimeValuesAreValid(): void {
+        $model = TemporalBigIntModel::create(
+            [
+                'event_date' => '2026-10-14',
+                'event_datetime' => '2026-10-14 12:30:45'
+            ]
+        );
+
+        $model->validateForTest();
+
+        self::assertSame(
+            '2026-10-14',
+            $model->event_date
+        );
+
+        self::assertSame(
+            '2026-10-14 12:30:45',
+            $model->event_datetime
+        );
+    }
+
+    /**
+     * Test that DATE fields reject DATETIME values.
+     *
+     * @return void
+     */
+    public function testDateRejectsDateTimeValue(): void {
+        $model = TemporalBigIntModel::create(
+            [
+                'event_date' => '2026-10-14 12:30:00',
+                'event_datetime' => '2026-10-14 12:30:00'
+            ]
+        );
+
+        $this->expectException(
+            \Exception::class
+        );
+
+        $this->expectExceptionMessageIs(
+            "The 'event_date' field must be in a valid date format (Y-m-d)."
+        );
+
+        $model->validateForTest();
+    }
+
+    /**
+     * Test that DATETIME fields reject DATE-only values.
+     *
+     * @return void
+     */
+    public function testDateTimeRejectsDateValue(): void {
+        $model = TemporalBigIntModel::create(
+            [
+                'event_date' => '2026-10-14',
+                'event_datetime' => '2026-10-14'
+            ]
+        );
+
+        $this->expectException(
+            \Exception::class
+        );
+
+        $this->expectExceptionMessageIs(
+            "The 'event_datetime' field must be in a valid date and time format (Y-m-d H:i:s)."
+        );
+
+        $model->validateForTest();
+    }
+
+    /**
+     * Test automatic timestamp fields use DATETIME internally.
+     *
+     * @return void
+     */
+    public function testAutomaticTimestampFieldsUseDateTime(): void {
+        $model = new TemporalBigIntModel();
+
+        $schema = $model->getModel();
+
+        self::assertSame(
+            OField::DATETIME,
+            $schema['fields']['created_at']['type']
+        );
+
+        self::assertSame(
+            OField::DATETIME,
+            $schema['fields']['updated_at']['type']
+        );
+    }
+
+    /**
+     * Test formatting of DATE and DATETIME fields.
+     *
+     * @return void
+     */
+    public function testDateAndDateTimeFieldsCanBeFormatted(): void {
+        $model = TemporalBigIntModel::create(
+            [
+                'event_date' => '2026-10-14',
+                'event_datetime' => '2026-10-14 12:30:45'
+            ]
+        );
+
+        self::assertSame(
+            '14/10/2026',
+            $model->get(
+                'event_date',
+                'd/m/Y'
+            )
+        );
+
+        self::assertSame(
+            '14/10/2026 12:30',
+            $model->get(
+                'event_datetime',
+                'd/m/Y H:i'
+            )
+        );
+    }
+
+    /**
+     * Test SQL generation for BIGINT, DATE and DATETIME fields.
+     *
+     * @return void
+     */
+    public function testBigIntDateAndDateTimeSQLDefinitionsAreGenerated(): void {
+        $model = new TemporalBigIntModel();
+
+        $sql = $model->toSQL();
+
+        self::assertStringContainsString(
+            '`id` BIGINT NOT NULL AUTO_INCREMENT',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`event_date` DATE NOT NULL',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`event_datetime` DATETIME NOT NULL',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`created_at` DATETIME',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`updated_at` DATETIME',
+            $sql
+        );
+    }
+
+    /**
+     * Test temporal and BIGINT schema contracts.
+     *
+     * @return void
+     */
+    public function testTemporalAndBigIntSchemaContracts(): void {
+        $model = new TemporalBigIntModel();
+
+        $schema = $model->getModel();
+
+        self::assertSame(
+            OField::BIGINT,
+            $schema['fields']['id']['type']
+        );
+
+        self::assertSame(
+            OField::DATE,
+            $schema['fields']['business_date']['type']
+        );
+
+        self::assertSame(
+            OField::DATETIME,
+            $schema['fields']['processed_at']['type']
+        );
+
+        self::assertSame(
+            OField::DATETIME,
+            $schema['fields']['created_at']['type']
+        );
+
+        self::assertSame(
+            OField::DATETIME,
+            $schema['fields']['updated_at']['type']
+        );
+    }
+
+    /**
+     * Test DATE and DATETIME formatting through get().
+     *
+     * @return void
+     */
+    public function testTemporalFieldsCanBeFormatted(): void {
+        $model = new TemporalBigIntModel([
+            'business_date' => '2026-10-14',
+            'processed_at' => '2026-10-14 13:45:30',
+            'created_at' => '2026-10-14 09:15:00'
+        ]);
+
+        self::assertSame(
+            '14/10/2026',
+            $model->get(
+                'business_date',
+                'd/m/Y'
+            )
+        );
+
+        self::assertSame(
+            '14/10/2026 13:45',
+            $model->get(
+                'processed_at',
+                'd/m/Y H:i'
+            )
+        );
+
+        self::assertSame(
+            '14/10/2026 09:15',
+            $model->get(
+                'created_at',
+                'd/m/Y H:i'
+            )
+        );
+    }
+
+    /**
+     * Test that invalid calendar DATE values are rejected.
+     *
+     * @return void
+     */
+    public function testInvalidCalendarDateIsRejected(): void {
+        $model = new TemporalBigIntModel([
+            'business_date' => '2026-02-30'
+        ]);
+
+        try {
+            $model->validateForTest();
+
+            self::fail(
+                'Invalid calendar DATE was expected to be rejected.'
+            );
+        } catch (\Exception $e) {
+            self::assertSame(
+                "The 'business_date' field must be in a valid date format (Y-m-d).",
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Test that DATE and DATETIME formats cannot be interchanged.
+     *
+     * @return void
+     */
+    public function testDateTimeRequiresTimeComponent(): void {
+        $model = new TemporalBigIntModel([
+            'processed_at' => '2026-10-14'
+        ]);
+
+        try {
+            $model->validateForTest();
+
+            self::fail(
+                'DATETIME without a time component was expected to be rejected.'
+            );
+        } catch (\Exception $e) {
+            self::assertSame(
+                "The 'processed_at' field must be in a valid date and time format (Y-m-d H:i:s).",
+                $e->getMessage()
+            );
+        }
     }
 }

@@ -147,7 +147,7 @@ final class GenerateModelFromDBTaskTest extends TestCase {
             \RuntimeException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             "SQL default expression 'current_timestamp()'"
         );
 
@@ -218,5 +218,116 @@ final class GenerateModelFromDBTaskTest extends TestCase {
             '1e3',
             'OField::DECIMAL'
         );
+    }
+
+    /**
+     * Test SQL types introduced or redefined in OFW 9.12.
+     *
+     * @return void
+     */
+    public function testDateDateTimeAndBigIntAreMapped(): void {
+        self::assertSame(
+            [
+                'decorator' => 'OField',
+                'type' => 'OField::DATE',
+                'attribute_type' => 'string'
+            ],
+            $this->getColumnTypeDefinition(
+                'date',
+                'date'
+            )
+        );
+
+        self::assertSame(
+            [
+                'decorator' => 'OField',
+                'type' => 'OField::DATETIME',
+                'attribute_type' => 'string'
+            ],
+            $this->getColumnTypeDefinition(
+                'datetime',
+                'datetime'
+            )
+        );
+
+        self::assertSame(
+            [
+                'decorator' => 'OField',
+                'type' => 'OField::BIGINT',
+                'attribute_type' => 'int'
+            ],
+            $this->getColumnTypeDefinition(
+                'bigint',
+                'bigint(20)'
+            )
+        );
+    }
+
+    /**
+     * Test that unsigned BIGINT columns remain unsupported.
+     *
+     * @return void
+     */
+    public function testUnsignedBigIntIsRejected(): void {
+        try {
+            $this->getColumnTypeDefinition(
+                'bigint',
+                'bigint(20) unsigned'
+            );
+
+            self::fail(
+                'Unsigned BIGINT was expected to be rejected.'
+            );
+        } catch (\RuntimeException $e) {
+            self::assertSame(
+                "Database column 'field' uses unsupported numeric modifiers 'bigint(20) unsigned'.",
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Invoke the pure SQL type mapper.
+     *
+     * @param string $data_type SQL DATA_TYPE.
+     * @param string $column_type SQL COLUMN_TYPE.
+     * @param int|null $character_maximum_length Character maximum length.
+     * @param int|null $numeric_precision Numeric precision.
+     * @param int|null $numeric_scale Numeric scale.
+     *
+     * @return array<string, string|int>
+     */
+    private function getColumnTypeDefinition(
+        string $data_type,
+        string $column_type,
+        ?int $character_maximum_length = null,
+        ?int $numeric_precision = null,
+        ?int $numeric_scale = null
+    ): array {
+        $task = new GenerateModelFromDBTask();
+
+        $method = new ReflectionMethod(
+            $task,
+            'getColumnTypeDefinition'
+        );
+
+        $result = $method->invoke(
+            $task,
+            'field',
+            $data_type,
+            $column_type,
+            $character_maximum_length,
+            $numeric_precision,
+            $numeric_scale
+        );
+
+        if (!is_array($result)) {
+            self::fail(
+                'Column type mapper did not return an array.'
+            );
+        }
+
+        /** @var array<string, string|int> $result */
+        return $result;
     }
 }

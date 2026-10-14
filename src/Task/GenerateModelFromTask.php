@@ -226,11 +226,13 @@ class GenerateModelFromTask extends OTask {
           $field['type'],
           [
             'OField::NUMBER',
+            'OField::BIGINT',
             'OField::TEXT',
             'OField::LONGTEXT',
             'OField::FLOAT',
             'OField::BOOL',
             'OField::DATE',
+            'OField::DATETIME',
             'OField::DECIMAL'
           ],
           true
@@ -247,12 +249,14 @@ class GenerateModelFromTask extends OTask {
       array_key_exists('attribute_type', $field)
     ) {
       $expected_attribute_type = match ($field['type']) {
-        'OField::NUMBER' => 'int',
+        'OField::NUMBER',
+        'OField::BIGINT' => 'int',
         'OField::FLOAT' => 'float',
         'OField::BOOL' => 'bool',
         'OField::TEXT',
         'OField::LONGTEXT',
         'OField::DATE',
+        'OField::DATETIME',
         'OField::DECIMAL' => 'string'
       };
 
@@ -366,10 +370,17 @@ class GenerateModelFromTask extends OTask {
 
       if (
         $is_incremental &&
-        $field_type !== 'OField::NUMBER'
+        !in_array(
+          $field_type,
+          [
+            'OField::NUMBER',
+            'OField::BIGINT'
+          ],
+          true
+        )
       ) {
         throw new \InvalidArgumentException(
-          "Auto-increment primary key '{$field['name']}' must use OField::NUMBER."
+          "Auto-increment primary key '{$field['name']}' must use OField::NUMBER or OField::BIGINT."
         );
       }
 

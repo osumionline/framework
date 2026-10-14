@@ -641,7 +641,7 @@ final class GenerateModelFromTaskTest extends TestCase {
             \InvalidArgumentException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIs(
             "Primary key field 'id' cannot use OField::DECIMAL."
         );
 
@@ -692,7 +692,7 @@ final class GenerateModelFromTaskTest extends TestCase {
             \InvalidArgumentException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIs(
             "DECIMAL field 'amount' default value must be a string."
         );
 
@@ -746,6 +746,143 @@ final class GenerateModelFromTaskTest extends TestCase {
 
         $this->runGenerator(
             $file
+        );
+    }
+
+    /**
+     * Test generation and SQL round-trip of DATE, DATETIME and BIGINT fields.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If the generated model cannot be read.
+     */
+    public function testGeneratesTemporalAndBigIntModelDefinition(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'generated_temporal_bigint_model_for_test',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK',
+                                'type' => 'OField::BIGINT',
+                                'incr' => true,
+                                'nullable' => false
+                            ],
+                            [
+                                'name' => 'business_date',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DATE',
+                                'nullable' => false
+                            ],
+                            [
+                                'name' => 'processed_at',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DATETIME',
+                                'nullable' => true
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->runGenerator(
+            $file
+        );
+
+        $generated_path = $this->project->getPath(
+            'src/Model/GeneratedTemporalBigintModelForTest.php'
+        );
+
+        self::assertFileExists(
+            $generated_path
+        );
+
+        $content = file_get_contents(
+            $generated_path
+        );
+
+        if ($content === false) {
+            throw new \RuntimeException(
+                'Could not read generated temporal/BIGINT model.'
+            );
+        }
+
+        self::assertStringContainsString(
+            'type: OField::BIGINT',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'public ?int $id;',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'type: OField::DATE',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'public ?string $business_date;',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'type: OField::DATETIME',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'public ?string $processed_at;',
+            $content
+        );
+
+        require_once $generated_path;
+
+        $class_name =
+            'Osumi\\OsumiFramework\\App\\Model\\GeneratedTemporalBigintModelForTest';
+
+        $model = new $class_name();
+
+        $sql = $model->toSQL();
+
+        self::assertStringContainsString(
+            '`id` BIGINT NOT NULL AUTO_INCREMENT',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`business_date` DATE NOT NULL',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`processed_at` DATETIME',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`created_at` DATETIME',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`updated_at` DATETIME',
+            $sql
         );
     }
 }

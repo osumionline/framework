@@ -205,6 +205,190 @@ class GenerateModelFromDBTask extends OTask {
 	}
 
 	/**
+	 * Convert MariaDB column type metadata into an ORM field definition.
+	 *
+	 * @param string $field_name Field name.
+	 * @param string $data_type MariaDB DATA_TYPE value.
+	 * @param string $column_type MariaDB COLUMN_TYPE value.
+	 * @param int|null $character_maximum_length Character maximum length.
+	 * @param int|null $numeric_precision Numeric precision.
+	 * @param int|null $numeric_scale Numeric scale.
+	 *
+	 * @return array{
+	 *     decorator: string,
+	 *     type: string,
+	 *     attribute_type: string,
+	 *     max?: int,
+	 *     precision?: int,
+	 *     scale?: int
+	 * }
+	 *
+	 * @throws \RuntimeException If the SQL type cannot be represented by the ORM.
+	 */
+	private function getColumnTypeDefinition(
+		string $field_name,
+		string $data_type,
+		string $column_type,
+		?int $character_maximum_length,
+		?int $numeric_precision,
+		?int $numeric_scale
+	): array {
+		$data_type = strtolower(
+			$data_type
+		);
+
+		$column_type = strtolower(
+			$column_type
+		);
+
+		if (
+			str_contains(
+				$column_type,
+				'unsigned'
+			) ||
+			str_contains(
+				$column_type,
+				'zerofill'
+			)
+		) {
+			throw new \RuntimeException(
+				"Database column '{$field_name}' uses unsupported numeric modifiers '{$column_type}'."
+			);
+		}
+
+		switch ($data_type) {
+			case 'text':
+			case 'longtext':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::LONGTEXT',
+					'attribute_type' => 'string'
+				];
+
+			case 'varchar':
+			case 'char':
+				if (
+					$character_maximum_length === null ||
+					$character_maximum_length <= 0
+				) {
+					throw new \RuntimeException(
+						"Text field '{$field_name}' does not define a valid maximum length."
+					);
+				}
+
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::TEXT',
+					'attribute_type' => 'string',
+					'max' => $character_maximum_length
+				];
+
+			case 'float':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::FLOAT',
+					'attribute_type' => 'float'
+				];
+
+			case 'decimal':
+				if (
+					$numeric_precision === null ||
+					$numeric_precision < 1 ||
+					$numeric_precision > OField::DECIMAL_MAX_PRECISION
+				) {
+					throw new \RuntimeException(
+						"DECIMAL field '{$field_name}' precision is outside the ORM supported range."
+					);
+				}
+
+				if (
+					$numeric_scale === null ||
+					$numeric_scale < 0 ||
+					$numeric_scale > OField::DECIMAL_MAX_SCALE
+				) {
+					throw new \RuntimeException(
+						"DECIMAL field '{$field_name}' scale is outside the ORM supported range."
+					);
+				}
+
+				if ($numeric_scale > $numeric_precision) {
+					throw new \RuntimeException(
+						"DECIMAL field '{$field_name}' scale cannot be greater than its precision."
+					);
+				}
+
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::DECIMAL',
+					'attribute_type' => 'string',
+					'precision' => $numeric_precision,
+					'scale' => $numeric_scale
+				];
+
+			case 'date':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::DATE',
+					'attribute_type' => 'string'
+				];
+
+			case 'datetime':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::DATETIME',
+					'attribute_type' => 'string'
+				];
+
+			case 'timestamp':
+				throw new \RuntimeException(
+					"TIMESTAMP field '{$field_name}' cannot be represented faithfully by the ORM DATETIME type."
+				);
+
+			case 'tinyint':
+				if (
+					preg_match(
+						'/^tinyint\(1\)/D',
+						$column_type
+					) === 1
+				) {
+					return [
+						'decorator' => 'OField',
+						'type' => 'OField::BOOL',
+						'attribute_type' => 'bool'
+					];
+				}
+
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::NUMBER',
+					'attribute_type' => 'int'
+				];
+
+			case 'smallint':
+			case 'mediumint':
+			case 'int':
+			case 'integer':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::NUMBER',
+					'attribute_type' => 'int'
+				];
+
+			case 'bigint':
+				return [
+					'decorator' => 'OField',
+					'type' => 'OField::BIGINT',
+					'attribute_type' => 'int'
+				];
+
+			default:
+				throw new \RuntimeException(
+					"Database type '{$data_type}' for field '{$field_name}' cannot be represented by the ORM."
+				);
+		}
+	}
+
+	/**
 	 * Get the column definitions for a database table.
 	 *
 	 * @param string $table_name Table name.
@@ -299,137 +483,23 @@ class GenerateModelFromDBTask extends OTask {
 
 			$field['nullable'] = $res['IS_NULLABLE'] === 'YES';
 
-			$data_type = strtolower(
-				(string) $res['DATA_TYPE']
-			);
-
-			$column_type = strtolower(
-				(string) $res['COLUMN_TYPE']
-			);
-
-			if (
-				str_contains(
-					$column_type,
-					'unsigned'
-				) ||
-				str_contains(
-					$column_type,
-					'zerofill'
+			$field = [
+				...$field,
+				...$this->getColumnTypeDefinition(
+					$field_name,
+					(string) $res['DATA_TYPE'],
+					(string) $res['COLUMN_TYPE'],
+					$res['CHARACTER_MAXIMUM_LENGTH'] === null
+						? null
+						: (int) $res['CHARACTER_MAXIMUM_LENGTH'],
+					$res['NUMERIC_PRECISION'] === null
+						? null
+						: (int) $res['NUMERIC_PRECISION'],
+					$res['NUMERIC_SCALE'] === null
+						? null
+						: (int) $res['NUMERIC_SCALE']
 				)
-			) {
-				throw new \RuntimeException(
-					"Database column '{$field_name}' uses unsupported numeric modifiers '{$column_type}'."
-				);
-			}
-
-			switch ($data_type) {
-				case 'text':
-				case 'longtext':
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::LONGTEXT';
-					$field['attribute_type'] = 'string';
-					break;
-
-				case 'varchar':
-				case 'char':
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::TEXT';
-					$field['attribute_type'] = 'string';
-					$field['max'] = (int) $res['CHARACTER_MAXIMUM_LENGTH'];
-					break;
-
-				case 'float':
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::FLOAT';
-					$field['attribute_type'] = 'float';
-					break;
-
-				case 'decimal':
-					$precision = (int) $res['NUMERIC_PRECISION'];
-					$scale = (int) $res['NUMERIC_SCALE'];
-
-					if (
-						$precision < 1 ||
-						$precision > OField::DECIMAL_MAX_PRECISION
-					) {
-						throw new \RuntimeException(
-							"DECIMAL field '{$field_name}' precision {$precision} is outside the ORM supported range."
-						);
-					}
-
-					if (
-						$scale < 0 ||
-						$scale > OField::DECIMAL_MAX_SCALE
-					) {
-						throw new \RuntimeException(
-							"DECIMAL field '{$field_name}' scale {$scale} is outside the ORM supported range."
-						);
-					}
-
-					if ($scale > $precision) {
-						throw new \RuntimeException(
-							"DECIMAL field '{$field_name}' scale cannot be greater than its precision."
-						);
-					}
-
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::DECIMAL';
-					$field['attribute_type'] = 'string';
-					$field['precision'] = $precision;
-					$field['scale'] = $scale;
-					break;
-
-				case 'datetime':
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::DATE';
-					$field['attribute_type'] = 'string';
-					break;
-
-				case 'timestamp':
-					throw new \RuntimeException(
-						"TIMESTAMP field '{$field_name}' cannot be represented faithfully by the ORM DATE type."
-					);
-
-				case 'tinyint':
-					if (
-						preg_match(
-							'/^tinyint\(1\)/D',
-							$column_type
-						) === 1
-					) {
-						$field['decorator'] = 'OField';
-						$field['type'] = 'OField::BOOL';
-						$field['attribute_type'] = 'bool';
-						break;
-					}
-
-					/*
-				 * Non-boolean TINYINT columns are regular integer fields.
-				 */
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::NUMBER';
-					$field['attribute_type'] = 'int';
-					break;
-
-				case 'smallint':
-				case 'mediumint':
-				case 'int':
-				case 'integer':
-					$field['decorator'] = 'OField';
-					$field['type'] = 'OField::NUMBER';
-					$field['attribute_type'] = 'int';
-					break;
-
-				case 'bigint':
-					throw new \RuntimeException(
-						"BIGINT field '{$field_name}' cannot be represented safely by the ORM NUMBER type."
-					);
-
-				default:
-					throw new \RuntimeException(
-						"Database type '{$data_type}' for field '{$field_name}' cannot be represented by the ORM."
-					);
-			}
+			];
 
 			$default = $this->parseColumnDefault(
 				$field_name,
@@ -535,10 +605,17 @@ class GenerateModelFromDBTask extends OTask {
 				$field['decorator'] = 'OPK';
 
 				$field['type'] = match ($attribute_type) {
-					'int' => 'OField::NUMBER',
+					'int' => match ($field['type'] ?? 'OField::NUMBER') {
+						'OField::BIGINT' => 'OField::BIGINT',
+						default => 'OField::NUMBER'
+					},
+
 					'float' => 'OField::FLOAT',
 					'bool' => 'OField::BOOL',
-					'string' => $field['type'] ?? 'OField::TEXT',
+
+					'string' => $field['type']
+						?? 'OField::TEXT',
+
 					default => throw new \RuntimeException(
 						"Unsupported PHP type '{$attribute_type}' for primary key '{$field['name']}'."
 					)

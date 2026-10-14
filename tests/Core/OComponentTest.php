@@ -231,7 +231,7 @@ final class OComponentTest extends TestCase {
             \RuntimeException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             'OStreamResponse cannot be converted to a string'
         );
 
@@ -250,7 +250,7 @@ final class OComponentTest extends TestCase {
             \RuntimeException::class
         );
 
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             'No valid template file found'
         );
 

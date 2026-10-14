@@ -277,7 +277,7 @@ final class OStreamResponseTest extends TestCase {
                 \InvalidArgumentException::class
             );
 
-            $this->expectExceptionMessage(
+            $this->expectExceptionMessageIsOrContains(
                 'requires a readable stream'
             );
 

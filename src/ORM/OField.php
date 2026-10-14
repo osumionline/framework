@@ -10,11 +10,13 @@ use Attribute;
 class OField {
     // Field types
     public const NUMBER   = 'NUMBER';
+    public const BIGINT   = 'BIGINT';
     public const TEXT     = 'TEXT';
     public const LONGTEXT = 'LONGTEXT';
     public const FLOAT    = 'FLOAT';
     public const BOOL     = 'BOOL';
     public const DATE     = 'DATE';
+    public const DATETIME = 'DATETIME';
     public const DECIMAL  = 'DECIMAL';
 
     public const DECIMAL_DEFAULT_PRECISION = 10;

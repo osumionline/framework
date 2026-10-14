@@ -125,7 +125,7 @@ PHP;
         $this->expectException(
             \RuntimeException::class
         );
-        $this->expectExceptionMessage(
+        $this->expectExceptionMessageIsOrContains(
             "src/Component/Example.php:3"
         );
 
