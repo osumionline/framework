@@ -1,5 +1,12 @@
 Proximamente en Osumi Framework:
 
+**~~9.12.1~~**
+
+- Soporte para `OField::CURRENT_TIMESTAMP` como valor por defecto dinámico de campos `OField::DATETIME`.
+- `generateModelFromDB` reconoce `DEFAULT CURRENT_TIMESTAMP` y `DEFAULT CURRENT_TIMESTAMP()`.
+- `generateModel` conserva `CURRENT_TIMESTAMP` como expresión SQL al regenerar el esquema.
+- Las expresiones SQL no soportadas continúan rechazándose explícitamente.
+
 **~~9.12.0~~**
 
 - Soporte nativo para columnas SQL `DATE` mediante `OField::DATE`.

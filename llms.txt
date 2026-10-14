@@ -6,7 +6,7 @@ This file is optimized for AI systems. Prefer explicit, strictly typed code and 
 
 ## Version
 
-- Framework: 9.12.0
+- Framework: 9.12.1
 - PHP: 8.5+
 - `declare(strict_types=1);` should be used in PHP files.
 
@@ -148,6 +148,8 @@ Exact SQL `DECIMAL(p,s)` fields use `OField::DECIMAL` and PHP `?string`, never `
 
 SQL `DATE` fields use `OField::DATE` with PHP `?string` values in canonical `Y-m-d` format. SQL `DATETIME` fields use `OField::DATETIME` with PHP `?string` values in canonical `Y-m-d H:i:s` format. Temporal values are validated strictly. Automatic created/updated/deleted timestamp fields use `DATETIME`.
 
+`OField::DATETIME` fields may use `default: OField::CURRENT_TIMESTAMP`. This is a dedicated ORM sentinel, not the literal string `"CURRENT_TIMESTAMP"`. The ORM resolves it to the current `Y-m-d H:i:s` value when defaults are applied and generates it as unquoted SQL `DEFAULT CURRENT_TIMESTAMP`. `generateModelFromDB` recognizes both `CURRENT_TIMESTAMP` and `CURRENT_TIMESTAMP()` for `DATETIME` columns. Other dynamic SQL expressions remain unsupported.
+
 Signed SQL `BIGINT` fields use `OField::BIGINT` with PHP `?int` and require a 64-bit PHP environment. BIGINT may be used as a primary key and auto-increment field. `UNSIGNED` and `ZEROFILL` are not supported.
 
 ## CLI and migrations
@@ -173,6 +175,7 @@ Filters predate 9.9 and are not part of the current runtime API. New code must u
 - `docs/en/migrations/9.10.1-to-9.10.2.md`
 - `docs/en/migrations/9.10.2-to-9.11.0.md`
 - `docs/en/migrations/9.11.0-to-9.12.0.md`
+- `docs/en/migrations/9.12.0-to-9.12.1.md`
 
 Web documentation:
 

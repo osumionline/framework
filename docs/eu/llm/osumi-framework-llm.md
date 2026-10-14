@@ -2,14 +2,14 @@
 
 **Helburua**
 
-Dokumentu honek **Osumi Framework 9.12** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
+Dokumentu honek **Osumi Framework 9.12.1** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
 
 Framework-aren portaera bat hemen dokumentatuta ez badago, ez asmatu.
 
 ## 0. Framework-aren identitatea
 
 - **Izena:** Osumi Framework
-- **Bertsioa:** 9.12.0
+- **Bertsioa:** 9.12.1
 - **Hizkuntza:** PHP
 - **Gutxieneko PHP bertsioa:** 8.5+
 - **Tipatzea:** erabili `declare(strict_types=1);`
@@ -106,6 +106,8 @@ SQL `DATETIME` eremuek `OField::DATETIME`, PHP `?string` propietateak eta `Y-m-d
 `DATE` eta `DATETIME` balioak modu zorrotzean balidatzen dira. Existitzen ez diren datak eta baliogabeko orduak baztertzen dira.
 
 `#[OCreatedAt]`, `#[OUpdatedAt]` eta `#[ODeletedAt]` atributuek `DATETIME` erabiltzen dute barnean.
+
+`OField::DATETIME` eremuek `default: OField::CURRENT_TIMESTAMP` erabil dezakete. ORM-ak balio hori dinamikoki `Y-m-d H:i:s` formatura bihurtzen du defaults aplikatzean, eta `toSQL()` metodoak komatxorik gabeko `DEFAULT CURRENT_TIMESTAMP` sortzen du. `OField::CURRENT_TIMESTAMP` ez da testu literal bat eta `DATETIME` eremuekin soilik erabil daiteke. `generateModelFromDB` tresnak `CURRENT_TIMESTAMP` eta `CURRENT_TIMESTAMP()` ezagutzen ditu `DATETIME` zutabeetarako; beste SQL adierazpen dinamikoek ez dute euskarririk.
 
 SQL `BIGINT` sinatutako eremuek `OField::BIGINT` eta PHP `?int` propietateak erabiltzen dituzte. 64 biteko PHP ingurunea behar dute eta `#[OPK]` atributuan erabil daitezke, autoincrement motako lehen mailako gakoetan barne.
 

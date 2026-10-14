@@ -199,6 +199,29 @@ ORM-ak denbora-balioak modu zorrotzean balidatzen ditu. `2026-02-30` bezalako ex
 
 `#[OCreatedAt]`, `#[OUpdatedAt]` eta `#[ODeletedAt]` atributu automatikoek `DATETIME` erabiltzen dute barnean.
 
+Osumi Framework 9.12.1 bertsiotik aurrera, `DATETIME` eremuek `OField::CURRENT_TIMESTAMP` erabil dezakete balio lehenetsi dinamiko gisa:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false,
+	default: OField::CURRENT_TIMESTAMP
+)]
+public ?string $joined_at = null;
+```
+
+SQL eskema sortzean, definizio horrek hau sortzen du:
+
+```sql
+`joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+Modelo berrietan, ORM-ak `OField::CURRENT_TIMESTAMP` uneko timestamp-era bihurtzen du `Y-m-d H:i:s` formatuan balio lehenetsiak aplikatzen direnean.
+
+`OField::CURRENT_TIMESTAMP` `OField::DATETIME` eremuekin soilik erabil daiteke. `CURRENT_TIMESTAMP` edukia duen testu literal bat testu-balio arrunta izaten jarraitzen du eta ez da SQL adierazpen gisa interpretatzen.
+
+`generateModelFromDB` tresnak `CURRENT_TIMESTAMP` eta `CURRENT_TIMESTAMP()` ezagutzen ditu `DATETIME` zutabeetan eta `default: OField::CURRENT_TIMESTAMP` sortzen du. Beste SQL adierazpen dinamikoek ez dute euskarririk eta esplizituki baztertzen dira.
+
 `get()` metodoak bi denbora-motei formatu-maskara bat aplika diezaieke:
 
 ```php

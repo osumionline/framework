@@ -199,6 +199,29 @@ The ORM validates temporal values strictly. Invalid calendar dates such as `2026
 
 Automatic `#[OCreatedAt]`, `#[OUpdatedAt]` and `#[ODeletedAt]` fields internally use `DATETIME`.
 
+Since Osumi Framework 9.12.1, `DATETIME` fields can use `OField::CURRENT_TIMESTAMP` as a dynamic default value:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false,
+	default: OField::CURRENT_TIMESTAMP
+)]
+public ?string $joined_at = null;
+```
+
+When generating the SQL schema, this definition produces:
+
+```sql
+`joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+For new models, the ORM resolves `OField::CURRENT_TIMESTAMP` to the current timestamp in `Y-m-d H:i:s` format when default values are applied.
+
+`OField::CURRENT_TIMESTAMP` can only be used with `OField::DATETIME` fields. A literal string containing `CURRENT_TIMESTAMP` remains a normal string value and is not interpreted as an SQL expression.
+
+`generateModelFromDB` recognizes both `CURRENT_TIMESTAMP` and `CURRENT_TIMESTAMP()` on `DATETIME` columns and generates `default: OField::CURRENT_TIMESTAMP`. Other dynamic SQL expressions remain unsupported and are explicitly rejected.
+
 The `get()` method can format both temporal types with an explicit mask:
 
 ```php

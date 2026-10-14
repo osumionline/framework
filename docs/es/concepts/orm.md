@@ -197,6 +197,29 @@ El ORM valida estrictamente los valores temporales. Fechas inexistentes como `20
 
 Los atributos automáticos `#[OCreatedAt]`, `#[OUpdatedAt]` y `#[ODeletedAt]` utilizan internamente `DATETIME`.
 
+Desde Osumi Framework 9.12.1, los campos `DATETIME` pueden utilizar `OField::CURRENT_TIMESTAMP` como valor por defecto dinámico:
+
+```php
+#[OField(
+	type: OField::DATETIME,
+	nullable: false,
+	default: OField::CURRENT_TIMESTAMP
+)]
+public ?string $joined_at = null;
+```
+
+Al generar el esquema SQL, esta definición produce:
+
+```sql
+`joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+En nuevos modelos, el ORM resuelve `OField::CURRENT_TIMESTAMP` al timestamp actual en formato `Y-m-d H:i:s` cuando se aplican los valores por defecto.
+
+`OField::CURRENT_TIMESTAMP` solo puede utilizarse con campos `OField::DATETIME`. Un string literal con el contenido `CURRENT_TIMESTAMP` sigue siendo un valor de texto normal y no se interpreta como una expresión SQL.
+
+`generateModelFromDB` reconoce tanto `CURRENT_TIMESTAMP` como `CURRENT_TIMESTAMP()` en columnas `DATETIME` y genera `default: OField::CURRENT_TIMESTAMP`. Otras expresiones SQL dinámicas continúan rechazándose.
+
 El método `get()` puede aplicar una máscara de formato a ambos tipos:
 
 ```php

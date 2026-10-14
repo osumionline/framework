@@ -2,14 +2,14 @@
 
 **Propósito**
 
-Este documento proporciona un contexto compacto pero autoritativo para sistemas de IA que expliquen o generen código para **Osumi Framework 9.12**.
+Este documento proporciona un contexto compacto pero autoritativo para sistemas de IA que expliquen o generen código para **Osumi Framework 9.12.1**.
 
 Cuando un comportamiento del framework no esté documentado aquí, no debe inventarse.
 
 ## 0. Identidad del framework
 
 - **Nombre:** Osumi Framework
-- **Versión:** 9.12.0
+- **Versión:** 9.12.1
 - **Lenguaje:** PHP
 - **PHP mínimo:** 8.5+
 - **Tipado:** usar `declare(strict_types=1);`
@@ -218,6 +218,8 @@ Los campos SQL `DATETIME` usan `OField::DATETIME`, propiedades PHP `?string` y f
 Los valores `DATE` y `DATETIME` se validan estrictamente. No se aceptan fechas u horas imposibles.
 
 `#[OCreatedAt]`, `#[OUpdatedAt]` y `#[ODeletedAt]` utilizan internamente `DATETIME`.
+
+Los campos `OField::DATETIME` pueden utilizar `default: OField::CURRENT_TIMESTAMP`. El ORM resuelve este valor dinámicamente a `Y-m-d H:i:s` al aplicar defaults y `toSQL()` lo genera como `DEFAULT CURRENT_TIMESTAMP` sin comillas. `OField::CURRENT_TIMESTAMP` no es un string literal y solo puede utilizarse con `DATETIME`. `generateModelFromDB` reconoce `CURRENT_TIMESTAMP` y `CURRENT_TIMESTAMP()` para columnas `DATETIME`; otras expresiones SQL dinámicas siguen rechazándose.
 
 Los campos SQL `BIGINT` con signo usan `OField::BIGINT` y propiedades PHP `?int`. Requieren PHP de 64 bits y pueden utilizarse en `#[OPK]`, incluido autoincremento.
 
