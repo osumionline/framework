@@ -604,7 +604,13 @@ class OBuild {
 					} elseif (is_bool($value)) {
 						$field_value = $value ? "true" : "false";
 					} elseif (is_string($value)) {
-						if ($key !== 'type') {
+						if (
+							$key === 'default' &&
+							($field['type'] ?? null) === 'OField::DATETIME' &&
+							$value === OField::CURRENT_TIMESTAMP
+						) {
+							$field_value = 'OField::CURRENT_TIMESTAMP';
+						} elseif ($key !== 'type') {
 							$field_value = var_export(
 								$value,
 								true

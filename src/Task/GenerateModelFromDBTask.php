@@ -117,6 +117,27 @@ class GenerateModelFromDBTask extends OTask {
 			);
 		}
 
+		$normalized_expression = strtolower(
+			trim(
+				$column_default
+			)
+		);
+
+		if (
+			$field_type === 'OField::DATETIME' &&
+			!$is_quoted &&
+			in_array(
+				$normalized_expression,
+				[
+					'current_timestamp',
+					'current_timestamp()'
+				],
+				true
+			)
+		) {
+			return OField::CURRENT_TIMESTAMP;
+		}
+
 		if ($field_type === 'OField::DECIMAL') {
 			if (
 				preg_match(

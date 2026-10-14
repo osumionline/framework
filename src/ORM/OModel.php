@@ -700,6 +700,19 @@ abstract class OModel {
         continue;
       }
 
+      if (
+        self::isCurrentTimestampDefault(
+          $field['type'],
+          $field['default']
+        )
+      ) {
+        $this->$field_name = date(
+          'Y-m-d H:i:s'
+        );
+
+        continue;
+      }
+
       $this->$field_name = self::normalizeModelValue(
         $field_name,
         $field['type'],
@@ -834,7 +847,13 @@ abstract class OModel {
           $field_schema['default'] = $default_value;
         }
 
-        if ($field_schema['default'] !== null) {
+        if (
+          $field_schema['default'] !== null &&
+          !self::isCurrentTimestampDefault(
+            $field_schema['type'],
+            $field_schema['default']
+          )
+        ) {
           $field_schema['default'] = self::normalizeModelValue(
             $field_name,
             $field_schema['type'],
@@ -2367,7 +2386,14 @@ abstract class OModel {
       if (isset($field['default'])) {
         $sql_field .= ' DEFAULT ';
 
-        if ($field['type'] === OField::DECIMAL) {
+        if (
+          self::isCurrentTimestampDefault(
+            $field['type'],
+            $field['default']
+          )
+        ) {
+          $sql_field .= 'CURRENT_TIMESTAMP';
+        } elseif ($field['type'] === OField::DECIMAL) {
           $sql_field .= $field['default'];
         } else {
           $sql_field .= self::quoteSqlValue(
@@ -2427,6 +2453,24 @@ abstract class OModel {
     }
 
     return $sql;
+  }
+
+  /**
+   * Check whether a field uses the dynamic CURRENT_TIMESTAMP default.
+   *
+   * @param string $field_type ORM field type.
+   * @param mixed $default Default value.
+   *
+   * @return bool Whether the default represents CURRENT_TIMESTAMP.
+   */
+  private static function isCurrentTimestampDefault(
+    string $field_type,
+    mixed $default
+  ): bool {
+    return (
+      $field_type === OField::DATETIME &&
+      $default === OField::CURRENT_TIMESTAMP
+    );
   }
 
   /**

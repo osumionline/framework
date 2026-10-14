@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Osumi\OsumiFramework\Tests\Task;
 
+use Osumi\OsumiFramework\ORM\OField;
 use Osumi\OsumiFramework\Task\GenerateModelFromDBTask;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -138,24 +139,55 @@ final class GenerateModelFromDBTaskTest extends TestCase {
     }
 
     /**
-     * Test that SQL expressions are not converted into string defaults.
+     * Test CURRENT_TIMESTAMP as a DATETIME default.
      *
      * @return void
      */
-    public function testSqlExpressionIsRejected(): void {
-        $this->expectException(
-            \RuntimeException::class
+    public function testCurrentTimestampDefaultIsSupportedForDateTime(): void {
+        self::assertSame(
+            OField::CURRENT_TIMESTAMP,
+            $this->parseColumnDefault(
+                'joined_at',
+                'string',
+                'current_timestamp()',
+                'OField::DATETIME'
+            )
         );
 
-        $this->expectExceptionMessageIsOrContains(
-            "SQL default expression 'current_timestamp()'"
+        self::assertSame(
+            OField::CURRENT_TIMESTAMP,
+            $this->parseColumnDefault(
+                'joined_at',
+                'string',
+                'CURRENT_TIMESTAMP',
+                'OField::DATETIME'
+            )
         );
+    }
 
-        $this->parseColumnDefault(
-            'created',
-            'string',
-            'current_timestamp()'
-        );
+    /**
+     * Test that unsupported SQL expressions remain rejected.
+     *
+     * @return void
+     */
+    public function testUnsupportedSqlExpressionIsRejected(): void {
+        try {
+            $this->parseColumnDefault(
+                'token',
+                'string',
+                'uuid()',
+                'OField::TEXT'
+            );
+
+            self::fail(
+                'Unsupported SQL expression was expected to be rejected.'
+            );
+        } catch (\RuntimeException $e) {
+            self::assertSame(
+                "SQL default expression 'uuid()' for field 'token' cannot be represented as an ORM default value.",
+                $e->getMessage()
+            );
+        }
     }
 
     /**

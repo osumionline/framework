@@ -19,6 +19,8 @@ class OField {
     public const DATETIME = 'DATETIME';
     public const DECIMAL  = 'DECIMAL';
 
+    public const CURRENT_TIMESTAMP = 'CURRENT_TIMESTAMP';
+
     public const DECIMAL_DEFAULT_PRECISION = 10;
     public const DECIMAL_DEFAULT_SCALE = 2;
     public const DECIMAL_MAX_PRECISION = 65;

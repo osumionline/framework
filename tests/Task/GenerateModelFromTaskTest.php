@@ -791,6 +791,14 @@ final class GenerateModelFromTaskTest extends TestCase {
                             [
                                 'name' => 'updated_at',
                                 'decorator' => 'OUpdatedAt'
+                            ],
+                            [
+                                'name' => 'joined_at',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DATETIME',
+                                'nullable' => false,
+                                'default' => 'CURRENT_TIMESTAMP'
                             ]
                         ],
                         'refs' => []
@@ -851,6 +859,11 @@ final class GenerateModelFromTaskTest extends TestCase {
             $content
         );
 
+        self::assertStringContainsString(
+            'default: OField::CURRENT_TIMESTAMP',
+            $content
+        );
+
         require_once $generated_path;
 
         $class_name =
@@ -882,6 +895,11 @@ final class GenerateModelFromTaskTest extends TestCase {
 
         self::assertStringContainsString(
             '`updated_at` DATETIME',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
             $sql
         );
     }

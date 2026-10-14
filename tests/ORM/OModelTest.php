@@ -12,6 +12,7 @@ use Osumi\OsumiFramework\Tests\Fixtures\ORM\InvalidAutoIncrementModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TextKeyModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\DecimalModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TemporalBigIntModel;
+use Osumi\OsumiFramework\Tests\Fixtures\ORM\CurrentTimestampDefaultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OModelTest extends TestCase {
@@ -1055,5 +1056,55 @@ final class OModelTest extends TestCase {
                 $e->getMessage()
             );
         }
+    }
+
+    /**
+     * Test that CURRENT_TIMESTAMP is resolved for new model values.
+     *
+     * @return void
+     */
+    public function testCurrentTimestampDefaultIsApplied(): void {
+        $model = new CurrentTimestampDefaultModel();
+
+        self::assertNull(
+            $model->joined_at
+        );
+
+        $model->applyDefaultsForTest();
+
+        self::assertIsString(
+            $model->joined_at
+        );
+
+        self::assertSame(
+            1,
+            preg_match(
+                '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',
+                $model->joined_at
+            )
+        );
+
+        $model->validateForTest();
+    }
+
+    /**
+     * Test that CURRENT_TIMESTAMP is generated as an SQL expression.
+     *
+     * @return void
+     */
+    public function testCurrentTimestampDefaultIsGeneratedAsSqlExpression(): void {
+        $model = new CurrentTimestampDefaultModel();
+
+        $sql = $model->toSQL();
+
+        self::assertStringContainsString(
+            '`joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+            $sql
+        );
+
+        self::assertStringNotContainsString(
+            "DEFAULT 'CURRENT_TIMESTAMP'",
+            $sql
+        );
     }
 }
