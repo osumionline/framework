@@ -319,6 +319,48 @@ final class GenerateModelFromDBTaskTest extends TestCase {
     }
 
     /**
+     * Test that a quoted CURRENT_TIMESTAMP remains a literal string.
+     *
+     * @return void
+     */
+    public function testQuotedCurrentTimestampRemainsLiteralString(): void {
+        self::assertSame(
+            'CURRENT_TIMESTAMP',
+            $this->parseColumnDefault(
+                'label',
+                'string',
+                "'CURRENT_TIMESTAMP'",
+                'OField::TEXT'
+            )
+        );
+    }
+
+    /**
+     * Test that CURRENT_TIMESTAMP is rejected for non-DATETIME fields.
+     *
+     * @return void
+     */
+    public function testCurrentTimestampExpressionIsRejectedForDate(): void {
+        try {
+            $this->parseColumnDefault(
+                'event_date',
+                'string',
+                'current_timestamp()',
+                'OField::DATE'
+            );
+
+            self::fail(
+                'CURRENT_TIMESTAMP was expected to be rejected for DATE.'
+            );
+        } catch (\RuntimeException $e) {
+            self::assertSame(
+                "SQL default expression 'current_timestamp()' for field 'event_date' cannot be represented as an ORM default value.",
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
      * Invoke the pure SQL type mapper.
      *
      * @param string $data_type SQL DATA_TYPE.

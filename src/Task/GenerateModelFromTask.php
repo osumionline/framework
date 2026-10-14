@@ -273,6 +273,19 @@ class GenerateModelFromTask extends OTask {
     $field_type = $field['type']
       ?? null;
 
+    if (
+      array_key_exists(
+        'default',
+        $field
+      ) &&
+      $field['default'] === OField::CURRENT_TIMESTAMP &&
+      $field_type !== 'OField::DATETIME'
+    ) {
+      throw new \InvalidArgumentException(
+        "CURRENT_TIMESTAMP default can only be used with DATETIME field '{$field['name']}'."
+      );
+    }
+
     $has_precision = array_key_exists(
       'precision',
       $field

@@ -6,6 +6,7 @@ namespace Osumi\OsumiFramework\Tests\Task;
 
 use Osumi\OsumiFramework\Core\OConfig;
 use Osumi\OsumiFramework\Core\OTranslate;
+use Osumi\OsumiFramework\ORM\OField;
 use Osumi\OsumiFramework\Task\GenerateModelFromTask;
 use Osumi\OsumiFramework\Tests\Support\TemporaryProject;
 use PHPUnit\Framework\TestCase;
@@ -798,7 +799,7 @@ final class GenerateModelFromTaskTest extends TestCase {
                                 'attribute_type' => 'string',
                                 'type' => 'OField::DATETIME',
                                 'nullable' => false,
-                                'default' => 'CURRENT_TIMESTAMP'
+                                'default' => OField::CURRENT_TIMESTAMP
                             ]
                         ],
                         'refs' => []

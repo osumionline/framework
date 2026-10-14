@@ -479,6 +479,15 @@ abstract class OModel {
     $type = $field->type;
 
     if (
+      $field->default === OField::CURRENT_TIMESTAMP &&
+      $type !== OField::DATETIME
+    ) {
+      throw new Exception(
+        "CURRENT_TIMESTAMP default can only be used with DATETIME field '{$field_name}'."
+      );
+    }
+
+    if (
       $type === OField::BIGINT &&
       PHP_INT_SIZE < 8
     ) {

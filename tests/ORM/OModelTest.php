@@ -13,6 +13,7 @@ use Osumi\OsumiFramework\Tests\Fixtures\ORM\TextKeyModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\DecimalModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TemporalBigIntModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\CurrentTimestampDefaultModel;
+use Osumi\OsumiFramework\Tests\Fixtures\ORM\InvalidCurrentTimestampDefaultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OModelTest extends TestCase {
@@ -1106,5 +1107,25 @@ final class OModelTest extends TestCase {
             "DEFAULT 'CURRENT_TIMESTAMP'",
             $sql
         );
+    }
+
+    /**
+     * Test that CURRENT_TIMESTAMP cannot be used by non-DATETIME fields.
+     *
+     * @return void
+     */
+    public function testCurrentTimestampDefaultRequiresDateTime(): void {
+        try {
+            new InvalidCurrentTimestampDefaultModel();
+
+            self::fail(
+                'CURRENT_TIMESTAMP was expected to be rejected for a TEXT field.'
+            );
+        } catch (\Exception $e) {
+            self::assertSame(
+                "CURRENT_TIMESTAMP default can only be used with DATETIME field 'name'.",
+                $e->getMessage()
+            );
+        }
     }
 }
