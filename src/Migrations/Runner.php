@@ -61,7 +61,7 @@ final class Runner {
     }
 
     /**
-     * Run all pending migrations using state.json as the source version.
+     * Run all pending migrations using the project migration state as the source version.
      *
      * When no migration state exists, version 0.0.0 is used so legacy projects
      * can execute every applicable idempotent migration step.

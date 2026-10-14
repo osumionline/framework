@@ -159,7 +159,8 @@ final class StateStore {
      * Build the serialized migration state for a successfully migrated version.
      *
      * This method does not write anything to disk. It allows the migration runner
-     * to include state.json in the same FilePatcher transaction as application
+     * to include the migration state in the same FilePatcher transaction as
+     * application file changes.
      * file changes.
      *
      * @param string $version Framework version.

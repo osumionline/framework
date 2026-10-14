@@ -106,26 +106,13 @@ final class StateStoreTest extends TestCase {
      * @return void
      */
     public function testMalformedStateIsRejected(): void {
-        $state_directory = $this->project->getPath(
-            'ofw/tmp'
+        $state_file = $this->project->getPath(
+            '.ofw-migrations.json'
         );
 
         if (
-            !mkdir(
-                $state_directory,
-                0755,
-                true
-            ) &&
-            !is_dir($state_directory)
-        ) {
-            self::fail(
-                'Could not create temporary migration state directory.'
-            );
-        }
-
-        if (
             file_put_contents(
-                $state_directory . '/state.json',
+                $state_file,
                 '{invalid',
                 LOCK_EX
             ) === false
@@ -136,7 +123,10 @@ final class StateStoreTest extends TestCase {
         }
 
         $store = new StateStore(
-            $state_directory
+            $this->project->getBasePath(),
+            $this->project->getPath(
+                'ofw/tmp'
+            )
         );
 
         $this->expectException(
