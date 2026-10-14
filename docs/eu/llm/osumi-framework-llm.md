@@ -70,7 +70,7 @@ Layout-ak ez dira `OStreamResponse` erantzunetan aplikatzen.
 
 ## 9. ORM
 
-Modeloek `OModel` hedatzen dute eta `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]` bezalako atributuak erabiltzen dituzte.
+Modeloek `OModel` hedatzen dute eta `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]` eta `#[ODeletedAt]` bezalako atributuak erabiltzen dituzte.
 
 SQL `DECIMAL(p,s)` eremu zehatzek `OField::DECIMAL` eta PHP `?string` propietateak erabiltzen dituzte; ez dira inoiz `float` gisa irudikatzen.
 
@@ -99,6 +99,18 @@ public ?string $amount = null;
 - ORM-ak ez du biribiltze automatikorik egiten.
 - `DECIMAL` ezin da `#[OPK]` atributuan erabili.
 
+SQL `DATE` eremuek `OField::DATE`, PHP `?string` propietateak eta `Y-m-d` formatu kanonikoa erabiltzen dituzte.
+
+SQL `DATETIME` eremuek `OField::DATETIME`, PHP `?string` propietateak eta `Y-m-d H:i:s` formatu kanonikoa erabiltzen dituzte.
+
+`DATE` eta `DATETIME` balioak modu zorrotzean balidatzen dira. Existitzen ez diren datak eta baliogabeko orduak baztertzen dira.
+
+`#[OCreatedAt]`, `#[OUpdatedAt]` eta `#[ODeletedAt]` atributuek `DATETIME` erabiltzen dute barnean.
+
+SQL `BIGINT` sinatutako eremuek `OField::BIGINT` eta PHP `?int` propietateak erabiltzen dituzte. 64 biteko PHP ingurunea behar dute eta `#[OPK]` atributuan erabil daitezke, autoincrement motako lehen mailako gakoetan barne.
+
+`BIGINT UNSIGNED` eta `ZEROFILL` ez dira onartzen.
+
 `where()` eta `count()` baldintzak ere eremuaren ORM motaren arabera balidatu eta normalizatzen dira.
 
 ## 10. CLI eta migrazioak
@@ -107,7 +119,9 @@ Aplikazio CLIa: `php of <zeregina>`.
 
 Migrazio CLIa: `php vendor/bin/ofw-migrate --help`.
 
-Egoera `ofw/tmp/state.json` fitxategian gordetzen da.
+Migrazioen egoera autoritatiboa proiektuaren erroko `.ofw-migrations.json` fitxategian gordetzen da eta aplikazioarekin batera bertsionatu behar da.
+
+9.12 baino lehen sortutako proiektuekin bateragarritasuna mantentzeko, `.ofw-migrations.json` existitzen ez denean runner-ak `ofw/tmp/state.json` irakur dezake.
 
 ## 11. Filter legacy-ak
 

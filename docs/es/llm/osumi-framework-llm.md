@@ -182,7 +182,7 @@ Usar para lógica de negocio/dominio reutilizable, operaciones de varios pasos e
 
 ## 12. ORM (`OModel`)
 
-Los modelos usan atributos como `#[OPK]`, `#[OField]`, `#[OCreatedAt]` y `#[OUpdatedAt]`.
+Los modelos usan atributos como `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]` y `#[ODeletedAt]`.
 
 Los campos SQL `DECIMAL(p,s)` exactos se representan mediante `OField::DECIMAL` y propiedades PHP `?string`. Nunca deben representarse mediante `float`.
 
@@ -211,6 +211,18 @@ Reglas de `DECIMAL`:
 - El ORM no realiza redondeo automático.
 - `DECIMAL` no puede utilizarse en `#[OPK]`.
 
+Los campos SQL `DATE` usan `OField::DATE`, propiedades PHP `?string` y formato canónico `Y-m-d`.
+
+Los campos SQL `DATETIME` usan `OField::DATETIME`, propiedades PHP `?string` y formato canónico `Y-m-d H:i:s`.
+
+Los valores `DATE` y `DATETIME` se validan estrictamente. No se aceptan fechas u horas imposibles.
+
+`#[OCreatedAt]`, `#[OUpdatedAt]` y `#[ODeletedAt]` utilizan internamente `DATETIME`.
+
+Los campos SQL `BIGINT` con signo usan `OField::BIGINT` y propiedades PHP `?int`. Requieren PHP de 64 bits y pueden utilizarse en `#[OPK]`, incluido autoincremento.
+
+No se soportan `BIGINT UNSIGNED` ni `ZEROFILL`.
+
 Las condiciones de `where()` y `count()` también se validan y normalizan según el tipo ORM del campo.
 
 ## 13. CLI y migraciones
@@ -221,7 +233,9 @@ Migrador: `php vendor/bin/ofw-migrate --help`.
 
 Opciones: `--from`, `--to`, `--dry-run`, `--force`, `--verbose`, `--no-interaction`, `--help`.
 
-Estado: `ofw/tmp/state.json`.
+El estado autoritativo de migraciones se guarda en `.ofw-migrations.json` en la raíz del proyecto y debe versionarse con la aplicación.
+
+Por compatibilidad con proyectos anteriores a 9.12, si `.ofw-migrations.json` no existe el runner puede leer `ofw/tmp/state.json`.
 
 ## 14. Filters legacy
 

@@ -147,12 +147,6 @@ is invalid because a `float` cannot be used for a `DECIMAL` field.
 
 ---
 
-## CLI Integration
-
-- **`generateModel`**: Generates the SQL structure from model definitions, including `DECIMAL(precision,scale)`.
-- **`generateModelFrom`**: Generates models from a JSON definition and supports `OField::DECIMAL` fields.
-- **`generateModelFromDB`**: Interprets SQL `DECIMAL(p,s)` columns as PHP `?string` properties, preserving precision, scale and exact default values.
-
 ### DATE and DATETIME Fields
 
 Since Osumi Framework 9.12, SQL `DATE` and `DATETIME` types are represented independently.
@@ -249,6 +243,14 @@ public ?int $id = null;
 `BIGINT` requires a 64-bit PHP environment.
 
 The ORM does not support `BIGINT UNSIGNED` columns or `ZEROFILL` modifiers.
+
+---
+
+## CLI Integration
+
+- **`generateModel`**: Generates the SQL structure from model definitions, including `DECIMAL(precision,scale)`, `DATE`, `DATETIME` and `BIGINT`.
+- **`generateModelFrom`**: Generates models from a JSON definition and supports `OField::DECIMAL`, `OField::DATE`, `OField::DATETIME` and `OField::BIGINT`.
+- **`generateModelFromDB`**: Interprets SQL `DECIMAL(p,s)`, `DATE`, `DATETIME` and `BIGINT` columns, preserving the types and metadata supported by the ORM.
 
 ---
 

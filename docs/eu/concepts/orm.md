@@ -147,12 +147,6 @@ ez da baliozkoa, `float` balio bat ezin baita `DECIMAL` eremu baterako erabili.
 
 ---
 
-## CLI integrazioa
-
-- **`generateModel`**: Modelo-definizioetatik SQL egitura sortzen du, `DECIMAL(precision,scale)` barne.
-- **`generateModelFrom`**: JSON definizio batetik modeloak sortzen ditu eta `OField::DECIMAL` eremuak onartzen ditu.
-- **`generateModelFromDB`**: SQL `DECIMAL(p,s)` zutabeak PHP `?string` propietate gisa interpretatzen ditu, precision, scale eta balio lehenetsi zehatzak mantenduz.
-
 ### DATE eta DATETIME eremuak
 
 Osumi Framework 9.12 bertsiotik aurrera, SQL `DATE` eta `DATETIME` motak bereizita irudikatzen dira.
@@ -249,6 +243,14 @@ public ?int $id = null;
 `BIGINT` erabiltzeko 64 biteko PHP ingurunea behar da.
 
 ORM-ak ez ditu `BIGINT UNSIGNED` zutabeak edo `ZEROFILL` modifikatzaileak onartzen.
+
+---
+
+## CLI integrazioa
+
+- **`generateModel`**: Modelo-definizioetatik SQL egitura sortzen du, `DECIMAL(precision,scale)`, `DATE`, `DATETIME` eta `BIGINT` barne.
+- **`generateModelFrom`**: JSON definizio batetik modeloak sortzen ditu eta `OField::DECIMAL`, `OField::DATE`, `OField::DATETIME` eta `OField::BIGINT` onartzen ditu.
+- **`generateModelFromDB`**: SQL `DECIMAL(p,s)`, `DATE`, `DATETIME` eta `BIGINT` zutabeak interpretatzen ditu, ORM-ak onartzen dituen motak eta metadatuak mantenduz.
 
 ---
 

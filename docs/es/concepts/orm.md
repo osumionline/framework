@@ -246,9 +246,9 @@ El ORM no soporta columnas `BIGINT UNSIGNED` ni modificadores `ZEROFILL`.
 
 ## Integración CLI
 
-- **`generateModel`**: genera la estructura SQL a partir de los modelos, incluyendo `DECIMAL(precision,scale)`.
-- **`generateModelFrom`**: genera modelos desde una definición JSON y admite campos `OField::DECIMAL`.
-- **`generateModelFromDB`**: interpreta columnas SQL `DECIMAL(p,s)` como propiedades PHP `?string`, conservando precisión, escala y defaults exactos.
+- **`generateModel`**: genera la estructura SQL a partir de los modelos, incluyendo `DECIMAL(precision,scale)`, `DATE`, `DATETIME` y `BIGINT`.
+- **`generateModelFrom`**: genera modelos desde una definición JSON y admite `OField::DECIMAL`, `OField::DATE`, `OField::DATETIME` y `OField::BIGINT`.
+- **`generateModelFromDB`**: interpreta columnas SQL `DECIMAL(p,s)`, `DATE`, `DATETIME` y `BIGINT`, conservando los tipos y metadatos soportados por el ORM.
 
 ---
 
