@@ -23,15 +23,17 @@ Define un campo de clave principal. Cada modelo debe tener al menos uno.
 
 Define una columna de base de datos estándar.
 
-| Parámetro  | Tipo     | Predeterminado | Descripción                                             |
-| :--------- | :------- | :------------- | :------------------------------------------------------ |
-| `type`     | `string` | `null`         | Tipo de dato (obligatorio).                             |
-| `nullable` | `bool`   | `true`         | Si el campo puede almacenar valores `null`.             |
-| `default`  | `mixed`  | `null`         | Valor predeterminado de la columna.                     |
-| `max`      | `int`    | `50`           | Tamaño/longitud máximos del campo.                      |
-| `comment`  | `string` | `''`           | Comentario para la columna de la base de datos.         |
-| `visible`  | `bool`   | `true`         | Si el campo se incluye al serializar el modelo.         |
-| `ref`      | `string` | `''`           | Referencia de clave externa (formato: `'tabla.campo'`). |
+| Parámetro   | Tipo     | Predeterminado | Descripción                                                                                        |
+| :---------- | :------- | :------------- | :------------------------------------------------------------------------------------------------- |
+| `type`      | `string` | `null`         | Tipo de dato (obligatorio).                                                                        |
+| `nullable`  | `bool`   | `true`         | Si el campo puede almacenar valores `null`.                                                        |
+| `default`   | `mixed`  | `null`         | Valor predeterminado de la columna.                                                                |
+| `max`       | `int`    | `50`           | Tamaño/longitud máximos del campo.                                                                 |
+| `comment`   | `string` | `''`           | Comentario para la columna de la base de datos.                                                    |
+| `visible`   | `bool`   | `true`         | Si el campo se incluye al serializar el modelo.                                                    |
+| `ref`       | `string` | `''`           | Referencia de clave externa (formato: `'tabla.campo'`).                                            |
+| `precision` | `?int`   | `null`         | Precisión total de un campo `DECIMAL`. Solo válido con `OField::DECIMAL`; si se omite usa `10`.    |
+| `scale`     | `?int`   | `null`         | Número de decimales de un campo `DECIMAL`. Solo válido con `OField::DECIMAL`; si se omite usa `2`. |
 
 ---
 
@@ -63,11 +65,46 @@ Se utiliza para la función de eliminación temporal (seguimiento de cuándo se 
 
 Al definir `type` en `#[OPK]` o `#[OField]`, utilice estas constantes de la clase `Osumi\OsumiFramework\ORM\OField`:
 
-- `OField::NUMBER`: Valores enteros.
-- `OField::TEXT`: Cadenas cortas (normalmente asignadas a `VARCHAR`).
-- `OField::LONGTEXT`: Bloques de texto grandes (normalmente asignados a `LONGTEXT`).
-- `OField::FLOAT`: Números de punto flotante.
-- `OField::BOOL`: Valores booleanos. - `OField::DATE`: Cadenas de fecha/hora.
+- `OField::NUMBER`: valores enteros (`?int`).
+- `OField::TEXT`: cadenas cortas (`?string`, normalmente `VARCHAR`).
+- `OField::LONGTEXT`: bloques de texto grandes (`?string`, normalmente `LONGTEXT`).
+- `OField::FLOAT`: números de punto flotante (`?float`).
+- `OField::BOOL`: valores booleanos (`?bool`).
+- `OField::DATE`: cadenas de fecha/hora (`?string`).
+- `OField::DECIMAL`: valores decimales exactos (`?string`, genera `DECIMAL(precision,scale)`).
+
+### Campos DECIMAL
+
+`OField::DECIMAL` debe utilizar siempre una propiedad `?string`. El ORM no acepta valores `float` ni `int` para estos campos, evitando conversiones intermedias de punto flotante.
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false
+)]
+public ?string $amount = null;
+```
+
+La precisión predeterminada es `10` y la escala predeterminada es `2`. La precisión válida está entre `1` y `65`; la escala entre `0` y `30`, y nunca puede superar la precisión.
+
+Como entrada se aceptan `.` y `,` como separadores decimales:
+
+```text
+"12"    → "12.00"
+"12.5"  → "12.50"
+"12,5"  → "12.50"
+"-0,50" → "-0.50"
+```
+
+La representación interna siempre utiliza `.` y exactamente el número de decimales definido por `scale`.
+
+No se admiten notación exponencial, separadores de miles ni valores que requieran redondeo. Un valor con más decimales de los permitidos produce un error.
+
+`precision` y `scale` solo pueden utilizarse con `OField::DECIMAL`. Utilizarlos con cualquier otro tipo produce un error de definición del modelo.
+
+`OField::DECIMAL` no está permitido en `#[OPK]`.
 
 ---
 

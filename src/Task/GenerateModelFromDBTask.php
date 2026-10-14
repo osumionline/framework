@@ -8,6 +8,7 @@ use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
 use Osumi\OsumiFramework\ORM\ODB;
+use Osumi\OsumiFramework\ORM\OField;
 
 /**
  * Generates all model files from a database connection
@@ -55,6 +56,7 @@ class GenerateModelFromDBTask extends OTask {
 	 * @param string $field_name Field name.
 	 * @param string $attribute_type PHP property type.
 	 * @param mixed $column_default Raw COLUMN_DEFAULT metadata value.
+	 * @param string|null $field_type ORM field type when relevant.
 	 *
 	 * @return string|int|float|bool|null Parsed default value.
 	 *
@@ -64,7 +66,8 @@ class GenerateModelFromDBTask extends OTask {
 	private function parseColumnDefault(
 		string $field_name,
 		string $attribute_type,
-		mixed $column_default
+		mixed $column_default,
+		?string $field_type = null
 	): string|int|float|bool|null {
 		if ($column_default === null) {
 			return null;
@@ -112,6 +115,21 @@ class GenerateModelFromDBTask extends OTask {
 				"'",
 				$value
 			);
+		}
+
+		if ($field_type === 'OField::DECIMAL') {
+			if (
+				preg_match(
+					'/^[+-]?\d+(?:\.\d+)?$/D',
+					$value
+				) !== 1
+			) {
+				throw new \RuntimeException(
+					"SQL default '{$column_default}' for DECIMAL field '{$field_name}' is invalid."
+				);
+			}
+
+			return $value;
 		}
 
 		switch ($attribute_type) {
@@ -200,6 +218,8 @@ class GenerateModelFromDBTask extends OTask {
 	 *     nullable?: bool,
 	 *     default?: string|int|float|bool,
 	 *     max?: int,
+	 *     precision?: int,
+	 *     scale?: int,
 	 *     ref?: string
 	 * }> Column definitions.
 	 *
@@ -325,9 +345,39 @@ class GenerateModelFromDBTask extends OTask {
 					break;
 
 				case 'decimal':
-					throw new \RuntimeException(
-						"DECIMAL field '{$field_name}' cannot be represented safely by the ORM FLOAT type."
-					);
+					$precision = (int) $res['NUMERIC_PRECISION'];
+					$scale = (int) $res['NUMERIC_SCALE'];
+
+					if (
+						$precision < 1 ||
+						$precision > OField::DECIMAL_MAX_PRECISION
+					) {
+						throw new \RuntimeException(
+							"DECIMAL field '{$field_name}' precision {$precision} is outside the ORM supported range."
+						);
+					}
+
+					if (
+						$scale < 0 ||
+						$scale > OField::DECIMAL_MAX_SCALE
+					) {
+						throw new \RuntimeException(
+							"DECIMAL field '{$field_name}' scale {$scale} is outside the ORM supported range."
+						);
+					}
+
+					if ($scale > $precision) {
+						throw new \RuntimeException(
+							"DECIMAL field '{$field_name}' scale cannot be greater than its precision."
+						);
+					}
+
+					$field['decorator'] = 'OField';
+					$field['type'] = 'OField::DECIMAL';
+					$field['attribute_type'] = 'string';
+					$field['precision'] = $precision;
+					$field['scale'] = $scale;
+					break;
 
 				case 'datetime':
 					$field['decorator'] = 'OField';
@@ -384,7 +434,8 @@ class GenerateModelFromDBTask extends OTask {
 			$default = $this->parseColumnDefault(
 				$field_name,
 				$field['attribute_type'],
-				$res['COLUMN_DEFAULT']
+				$res['COLUMN_DEFAULT'],
+				$field['type'] ?? null
 			);
 
 			if ($default !== null) {
@@ -411,6 +462,8 @@ class GenerateModelFromDBTask extends OTask {
 	 *         nullable?: bool,
 	 *         default?: string|int|float|bool|null,
 	 *         max?: int,
+	 *         precision?: int,
+	 *         scale?: int,
 	 *         ref?: string
 	 *     }>,
 	 *     refs?: list<array{
@@ -461,6 +514,14 @@ class GenerateModelFromDBTask extends OTask {
 			foreach ($model['fields'] as &$field) {
 				if ($field['name'] !== $res['COLUMN_NAME']) {
 					continue;
+				}
+
+				if (
+					($field['type'] ?? null) === 'OField::DECIMAL'
+				) {
+					throw new \RuntimeException(
+						"DECIMAL field '{$field['name']}' cannot be used as a primary key by the ORM."
+					);
 				}
 
 				$attribute_type = $field['attribute_type'] ?? null;
@@ -543,6 +604,8 @@ class GenerateModelFromDBTask extends OTask {
 	 *         nullable?: bool,
 	 *         default?: string|int|float|bool|null,
 	 *         max?: int,
+	 *     	   precision?: int,
+	 *         scale?: int,
 	 *         ref?: string
 	 *     }>,
 	 *     refs?: list<array{
@@ -621,6 +684,8 @@ class GenerateModelFromDBTask extends OTask {
 	 *         nullable?: bool,
 	 *         default?: string|int|float|bool|null,
 	 *         max?: int,
+	 *         precision?: int,
+	 *         scale?: int,
 	 *         ref?: string
 	 *     }>,
 	 *     refs?: list<array{

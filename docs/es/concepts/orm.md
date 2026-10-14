@@ -97,9 +97,61 @@ El framework llama a `validate()` durante el proceso `save()`. Si un valor exced
 
 ---
 
+### Campos DECIMAL exactos
+
+Para valores que no deben pasar por representación de punto flotante, como importes monetarios, porcentajes o cantidades de precisión fija, utilice `OField::DECIMAL`.
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false,
+	comment: 'Importe'
+)]
+public ?string $amount = null;
+```
+
+Los campos `DECIMAL` se representan siempre mediante `?string`, nunca mediante `?float`.
+
+El ORM acepta `.` y `,` como separadores decimales de entrada y normaliza el valor a `.` y escala fija:
+
+```php
+$model->amount = '12,5';
+$model->save();
+
+// $model->amount === '12.50'
+```
+
+No se realizan redondeos automáticos. Si un valor supera la precisión o la escala configurada, el ORM genera un error.
+
+Las condiciones de consulta siguen las mismas reglas:
+
+```php
+Payment::where([
+	'amount' => '12,5'
+]);
+```
+
+se normaliza internamente a `"12.50"`, mientras que:
+
+```php
+Payment::where([
+	'amount' => 12.5
+]);
+```
+
+es inválido porque un `float` no puede utilizarse para un campo `DECIMAL`.
+
+Los campos `DECIMAL` no pueden utilizarse como claves primarias.
+
+---
+
 ## Integración CLI
 
-- **`generateModel`**: Genera la estructura SQL (CREATE TABLE) basándose en las definiciones del modelo, incluyendo los índices y las claves foráneas definidas en `ref`.
+- **`generateModel`**: genera la estructura SQL a partir de los modelos, incluyendo `DECIMAL(precision,scale)`.
+- **`generateModelFrom`**: genera modelos desde una definición JSON y admite campos `OField::DECIMAL`.
+- **`generateModelFromDB`**: interpreta columnas SQL `DECIMAL(p,s)` como propiedades PHP `?string`, conservando precisión, escala y defaults exactos.
 
 ---
 

@@ -499,6 +499,8 @@ class OBuild {
 	 *         default?: string|int|float|bool|null,
 	 *         max?: int,
 	 *         comment?: string,
+	 *         precision?: int,
+	 *         scale?: int,
 	 *         visible?: bool,
 	 *         ref?: string,
 	 *         incr?: bool
@@ -530,6 +532,15 @@ class OBuild {
 
 		// Add fields and check validations
 		foreach ($values['fields'] as $field) {
+			if (
+				$field['decorator'] === 'OPK' &&
+				($field['type'] ?? null) === 'OField::DECIMAL'
+			) {
+				throw new \InvalidArgumentException(
+					"Primary key field '{$field['name']}' cannot use OField::DECIMAL."
+				);
+			}
+
 			if ($field['decorator'] === 'OPK') {
 				$has_pk = true;
 			}

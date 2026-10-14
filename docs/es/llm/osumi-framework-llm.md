@@ -2,14 +2,14 @@
 
 **Propósito**
 
-Este documento proporciona un contexto compacto pero autoritativo para sistemas de IA que expliquen o generen código para **Osumi Framework 9.10**.
+Este documento proporciona un contexto compacto pero autoritativo para sistemas de IA que expliquen o generen código para **Osumi Framework 9.11**.
 
 Cuando un comportamiento del framework no esté documentado aquí, no debe inventarse.
 
 ## 0. Identidad del framework
 
 - **Nombre:** Osumi Framework
-- **Versión:** 9.10.2
+- **Versión:** 9.11.0
 - **Lenguaje:** PHP
 - **PHP mínimo:** 8.5+
 - **Tipado:** usar `declare(strict_types=1);`
@@ -182,7 +182,36 @@ Usar para lógica de negocio/dominio reutilizable, operaciones de varios pasos e
 
 ## 12. ORM (`OModel`)
 
-Modelos con atributos como `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]`.
+Los modelos usan atributos como `#[OPK]`, `#[OField]`, `#[OCreatedAt]` y `#[OUpdatedAt]`.
+
+Los campos SQL `DECIMAL(p,s)` exactos se representan mediante `OField::DECIMAL` y propiedades PHP `?string`. Nunca deben representarse mediante `float`.
+
+Ejemplo:
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false
+)]
+public ?string $amount = null;
+```
+
+Reglas de `DECIMAL`:
+
+- Precisión predeterminada: `10`.
+- Escala predeterminada: `2`.
+- Precisión máxima: `65`.
+- Escala máxima: `30`.
+- La escala no puede superar la precisión.
+- Se aceptan `.` y `,` como separadores decimales de entrada.
+- La representación interna siempre usa `.` y escala fija.
+- No se admiten `float`, `int`, notación exponencial ni separadores de miles.
+- El ORM no realiza redondeo automático.
+- `DECIMAL` no puede utilizarse en `#[OPK]`.
+
+Las condiciones de `where()` y `count()` también se validan y normalizan según el tipo ORM del campo.
 
 ## 13. CLI y migraciones
 

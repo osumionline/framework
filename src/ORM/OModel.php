@@ -29,6 +29,8 @@ abstract class OModel {
    *         default: mixed,
    *         max: int|null,
    *         comment: string,
+   *         precision: int|null,
+   *         scale: int|null,
    *         visible: bool,
    *         ref: string|null,
    *         primary?: bool,
@@ -168,6 +170,113 @@ abstract class OModel {
   }
 
   /**
+   * Normalize an exact DECIMAL value without using floating-point arithmetic.
+   *
+   * Both "." and "," are accepted as decimal separators. The normalized value
+   * always uses "." and always contains exactly the configured number of
+   * fractional digits.
+   *
+   * @param string $field_name Field name.
+   * @param string $value Raw decimal value.
+   * @param int $precision Maximum total number of digits.
+   * @param int $scale Number of fractional digits.
+   *
+   * @return string Canonical decimal representation.
+   *
+   * @throws \UnexpectedValueException If the value has an invalid format or
+   *                                   exceeds the configured precision or scale.
+   */
+  protected static function normalizeDecimalValue(
+    string $field_name,
+    string $value,
+    int $precision,
+    int $scale
+  ): string {
+    $matches = [];
+
+    if (
+      preg_match(
+        '/^([+-]?)(\d+)(?:[.,](\d+))?$/D',
+        $value,
+        $matches
+      ) !== 1
+    ) {
+      throw new \UnexpectedValueException(
+        "Value '{$value}' for DECIMAL field '{$field_name}' has an invalid decimal format."
+      );
+    }
+
+    $sign = $matches[1];
+    $integer_part = $matches[2];
+    $fractional_part = $matches[3]
+      ?? '';
+
+    if (strlen($fractional_part) > $scale) {
+      throw new \UnexpectedValueException(
+        "Value '{$value}' for DECIMAL field '{$field_name}' exceeds scale {$scale}."
+      );
+    }
+
+    $integer_part = ltrim(
+      $integer_part,
+      '0'
+    );
+
+    if ($integer_part === '') {
+      $integer_part = '0';
+    }
+
+    $maximum_integer_digits = $precision - $scale;
+
+    /*
+   * The leading zero of values between -1 and 1 does not consume integer
+   * precision. This is required, for example, for DECIMAL(2,2).
+   */
+    $integer_digits = $integer_part === '0'
+      ? 0
+      : strlen($integer_part);
+
+    if ($integer_digits > $maximum_integer_digits) {
+      throw new \UnexpectedValueException(
+        "Value '{$value}' for DECIMAL field '{$field_name}' exceeds precision {$precision} with scale {$scale}."
+      );
+    }
+
+    $fractional_part = str_pad(
+      $fractional_part,
+      $scale,
+      '0'
+    );
+
+    $is_zero = (
+      $integer_part === '0' &&
+      (
+        $scale === 0 ||
+        trim(
+          $fractional_part,
+          '0'
+        ) === ''
+      )
+    );
+
+    $normalized_sign = (
+      $sign === '-' &&
+      !$is_zero
+    )
+      ? '-'
+      : '';
+
+    if ($scale === 0) {
+      return $normalized_sign . $integer_part;
+    }
+
+    return $normalized_sign
+      . $integer_part
+      . '.'
+      . $fractional_part;
+  }
+
+  /**
    * Normalize a value before assigning it to a model property.
    *
    * Database drivers may return numeric and boolean values using different
@@ -177,16 +286,20 @@ abstract class OModel {
    * @param string $field_name Field name.
    * @param string $field_type ORM field type.
    * @param mixed $value Raw field value.
+   * @param int|null $precision DECIMAL precision when applicable.
+   * @param int|null $scale DECIMAL scale when applicable.
    *
    * @return string|int|float|bool|null Normalized field value.
    *
    * @throws \UnexpectedValueException If the value cannot be converted to the
    *                                   expected ORM field type.
    */
-  protected function normalizeModelValue(
+  protected static function normalizeModelValue(
     string $field_name,
     string $field_type,
-    mixed $value
+    mixed $value,
+    ?int $precision = null,
+    ?int $scale = null
   ): string|int|float|bool|null {
     if ($value === null) {
       return null;
@@ -244,6 +357,27 @@ abstract class OModel {
         }
 
         break;
+
+      case OField::DECIMAL:
+        if (!is_string($value)) {
+          break;
+        }
+
+        if (
+          $precision === null ||
+          $scale === null
+        ) {
+          throw new \UnexpectedValueException(
+            "DECIMAL field '{$field_name}' does not define precision and scale."
+          );
+        }
+
+        return self::normalizeDecimalValue(
+          $field_name,
+          $value,
+          $precision,
+          $scale
+        );
 
       case OField::BOOL:
         if (is_bool($value)) {
@@ -359,6 +493,14 @@ abstract class OModel {
           "Auto-increment primary key '{$field_name}' cannot define a default value."
         );
       }
+
+      if (
+        $type === OField::DECIMAL
+      ) {
+        throw new Exception(
+          "Primary key field '{$field_name}' cannot use OField::DECIMAL."
+        );
+      }
     }
 
     if (
@@ -368,6 +510,56 @@ abstract class OModel {
       throw new Exception(
         "Text field '{$field_name}' must define a maximum length greater than zero."
       );
+    }
+
+    if ($field instanceof OField) {
+      if (
+        $type !== OField::DECIMAL &&
+        (
+          $field->precision !== null ||
+          $field->scale !== null
+        )
+      ) {
+        throw new Exception(
+          "Precision and scale can only be defined for OField::DECIMAL field '{$field_name}'."
+        );
+      }
+
+      if ($type === OField::DECIMAL) {
+        $precision = $field->precision
+          ?? OField::DECIMAL_DEFAULT_PRECISION;
+
+        $scale = $field->scale
+          ?? OField::DECIMAL_DEFAULT_SCALE;
+
+        if (
+          $precision < 1 ||
+          $precision > OField::DECIMAL_MAX_PRECISION
+        ) {
+          throw new Exception(
+            "DECIMAL field '{$field_name}' precision must be between 1 and "
+              . OField::DECIMAL_MAX_PRECISION
+              . '.'
+          );
+        }
+
+        if (
+          $scale < 0 ||
+          $scale > OField::DECIMAL_MAX_SCALE
+        ) {
+          throw new Exception(
+            "DECIMAL field '{$field_name}' scale must be between 0 and "
+              . OField::DECIMAL_MAX_SCALE
+              . '.'
+          );
+        }
+
+        if ($scale > $precision) {
+          throw new Exception(
+            "DECIMAL field '{$field_name}' scale cannot be greater than its precision."
+          );
+        }
+      }
     }
 
     switch ($type) {
@@ -383,6 +575,14 @@ abstract class OModel {
         if ($property_type_name !== 'float') {
           throw new Exception(
             "The type of the property '{$field_name}' does not match the expected type '{$type}'."
+          );
+        }
+        break;
+
+      case OField::DECIMAL:
+        if ($property_type_name !== 'string') {
+          throw new Exception(
+            "The type of the property '{$field_name}' does not match the expected type 'string' for DECIMAL."
           );
         }
         break;
@@ -479,10 +679,12 @@ abstract class OModel {
         continue;
       }
 
-      $this->$field_name = $this->normalizeModelValue(
+      $this->$field_name = self::normalizeModelValue(
         $field_name,
         $field['type'],
-        $field['default']
+        $field['default'],
+        $field['precision'],
+        $field['scale']
       );
     }
   }
@@ -522,6 +724,8 @@ abstract class OModel {
           'default' => null,
           'max' => null,
           'comment' => '',
+          'precision' => null,
+          'scale' => null,
           'visible' => true,
           'ref' => null
         ];
@@ -550,6 +754,12 @@ abstract class OModel {
             $field_schema['visible'] = $attr_instance->visible;
             $field_schema['ref'] = $attr_instance->ref;
             $field_schema['comment'] = $attr_instance->comment;
+            if ($attr_instance->type === OField::DECIMAL) {
+              $field_schema['precision'] = $attr_instance->precision
+                ?? OField::DECIMAL_DEFAULT_PRECISION;
+              $field_schema['scale'] = $attr_instance->scale
+                ?? OField::DECIMAL_DEFAULT_SCALE;
+            }
           } elseif ($attr_instance instanceof OCreatedAt) {
             $field_schema['type'] = OField::DATE;
             $field_schema['comment'] = $attr_instance->comment;
@@ -591,17 +801,25 @@ abstract class OModel {
           }
         }
 
-        // Get default value of property if not defined in attribute
-        $default_value = $property->getDefaultValue();
-        if ($field_schema['default'] === null && $default_value !== null) {
+        // Get property default value if one is explicitly defined
+        $default_value = $property->hasDefaultValue()
+          ? $property->getDefaultValue()
+          : null;
+
+        if (
+          $field_schema['default'] === null &&
+          $default_value !== null
+        ) {
           $field_schema['default'] = $default_value;
         }
 
         if ($field_schema['default'] !== null) {
-          $field_schema['default'] = $this->normalizeModelValue(
+          $field_schema['default'] = self::normalizeModelValue(
             $field_name,
             $field_schema['type'],
-            $field_schema['default']
+            $field_schema['default'],
+            $field_schema['precision'],
+            $field_schema['scale']
           );
         }
 
@@ -671,10 +889,12 @@ abstract class OModel {
         $field_name,
         $data
       )
-        ? $this->normalizeModelValue(
+        ? self::normalizeModelValue(
           $field_name,
           $field['type'],
-          $data[$field_name]
+          $data[$field_name],
+          $field['precision'],
+          $field['scale']
         )
         : null;
 
@@ -765,11 +985,28 @@ abstract class OModel {
             throw new Exception("The '{$field_name}' field must be an integer.");
           }
           break;
+
         case OField::FLOAT:
           if (!is_float($value) && !is_int($value)) {
             throw new Exception("The '{$field_name}' field must be a decimal number.");
           }
           break;
+
+        case OField::DECIMAL:
+          if (!is_string($value)) {
+            throw new Exception(
+              "The '{$field_name}' field must be a decimal string."
+            );
+          }
+
+          $this->$field_name = self::normalizeDecimalValue(
+            $field_name,
+            $value,
+            $field['precision'],
+            $field['scale']
+          );
+          break;
+
         case OField::TEXT:
           if (!is_string($value)) {
             throw new Exception("The '{$field_name}' field must be a text string.");
@@ -778,21 +1015,25 @@ abstract class OModel {
             throw new Exception("The '{$field_name}' field cannot be longer than {$field['max']} characters.");
           }
           break;
+
         case OField::LONGTEXT:
           if (!is_string($value)) {
             throw new Exception("The '{$field_name}' field must be a text string.");
           }
           break;
+
         case OField::BOOL:
           if (!is_bool($value)) {
             throw new Exception("The '{$field_name}' field must be a boolean value.");
           }
           break;
+
         case OField::DATE:
           if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
             throw new Exception("The '{$field_name}' field must be in a valid date and time format (Y-m-d H:i:s).");
           }
           break;
+
         default:
           throw new Exception("Unknown field type for '{$field_name}'.");
       }
@@ -905,6 +1146,88 @@ abstract class OModel {
     }
 
     return $parsed_value;
+  }
+
+  /**
+   * Ensure that the schema for the current model class has been initialized.
+   *
+   * Static query methods may be called before any model instance has been
+   * created. In that case, instantiate the model once so its validated schema is
+   * available in the shared schema cache.
+   *
+   * @return void
+   */
+  protected static function ensureSchemaInitialized(): void {
+    if (
+      !array_key_exists(
+        static::class,
+        self::$schema_cache
+      )
+    ) {
+      new static();
+    }
+  }
+
+  /**
+   * Validate and normalize query conditions using the current model schema.
+   *
+   * Condition values follow the same normalization rules as values assigned to
+   * model properties. This guarantees that exact types such as DECIMAL preserve
+   * their canonical representation when used in queries.
+   *
+   * @param array<string, mixed> $conditions Query conditions indexed by field.
+   *
+   * @return array<string, string|int|float|bool|null> Normalized conditions.
+   *
+   * @throws \InvalidArgumentException If a condition references an unknown model
+   *                                   field.
+   * @throws \UnexpectedValueException If a condition value cannot be normalized
+   *                                   to the field ORM type.
+   * @throws \Exception If a field name is not a valid SQL identifier.
+   */
+  protected static function normalizeConditions(
+    array $conditions
+  ): array {
+    static::ensureSchemaInitialized();
+
+    $schema = self::$schema_cache[static::class];
+    $normalized_conditions = [];
+
+    foreach ($conditions as $field_name => $value) {
+      if (!is_string($field_name)) {
+        throw new \InvalidArgumentException(
+          'ORM query condition field names must be strings.'
+        );
+      }
+
+      $field_name = self::validateSqlIdentifier(
+        $field_name,
+        'field'
+      );
+
+      if (
+        !array_key_exists(
+          $field_name,
+          $schema['fields']
+        )
+      ) {
+        throw new \InvalidArgumentException(
+          "Unknown model field '{$field_name}'."
+        );
+      }
+
+      $field = $schema['fields'][$field_name];
+
+      $normalized_conditions[$field_name] = self::normalizeModelValue(
+        $field_name,
+        $field['type'],
+        $value,
+        $field['precision'],
+        $field['scale']
+      );
+    }
+
+    return $normalized_conditions;
   }
 
   /**
@@ -1263,6 +1586,10 @@ abstract class OModel {
       );
     }
 
+    $conditions = static::normalizeConditions(
+      $conditions
+    );
+
     $table_name = self::getTableName();
 
     $cache_key = self::generateCacheKey(
@@ -1389,6 +1716,12 @@ abstract class OModel {
    * @return int Number of matching records.
    */
   public static function count(array $conditions = []): int {
+    if ($conditions !== []) {
+      $conditions = static::normalizeConditions(
+        $conditions
+      );
+    }
+
     $table_name = self::getTableName();
     $db = ODB::getInstance();
 
@@ -1919,19 +2252,28 @@ abstract class OModel {
         case OField::NUMBER:
           $sql_field .= " INT(11)";
           break;
+
         case OField::FLOAT:
           $sql_field .= " FLOAT";
           break;
+
+        case OField::DECIMAL:
+          $sql_field .= " DECIMAL({$field['precision']},{$field['scale']})";
+          break;
+
         case OField::TEXT:
           $sql_field .= " VARCHAR({$field['max']})";
           $sql_field .= " COLLATE utf8mb4_unicode_ci";
           break;
+
         case OField::LONGTEXT:
           $sql_field .= " LONGTEXT COLLATE utf8mb4_unicode_ci";
           break;
+
         case OField::BOOL:
           $sql_field .= " TINYINT(1)";
           break;
+
         case OField::DATE:
           $sql_field .= " DATETIME";
           break;
@@ -1943,7 +2285,15 @@ abstract class OModel {
 
       // Default value
       if (isset($field['default'])) {
-        $sql_field .= " DEFAULT " . self::quoteSqlValue($field['default']);
+        $sql_field .= ' DEFAULT ';
+
+        if ($field['type'] === OField::DECIMAL) {
+          $sql_field .= $field['default'];
+        } else {
+          $sql_field .= self::quoteSqlValue(
+            $field['default']
+          );
+        }
       }
 
       // Field comment

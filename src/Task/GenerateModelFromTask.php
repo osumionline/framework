@@ -7,6 +7,7 @@ namespace Osumi\OsumiFramework\Task;
 use Osumi\OsumiFramework\Core\OTask;
 use Osumi\OsumiFramework\Tools\OTools;
 use Osumi\OsumiFramework\Tools\OBuild;
+use Osumi\OsumiFramework\ORM\OField;
 
 /**
  * Generates all model files from a JSON file.
@@ -31,6 +32,73 @@ class GenerateModelFromTask extends OTask {
       '/^[A-Za-z_][A-Za-z0-9_]*$/D',
       $value
     ) === 1;
+  }
+
+  /**
+   * Validate a DECIMAL value without using floating-point arithmetic.
+   *
+   * Both "." and "," are accepted as decimal separators. The value must fit
+   * within the configured precision and scale without requiring rounding.
+   *
+   * @param string $field_name Field name.
+   * @param string $value Decimal value.
+   * @param int $precision Maximum total number of digits.
+   * @param int $scale Maximum number of fractional digits.
+   *
+   * @return void
+   *
+   * @throws \InvalidArgumentException If the value has an invalid format or
+   *                                   exceeds the configured precision or scale.
+   */
+  private function validateDecimalValue(
+    string $field_name,
+    string $value,
+    int $precision,
+    int $scale
+  ): void {
+    $matches = [];
+
+    if (
+      preg_match(
+        '/^([+-]?)(\d+)(?:[.,](\d+))?$/D',
+        $value,
+        $matches
+      ) !== 1
+    ) {
+      throw new \InvalidArgumentException(
+        "DECIMAL default for field '{$field_name}' has an invalid format."
+      );
+    }
+
+    $integer_part = ltrim(
+      $matches[2],
+      '0'
+    );
+
+    if ($integer_part === '') {
+      $integer_part = '0';
+    }
+
+    $fractional_part = $matches[3]
+      ?? '';
+
+    if (strlen($fractional_part) > $scale) {
+      throw new \InvalidArgumentException(
+        "DECIMAL default for field '{$field_name}' exceeds scale {$scale}."
+      );
+    }
+
+    $maximum_integer_digits = $precision - $scale;
+
+    $integer_digits = $integer_part === '0'
+      ? 0
+      : strlen($integer_part);
+
+    if ($integer_digits > $maximum_integer_digits) {
+      throw new \InvalidArgumentException(
+        "DECIMAL default for field '{$field_name}' exceeds precision {$precision} with scale {$scale}."
+      );
+    }
   }
 
   /**
@@ -96,7 +164,9 @@ class GenerateModelFromTask extends OTask {
         'max',
         'comment',
         'visible',
-        'ref'
+        'ref',
+        'precision',
+        'scale'
       ],
       'OCreatedAt',
       'OUpdatedAt',
@@ -160,7 +230,8 @@ class GenerateModelFromTask extends OTask {
             'OField::LONGTEXT',
             'OField::FLOAT',
             'OField::BOOL',
-            'OField::DATE'
+            'OField::DATE',
+            'OField::DECIMAL'
           ],
           true
         )
@@ -181,7 +252,8 @@ class GenerateModelFromTask extends OTask {
         'OField::BOOL' => 'bool',
         'OField::TEXT',
         'OField::LONGTEXT',
-        'OField::DATE' => 'string'
+        'OField::DATE',
+        'OField::DECIMAL' => 'string'
       };
 
       if (
@@ -192,6 +264,97 @@ class GenerateModelFromTask extends OTask {
           "Field '{$field['name']}' type '{$field['type']}' is incompatible with PHP attribute type '{$field['attribute_type']}'."
         );
       }
+    }
+
+    $field_type = $field['type']
+      ?? null;
+
+    $has_precision = array_key_exists(
+      'precision',
+      $field
+    );
+
+    $has_scale = array_key_exists(
+      'scale',
+      $field
+    );
+
+    if ($field_type === 'OField::DECIMAL') {
+      if ($field['decorator'] === 'OPK') {
+        throw new \InvalidArgumentException(
+          "Primary key field '{$field['name']}' cannot use OField::DECIMAL."
+        );
+      }
+
+      if ($field['decorator'] !== 'OField') {
+        throw new \InvalidArgumentException(
+          "DECIMAL field '{$field['name']}' must use the OField decorator."
+        );
+      }
+
+      $precision = $field['precision']
+        ?? OField::DECIMAL_DEFAULT_PRECISION;
+
+      $scale = $field['scale']
+        ?? OField::DECIMAL_DEFAULT_SCALE;
+
+      if (
+        !is_int($precision) ||
+        $precision < 1 ||
+        $precision > OField::DECIMAL_MAX_PRECISION
+      ) {
+        throw new \InvalidArgumentException(
+          "DECIMAL field '{$field['name']}' precision must be between 1 and "
+            . OField::DECIMAL_MAX_PRECISION
+            . '.'
+        );
+      }
+
+      if (
+        !is_int($scale) ||
+        $scale < 0 ||
+        $scale > OField::DECIMAL_MAX_SCALE
+      ) {
+        throw new \InvalidArgumentException(
+          "DECIMAL field '{$field['name']}' scale must be between 0 and "
+            . OField::DECIMAL_MAX_SCALE
+            . '.'
+        );
+      }
+
+      if ($scale > $precision) {
+        throw new \InvalidArgumentException(
+          "DECIMAL field '{$field['name']}' scale cannot be greater than its precision."
+        );
+      }
+
+      if (
+        array_key_exists(
+          'default',
+          $field
+        ) &&
+        $field['default'] !== null
+      ) {
+        if (!is_string($field['default'])) {
+          throw new \InvalidArgumentException(
+            "DECIMAL field '{$field['name']}' default value must be a string."
+          );
+        }
+
+        $this->validateDecimalValue(
+          $field['name'],
+          $field['default'],
+          $precision,
+          $scale
+        );
+      }
+    } elseif (
+      $has_precision ||
+      $has_scale
+    ) {
+      throw new \InvalidArgumentException(
+        "Precision and scale can only be defined for OField::DECIMAL field '{$field['name']}'."
+      );
     }
 
     if ($field['decorator'] === 'OPK') {
@@ -477,6 +640,8 @@ class GenerateModelFromTask extends OTask {
    *         default?: string|int|float|bool|null,
    *         max?: int,
    *         comment?: string,
+   *         precision?: int,
+   *         scale?: int,
    *         visible?: bool,
    *         ref?: string,
    *         incr?: bool

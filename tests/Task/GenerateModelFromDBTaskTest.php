@@ -19,13 +19,15 @@ final class GenerateModelFromDBTaskTest extends TestCase {
      * @param string $field_name Field name.
      * @param string $attribute_type PHP field type.
      * @param mixed $column_default Raw MariaDB COLUMN_DEFAULT value.
+     * @param string|null $field_type ORM field type when relevant.
      *
      * @return string|int|float|bool|null Parsed default.
      */
     private function parseColumnDefault(
         string $field_name,
         string $attribute_type,
-        mixed $column_default
+        mixed $column_default,
+        ?string $field_type = null
     ): string|int|float|bool|null {
         $task = new GenerateModelFromDBTask();
 
@@ -39,7 +41,8 @@ final class GenerateModelFromDBTaskTest extends TestCase {
             $task,
             $field_name,
             $attribute_type,
-            $column_default
+            $column_default,
+            $field_type
         );
 
         return $result;
@@ -169,6 +172,51 @@ final class GenerateModelFromDBTaskTest extends TestCase {
             'field',
             'int',
             42
+        );
+    }
+
+    /**
+     * Test that DECIMAL defaults are preserved as exact strings.
+     *
+     * @return void
+     */
+    public function testDecimalDefaultIsPreservedAsString(): void {
+        self::assertSame(
+            '12.50',
+            $this->parseColumnDefault(
+                'amount',
+                'string',
+                '12.50',
+                'OField::DECIMAL'
+            )
+        );
+
+        self::assertSame(
+            '-0.10',
+            $this->parseColumnDefault(
+                'amount',
+                'string',
+                '-0.10',
+                'OField::DECIMAL'
+            )
+        );
+    }
+
+    /**
+     * Test that DECIMAL defaults cannot use scientific notation.
+     *
+     * @return void
+     */
+    public function testDecimalDefaultRejectsScientificNotation(): void {
+        $this->expectException(
+            \RuntimeException::class
+        );
+
+        $this->parseColumnDefault(
+            'amount',
+            'string',
+            '1e3',
+            'OField::DECIMAL'
         );
     }
 }

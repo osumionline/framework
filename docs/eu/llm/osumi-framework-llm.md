@@ -2,14 +2,14 @@
 
 **Helburua**
 
-Dokumentu honek **Osumi Framework 9.10** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
+Dokumentu honek **Osumi Framework 9.11** azaltzen edo harentzat kodea sortzen duten IA sistemetarako testuinguru trinko baina autoritarioa eskaintzen du.
 
 Framework-aren portaera bat hemen dokumentatuta ez badago, ez asmatu.
 
 ## 0. Framework-aren identitatea
 
 - **Izena:** Osumi Framework
-- **Bertsioa:** 9.10.2
+- **Bertsioa:** 9.11.0
 - **Hizkuntza:** PHP
 - **Gutxieneko PHP bertsioa:** 8.5+
 - **Tipatzea:** erabili `declare(strict_types=1);`
@@ -71,6 +71,35 @@ Layout-ak ez dira `OStreamResponse` erantzunetan aplikatzen.
 ## 9. ORM
 
 Modeloek `OModel` hedatzen dute eta `#[OPK]`, `#[OField]`, `#[OCreatedAt]`, `#[OUpdatedAt]` bezalako atributuak erabiltzen dituzte.
+
+SQL `DECIMAL(p,s)` eremu zehatzek `OField::DECIMAL` eta PHP `?string` propietateak erabiltzen dituzte; ez dira inoiz `float` gisa irudikatzen.
+
+Adibidea:
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false
+)]
+public ?string $amount = null;
+```
+
+`DECIMAL` arauak:
+
+- Lehenetsitako precision: `10`.
+- Lehenetsitako scale: `2`.
+- Gehieneko precision: `65`.
+- Gehieneko scale: `30`.
+- Scale ezin da precision baino handiagoa izan.
+- `.` eta `,` onartzen dira sarrerako bereizle hamartar gisa.
+- Barneko irudikapenak beti `.` eta scale finkoa erabiltzen ditu.
+- Ez dira `float`, `int`, notazio esponentziala edo milakoen bereizleak onartzen.
+- ORM-ak ez du biribiltze automatikorik egiten.
+- `DECIMAL` ezin da `#[OPK]` atributuan erabili.
+
+`where()` eta `count()` baldintzak ere eremuaren ORM motaren arabera balidatu eta normalizatzen dira.
 
 ## 10. CLI eta migrazioak
 

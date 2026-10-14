@@ -23,15 +23,17 @@ Defines a Primary Key field. Every model must have at least one.
 
 Defines a standard database column.
 
-| Parameter  | Type     | Default | Description                                               |
-| :--------- | :------- | :------ | :-------------------------------------------------------- |
-| `type`     | `string` | `null`  | Data type (Mandatory).                                    |
-| `nullable` | `bool`   | `true`  | Whether the field can store `null` values.                |
-| `default`  | `mixed`  | `null`  | Default value for the column.                             |
-| `max`      | `int`    | `50`    | Maximum size/length for the field.                        |
-| `comment`  | `string` | `''`    | Comment for the database column.                          |
-| `visible`  | `bool`   | `true`  | Whether the field is included when serializing the model. |
-| `ref`      | `string` | `''`    | Foreign key reference (format: `'table.field'`).          |
+| Parameter   | Type     | Default | Description                                                                                                     |
+| :---------- | :------- | :------ | :-------------------------------------------------------------------------------------------------------------- |
+| `type`      | `string` | `null`  | Data type (Mandatory).                                                                                          |
+| `nullable`  | `bool`   | `true`  | Whether the field can store `null` values.                                                                      |
+| `default`   | `mixed`  | `null`  | Default value for the column.                                                                                   |
+| `max`       | `int`    | `50`    | Maximum size/length for the field.                                                                              |
+| `comment`   | `string` | `''`    | Comment for the database column.                                                                                |
+| `visible`   | `bool`   | `true`  | Whether the field is included when serializing the model.                                                       |
+| `ref`       | `string` | `''`    | Foreign key reference (format: `'table.field'`).                                                                |
+| `precision` | `?int`   | `null`  | Total precision of a `DECIMAL` field. Only valid with `OField::DECIMAL`; when omitted, `10` is used.            |
+| `scale`     | `?int`   | `null`  | Number of fractional digits of a `DECIMAL` field. Only valid with `OField::DECIMAL`; when omitted, `2` is used. |
 
 ---
 
@@ -63,12 +65,46 @@ Used for soft-delete functionality (tracking when a record was "removed").
 
 When defining `type` in `#[OPK]` or `#[OField]`, use these constants from the `Osumi\OsumiFramework\ORM\OField` class:
 
-- `OField::NUMBER`: Integer values.
-- `OField::TEXT`: Short strings (usually mapped to `VARCHAR`).
-- `OField::LONGTEXT`: Large text blocks (usually mapped to `LONGTEXT`).
-- `OField::FLOAT`: Floating-point numbers.
-- `OField::BOOL`: Boolean values.
-- `OField::DATE`: Date/Time strings.
+- `OField::NUMBER`: Integer values (`?int`).
+- `OField::TEXT`: Short strings (`?string`, normally mapped to `VARCHAR`).
+- `OField::LONGTEXT`: Large text blocks (`?string`, normally mapped to `LONGTEXT`).
+- `OField::FLOAT`: Floating-point numbers (`?float`).
+- `OField::BOOL`: Boolean values (`?bool`).
+- `OField::DATE`: Date/time strings (`?string`).
+- `OField::DECIMAL`: Exact decimal values (`?string`, generates `DECIMAL(precision,scale)`).
+
+### DECIMAL Fields
+
+`OField::DECIMAL` must always use a `?string` property. The ORM does not accept `float` or `int` values for these fields, avoiding intermediate floating-point conversions.
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false
+)]
+public ?string $amount = null;
+```
+
+The default precision is `10` and the default scale is `2`. Valid precision ranges from `1` to `65`; valid scale ranges from `0` to `30`, and scale can never exceed precision.
+
+Both `.` and `,` are accepted as decimal separators on input:
+
+```text
+"12"    → "12.00"
+"12.5"  → "12.50"
+"12,5"  → "12.50"
+"-0,50" → "-0.50"
+```
+
+The internal representation always uses `.` and exactly the number of fractional digits defined by `scale`.
+
+Scientific notation, thousands separators and values requiring rounding are not accepted. A value with more fractional digits than allowed causes an error.
+
+`precision` and `scale` can only be used with `OField::DECIMAL`. Using them with any other type causes a model definition error.
+
+`OField::DECIMAL` is not allowed in `#[OPK]`.
 
 ---
 

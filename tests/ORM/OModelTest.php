@@ -9,6 +9,7 @@ use PDOStatement;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\ExampleModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\InvalidAutoIncrementModel;
 use Osumi\OsumiFramework\Tests\Fixtures\ORM\TextKeyModel;
+use Osumi\OsumiFramework\Tests\Fixtures\ORM\DecimalModel;
 use PHPUnit\Framework\TestCase;
 
 final class OModelTest extends TestCase {
@@ -476,6 +477,338 @@ final class OModelTest extends TestCase {
                 ]
             ],
             $bound_values
+        );
+    }
+
+    /**
+     * Test exact DECIMAL normalization.
+     *
+     * @return void
+     */
+    public function testDecimalValuesAreNormalizedExactly(): void {
+        $model = DecimalModel::create(
+            [
+                'amount' => '+0012,5',
+                'ratio' => '0,9',
+                'units' => '00012'
+            ]
+        );
+
+        self::assertSame(
+            '12.50',
+            $model->amount
+        );
+
+        self::assertSame(
+            '0.90',
+            $model->ratio
+        );
+
+        self::assertSame(
+            '12',
+            $model->units
+        );
+
+        $model->applyDefaultsForTest();
+
+        self::assertSame(
+            '1.50',
+            $model->rate
+        );
+    }
+
+    /**
+     * Test that negative zero is normalized to unsigned zero.
+     *
+     * @return void
+     */
+    public function testDecimalNegativeZeroIsNormalized(): void {
+        $model = DecimalModel::create(
+            [
+                'amount' => '-0,00'
+            ]
+        );
+
+        self::assertSame(
+            '0.00',
+            $model->amount
+        );
+    }
+
+    /**
+     * Test that DECIMAL values never accept floating-point input.
+     *
+     * @return void
+     */
+    public function testDecimalRejectsFloatInput(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::create(
+            [
+                'amount' => 12.5
+            ]
+        );
+    }
+
+    /**
+     * Test that DECIMAL values never accept integer input.
+     *
+     * @return void
+     */
+    public function testDecimalRejectsIntegerInput(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::create(
+            [
+                'amount' => 12
+            ]
+        );
+    }
+
+    /**
+     * Test that DECIMAL values cannot exceed their scale.
+     *
+     * @return void
+     */
+    public function testDecimalRejectsExcessiveScale(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::create(
+            [
+                'amount' => '12.345'
+            ]
+        );
+    }
+
+    /**
+     * Test that DECIMAL values cannot exceed their integer precision.
+     *
+     * @return void
+     */
+    public function testDecimalRejectsExcessivePrecision(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::create(
+            [
+                'amount' => '123456789.00'
+            ]
+        );
+    }
+
+    /**
+     * Test DECIMAL definitions whose scale consumes all available precision.
+     *
+     * @return void
+     */
+    public function testDecimalSupportsZeroIntegerDigits(): void {
+        $model = DecimalModel::create(
+            [
+                'amount' => '1.00',
+                'ratio' => '0.99'
+            ]
+        );
+
+        self::assertSame(
+            '0.99',
+            $model->ratio
+        );
+    }
+
+    /**
+     * Test that DECIMAL fields with scale zero reject fractional values.
+     *
+     * @return void
+     */
+    public function testDecimalScaleZeroRejectsFractionalValues(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::create(
+            [
+                'amount' => '1.00',
+                'units' => '12.0'
+            ]
+        );
+    }
+
+    /**
+     * Test SQL generation for DECIMAL fields.
+     *
+     * @return void
+     */
+    public function testDecimalSQLDefinitionIsGenerated(): void {
+        $model = new DecimalModel();
+
+        $sql = $model->toSQL();
+
+        self::assertStringContainsString(
+            '`amount` DECIMAL(10,2) NOT NULL',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`rate` DECIMAL(5,2) DEFAULT 1.50',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`ratio` DECIMAL(2,2)',
+            $sql
+        );
+
+        self::assertStringContainsString(
+            '`units` DECIMAL(5,0)',
+            $sql
+        );
+    }
+
+    /**
+     * Test that DECIMAL query conditions use their canonical representation.
+     *
+     * @return void
+     */
+    public function testDecimalQueryConditionsAreNormalized(): void {
+        $conditions = DecimalModel::normalizeConditionsForTest(
+            [
+                'amount' => '+0012,5'
+            ]
+        );
+
+        self::assertSame(
+            [
+                'amount' => '12.50'
+            ],
+            $conditions
+        );
+    }
+
+    /**
+     * Test that accepted decimal separators produce identical query conditions.
+     *
+     * @return void
+     */
+    public function testDecimalQuerySeparatorsNormalizeIdentically(): void {
+        $comma_conditions = DecimalModel::normalizeConditionsForTest(
+            [
+                'amount' => '12,5'
+            ]
+        );
+
+        $dot_conditions = DecimalModel::normalizeConditionsForTest(
+            [
+                'amount' => '12.50'
+            ]
+        );
+
+        self::assertSame(
+            $dot_conditions,
+            $comma_conditions
+        );
+    }
+
+    /**
+     * Test that DECIMAL query conditions reject floating-point values.
+     *
+     * @return void
+     */
+    public function testDecimalQueryConditionsRejectFloat(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::normalizeConditionsForTest(
+            [
+                'amount' => 12.5
+            ]
+        );
+    }
+
+    /**
+     * Test that DECIMAL query conditions reject integer values.
+     *
+     * @return void
+     */
+    public function testDecimalQueryConditionsRejectInteger(): void {
+        $this->expectException(
+            \UnexpectedValueException::class
+        );
+
+        DecimalModel::normalizeConditionsForTest(
+            [
+                'amount' => 12
+            ]
+        );
+    }
+
+    /**
+     * Test that query conditions use the normalization rules of every ORM field.
+     *
+     * @return void
+     */
+    public function testQueryConditionsUseModelFieldNormalization(): void {
+        $conditions = DecimalModel::normalizeConditionsForTest(
+            [
+                'id' => '25',
+                'amount' => '12,5'
+            ]
+        );
+
+        self::assertSame(
+            [
+                'id' => 25,
+                'amount' => '12.50'
+            ],
+            $conditions
+        );
+    }
+
+    /**
+     * Test that null query conditions remain null.
+     *
+     * @return void
+     */
+    public function testQueryConditionsPreserveNull(): void {
+        $conditions = DecimalModel::normalizeConditionsForTest(
+            [
+                'rate' => null
+            ]
+        );
+
+        self::assertSame(
+            [
+                'rate' => null
+            ],
+            $conditions
+        );
+    }
+
+    /**
+     * Test that query conditions cannot reference unknown model fields.
+     *
+     * @return void
+     */
+    public function testQueryConditionsRejectUnknownFields(): void {
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->expectExceptionMessage(
+            "Unknown model field 'unknown_field'."
+        );
+
+        DecimalModel::normalizeConditionsForTest(
+            [
+                'unknown_field' => '12.50'
+            ]
         );
     }
 }

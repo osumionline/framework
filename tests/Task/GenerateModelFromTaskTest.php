@@ -404,4 +404,348 @@ final class GenerateModelFromTaskTest extends TestCase {
             );
         }
     }
+
+    /**
+     * Test generation and SQL round-trip of a DECIMAL model field.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException If the generated model cannot be read.
+     */
+    public function testGeneratesDecimalModelDefinition(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'generated_decimal_model_for_test',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK'
+                            ],
+                            [
+                                'name' => 'amount',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DECIMAL',
+                                'nullable' => false,
+                                'default' => '12,5',
+                                'precision' => 12,
+                                'scale' => 2
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->runGenerator(
+            $file
+        );
+
+        $generated_path = $this->project->getPath(
+            'src/Model/GeneratedDecimalModelForTest.php'
+        );
+
+        self::assertFileExists(
+            $generated_path
+        );
+
+        $content = file_get_contents(
+            $generated_path
+        );
+
+        if ($content === false) {
+            throw new \RuntimeException(
+                'Could not read generated DECIMAL model.'
+            );
+        }
+
+        self::assertStringContainsString(
+            'type: OField::DECIMAL',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'precision: 12',
+            $content
+        );
+
+        self::assertStringContainsString(
+            'scale: 2',
+            $content
+        );
+
+        self::assertStringContainsString(
+            "default: '12,5'",
+            $content
+        );
+
+        self::assertStringContainsString(
+            'public ?string $amount;',
+            $content
+        );
+
+        require_once $generated_path;
+
+        $class_name =
+            'Osumi\\OsumiFramework\\App\\Model\\GeneratedDecimalModelForTest';
+
+        $model = new $class_name();
+
+        $sql = $model->toSQL();
+
+        self::assertStringContainsString(
+            '`amount` DECIMAL(12,2) NOT NULL DEFAULT 12.50',
+            $sql
+        );
+    }
+
+    /**
+     * Test that DECIMAL fields require string PHP properties.
+     *
+     * @return void
+     */
+    public function testRejectsDecimalWithFloatAttributeType(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'invalid_decimal',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK'
+                            ],
+                            [
+                                'name' => 'amount',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'float',
+                                'type' => 'OField::DECIMAL'
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->runGenerator(
+            $file
+        );
+    }
+
+    /**
+     * Test that precision cannot be used by non-DECIMAL fields.
+     *
+     * @return void
+     */
+    public function testRejectsPrecisionOnNonDecimalField(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'invalid_precision',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK'
+                            ],
+                            [
+                                'name' => 'name',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::TEXT',
+                                'precision' => 12
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->runGenerator(
+            $file
+        );
+    }
+
+    /**
+     * Test that DECIMAL cannot be used as a primary key.
+     *
+     * @return void
+     */
+    public function testRejectsDecimalPrimaryKeyDefinition(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'invalid_decimal_pk',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DECIMAL',
+                                'incr' => false
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->expectExceptionMessage(
+            "Primary key field 'id' cannot use OField::DECIMAL."
+        );
+
+        $this->runGenerator(
+            $file
+        );
+    }
+
+    /**
+     * Test that DECIMAL defaults must remain exact strings.
+     *
+     * @return void
+     */
+    public function testRejectsDecimalFloatDefault(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'invalid_decimal_default',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK'
+                            ],
+                            [
+                                'name' => 'amount',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DECIMAL',
+                                'default' => 12.5
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->expectExceptionMessage(
+            "DECIMAL field 'amount' default value must be a string."
+        );
+
+        $this->runGenerator(
+            $file
+        );
+    }
+
+    /**
+     * Test that DECIMAL scale cannot exceed precision.
+     *
+     * @return void
+     */
+    public function testRejectsDecimalScaleGreaterThanPrecision(): void {
+        $file = $this->writeDefinition(
+            [
+                'model' => [
+                    [
+                        'name' => 'invalid_decimal_scale',
+                        'fields' => [
+                            [
+                                'name' => 'id',
+                                'decorator' => 'OPK'
+                            ],
+                            [
+                                'name' => 'amount',
+                                'decorator' => 'OField',
+                                'attribute_type' => 'string',
+                                'type' => 'OField::DECIMAL',
+                                'precision' => 5,
+                                'scale' => 6
+                            ],
+                            [
+                                'name' => 'created_at',
+                                'decorator' => 'OCreatedAt'
+                            ],
+                            [
+                                'name' => 'updated_at',
+                                'decorator' => 'OUpdatedAt'
+                            ]
+                        ],
+                        'refs' => []
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(
+            \InvalidArgumentException::class
+        );
+
+        $this->runGenerator(
+            $file
+        );
+    }
 }

@@ -97,9 +97,61 @@ Framework-ak `validate()` deitzen du `save()` prozesuan. Balio batek `max` luzer
 
 ---
 
-## CLI Integrazioa
+### DECIMAL eremu zehatzak
 
-- **`generateModel`**: SQL egitura (CREATE TABLE) sortzen du zure modeloaren definizioetan oinarrituta, `ref`-n definitutako indizeak eta kanpoko gakoak barne.
+Puntu mugikorreko irudikapenetik igaro behar ez duten balioetarako, hala nola diru-kopuruak, ehunekoak edo zehaztasun finkoko kantitateak, erabili `OField::DECIMAL`.
+
+```php
+#[OField(
+	type: OField::DECIMAL,
+	precision: 12,
+	scale: 2,
+	nullable: false,
+	comment: 'Zenbatekoa'
+)]
+public ?string $amount = null;
+```
+
+`DECIMAL` eremuak beti `?string` bidez irudikatzen dira, inoiz ez `?float` bidez.
+
+ORM-ak `.` eta `,` onartzen ditu sarrerako bereizle hamartar gisa, eta balioa `.` erabiliz eta scale finkoarekin normalizatzen du:
+
+```php
+$model->amount = '12,5';
+$model->save();
+
+// $model->amount === '12.50'
+```
+
+Ez da biribiltze automatikorik egiten. Balio batek konfiguratutako precision edo scale gainditzen badu, ORM-ak errorea sortzen du.
+
+Kontsulten baldintzek arau berak jarraitzen dituzte:
+
+```php
+Payment::where([
+	'amount' => '12,5'
+]);
+```
+
+barnean `"12.50"` baliora normalizatzen da; aldiz:
+
+```php
+Payment::where([
+	'amount' => 12.5
+]);
+```
+
+ez da baliozkoa, `float` balio bat ezin baita `DECIMAL` eremu baterako erabili.
+
+`DECIMAL` eremuak ezin dira lehen mailako gako gisa erabili.
+
+---
+
+## CLI integrazioa
+
+- **`generateModel`**: Modelo-definizioetatik SQL egitura sortzen du, `DECIMAL(precision,scale)` barne.
+- **`generateModelFrom`**: JSON definizio batetik modeloak sortzen ditu eta `OField::DECIMAL` eremuak onartzen ditu.
+- **`generateModelFromDB`**: SQL `DECIMAL(p,s)` zutabeak PHP `?string` propietate gisa interpretatzen ditu, precision, scale eta balio lehenetsi zehatzak mantenduz.
 
 ---
 
